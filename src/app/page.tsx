@@ -24,7 +24,6 @@ import {
   ShieldAlert,
   Sparkles,
   Star,
-  Trash2,
   Trophy,
   UploadCloud,
   UserCircle,
@@ -33,8 +32,8 @@ import {
   Zap
 } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
+import type { RealtimeChannel } from "@supabase/supabase-js";
 
-type Role = "player_1" | "player_2";
 type Tab = "feed" | "vote" | "studio" | "trophies" | "archive";
 type NominationStatus = "pending" | "accepted" | "rejected";
 type VerdictChoice = "nominee" | "ejected";
@@ -44,13 +43,19 @@ type MediaKind = "video" | "image";
 
 type ToastState = { tone: ToastTone; message: string } | null;
 
+type Participant = {
+  id: string;
+  pseudo: string;
+};
+
 type VoteValue = {
   rating: number;
   choice: VerdictChoice;
+  pseudo: string;
   voted_at: string;
 };
 
-type Votes = Partial<Record<Role, VoteValue>>;
+type Votes = Record<string, VoteValue | undefined>;
 
 type Nomination = {
   id: string;
@@ -61,7 +66,7 @@ type Nomination = {
   video_storage_path: string | null;
   category_id: string;
   comment: string;
-  submitted_by: Role;
+  submitted_by: string;
   status: NominationStatus;
   votes: Votes;
   created_at: string;
@@ -74,38 +79,33 @@ type CategoryMeta = {
   icon: LucideIcon;
 };
 
-const ROLE_KEY = "nod_role";
-const P1_NAME_KEY = "nod_p1name";
-const P2_NAME_KEY = "nod_p2name";
-const ROOM_CODE_KEY = "nod_room_code";
-const DEFAULT_ROOM_CODE = "NOD-DUO";
-const BUCKET_NAME = "nod-media";
-const MAX_SOURCE_FILE_BYTES = 420 * 1024 * 1024;
-const MAX_UPLOAD_BYTES = 48 * 1024 * 1024;
-const MAX_VIDEO_SECONDS = 240;
-const VIDEO_FPS = 24;
-const VIDEO_BITRATE = 900_000;
-const AUDIO_BITRATE = 64_000;
-const STAR_VALUES = [1, 2, 3, 4, 5] as const;
-
-const ROLE_LABEL: Record<Role, string> = {
-  player_1: "Joueur 1",
-  player_2: "Joueur 2"
+type SpacesUploadResult = {
+  key: string;
+  publicUrl: string;
+  uploadUrl: string;
 };
+
+const SESSION_ID_KEY = "nod_session_id";
+const PSEUDO_KEY = "nod_pseudo";
+const ROOM_CODE_KEY = "nod_room_code";
+const DEFAULT_ROOM_CODE = "NOD-CLUB";
+const MIN_VERDICT_VOTES = 2;
+const MAX_DIRECT_UPLOAD_BYTES = 5 * 1024 * 1024 * 1024;
+const STAR_VALUES = [1, 2, 3, 4, 5] as const;
 
 const CATEGORIES: CategoryMeta[] = [
   { id: "moment_marquant", label: "Moment marquant", mood: "positive", icon: Sparkles },
-  { id: "pepite_cachee", label: "Pepite cachee", mood: "positive", icon: Crown },
+  { id: "pepite_cachee", label: "Pépite cachée", mood: "positive", icon: Crown },
   { id: "style_remarquable", label: "Style remarquable", mood: "positive", icon: Trophy },
-  { id: "replique_culte", label: "Replique culte", mood: "positive", icon: BadgeCheck },
-  { id: "elan_creatif", label: "Elan creatif", mood: "positive", icon: Zap },
+  { id: "replique_culte", label: "Réplique culte", mood: "positive", icon: BadgeCheck },
+  { id: "elan_creatif", label: "Élan créatif", mood: "positive", icon: Zap },
   { id: "malaise_public", label: "Malaise public", mood: "critical", icon: ShieldAlert },
   { id: "signal_alerte", label: "Signal d'alerte", mood: "critical", icon: ShieldAlert },
-  { id: "derapage_leger", label: "Derapage leger", mood: "critical", icon: Flame },
+  { id: "derapage_leger", label: "Dérapage léger", mood: "critical", icon: Flame },
   { id: "choix_discutable", label: "Choix discutable", mood: "critical", icon: Archive },
-  { id: "silence_genant", label: "Silence genant", mood: "critical", icon: Clock3 },
+  { id: "silence_genant", label: "Silence gênant", mood: "critical", icon: Clock3 },
   { id: "fou_rire", label: "Fou rire du mois", mood: "fun", icon: Sparkles },
-  { id: "scene_improbable", label: "Scene improbable", mood: "fun", icon: Video },
+  { id: "scene_improbable", label: "Scène improbable", mood: "fun", icon: Video },
   { id: "roue_libre", label: "Roue libre", mood: "fun", icon: Flame },
   { id: "performance_surprise", label: "Performance surprise", mood: "fun", icon: Trophy },
   { id: "voyage_express", label: "Voyage express", mood: "fun", icon: Camera }
@@ -114,10 +114,10 @@ const CATEGORIES: CategoryMeta[] = [
 const CATEGORY_BY_ID = Object.fromEntries(CATEGORIES.map((category) => [category.id, category])) as Record<string, CategoryMeta>;
 
 const TAB_ITEMS: Array<{ id: Tab; label: string; icon: LucideIcon }> = [
-  { id: "feed", label: "Live", icon: Sparkles },
-  { id: "vote", label: "Duel", icon: Zap },
-  { id: "studio", label: "Studio", icon: Plus },
-  { id: "trophies", label: "Trophees", icon: Crown },
+  { id: "feed", label: "Flux", icon: Sparkles },
+  { id: "vote", label: "Vote", icon: Zap },
+  { id: "studio", label: "Uploader", icon: Plus },
+  { id: "trophies", label: "Trophées", icon: Crown },
   { id: "archive", label: "Archive", icon: ImageIcon }
 ];
 
@@ -125,19 +125,6 @@ const TAB_ORDER: Tab[] = TAB_ITEMS.map((item) => item.id);
 
 function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === "object" && value !== null && !Array.isArray(value);
-}
-
-function normalizeRole(value: string | null): Role | null {
-  if (value === "player_1" || value === "Joueur 1") return "player_1";
-  if (value === "player_2" || value === "Joueur 2") return "player_2";
-  return null;
-}
-
-function normalizeStatus(value: unknown): NominationStatus | null {
-  if (value === "pending" || value === "accepted" || value === "rejected") return value;
-  if (value === "arena") return "rejected";
-  if (value === "resolved") return "accepted";
-  return null;
 }
 
 function toText(value: unknown, fallback = "") {
@@ -152,6 +139,26 @@ function clampRating(value: number) {
   return Math.min(5, Math.max(1, Math.round(value)));
 }
 
+function haptic(pattern: number | number[]) {
+  if (typeof navigator === "undefined" || !("vibrate" in navigator)) return;
+  navigator.vibrate(pattern);
+}
+
+function makeSessionId() {
+  if (typeof crypto !== "undefined" && "randomUUID" in crypto) {
+    return crypto.randomUUID();
+  }
+  return `session-${Date.now()}-${Math.random().toString(36).slice(2, 12)}`;
+}
+
+function sanitizePseudo(value: string) {
+  return value
+    .trim()
+    .replace(/\s+/g, " ")
+    .replace(/[^\w\sÀ-ÖØ-öø-ÿ_.-]/g, "")
+    .slice(0, 24);
+}
+
 function sanitizeRoomCode(value: string) {
   return value
     .trim()
@@ -160,20 +167,26 @@ function sanitizeRoomCode(value: string) {
     .slice(0, 24);
 }
 
+function normalizeStatus(value: unknown): NominationStatus | null {
+  if (value === "pending" || value === "accepted" || value === "rejected") return value;
+  if (value === "resolved") return "accepted";
+  return null;
+}
+
 function parseVotes(value: unknown): Votes {
   if (!isRecord(value)) return {};
 
-  return (["player_1", "player_2"] as const).reduce<Votes>((acc, role) => {
-    const rawVote = value[role];
+  return Object.entries(value).reduce<Votes>((acc, [sessionId, rawVote]) => {
     if (!isRecord(rawVote)) return acc;
 
     const rating = toIntOrNull(rawVote.rating);
     const choice = rawVote.choice;
     if (rating === null || (choice !== "nominee" && choice !== "ejected")) return acc;
 
-    acc[role] = {
+    acc[sessionId] = {
       rating: clampRating(rating),
       choice,
+      pseudo: sanitizePseudo(toText(rawVote.pseudo, "Invité")) || "Invité",
       voted_at: toText(rawVote.voted_at, new Date().toISOString())
     };
 
@@ -181,21 +194,28 @@ function parseVotes(value: unknown): Votes {
   }, {});
 }
 
-function computeStatus(votes: Votes): NominationStatus {
-  const p1 = votes.player_1;
-  const p2 = votes.player_2;
+function getVoteList(votes: Votes) {
+  return Object.values(votes).filter((vote): vote is VoteValue => Boolean(vote));
+}
 
-  if (!p1 || !p2) return "pending";
-  return p1.choice === "nominee" && p2.choice === "nominee" ? "accepted" : "rejected";
+function voteCount(votes: Votes) {
+  return getVoteList(votes).length;
+}
+
+function averageFromVotes(votes: Votes) {
+  const ratings = getVoteList(votes).map((vote) => vote.rating);
+  if (ratings.length === 0) return null;
+  return ratings.reduce((sum, rating) => sum + rating, 0) / ratings.length;
+}
+
+function computeStatus(votes: Votes): NominationStatus {
+  const average = averageFromVotes(votes);
+  if (average === null || voteCount(votes) < MIN_VERDICT_VOTES) return "pending";
+  return average >= 3 ? "accepted" : "rejected";
 }
 
 function averageRating(nomination: Nomination) {
-  const ratings = Object.values(nomination.votes)
-    .map((vote) => vote?.rating)
-    .filter((rating): rating is number => typeof rating === "number");
-
-  if (ratings.length === 0) return null;
-  return ratings.reduce((sum, rating) => sum + rating, 0) / ratings.length;
+  return averageFromVotes(nomination.votes);
 }
 
 function countdownToNextMonth() {
@@ -209,12 +229,12 @@ function countdownToNextMonth() {
 }
 
 function getCategoryMeta(value: string): CategoryMeta {
-  return CATEGORY_BY_ID[value] ?? { id: "custom", label: value || "Sans categorie", mood: "fun", icon: Archive };
+  return CATEGORY_BY_ID[value] ?? { id: "custom", label: value || "Sans catégorie", mood: "fun", icon: Archive };
 }
 
 function statusLabel(status: NominationStatus) {
-  if (status === "accepted") return "SACRE";
-  if (status === "rejected") return "EJECTE";
+  if (status === "accepted") return "SACRÉ";
+  if (status === "rejected") return "ÉJECTÉ";
   return "A VOTER";
 }
 
@@ -226,13 +246,12 @@ function statusClass(status: NominationStatus) {
 
 function formatBytes(bytes: number) {
   if (bytes < 1024 * 1024) return `${Math.max(1, Math.round(bytes / 1024))} Ko`;
-  return `${(bytes / 1024 / 1024).toFixed(1)} Mo`;
+  if (bytes < 1024 * 1024 * 1024) return `${(bytes / 1024 / 1024).toFixed(1)} Mo`;
+  return `${(bytes / 1024 / 1024 / 1024).toFixed(2)} Go`;
 }
 
 function parseNomination(row: Record<string, unknown>): Nomination {
   const votes = parseVotes(row.votes);
-  const submittedBy = normalizeRole(toText(row.submitted_by)) ?? "player_1";
-
   return {
     id: toText(row.id, `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`),
     room_id: toText(row.room_id),
@@ -242,41 +261,18 @@ function parseNomination(row: Record<string, unknown>): Nomination {
     video_storage_path: toText(row.video_storage_path) || null,
     category_id: toText(row.category_id, toText(row.category, "moment_marquant")),
     comment: toText(row.comment),
-    submitted_by: submittedBy,
+    submitted_by: toText(row.submitted_by, "session-inconnue"),
     status: normalizeStatus(row.status) ?? computeStatus(votes),
     votes,
     created_at: toText(row.created_at, new Date().toISOString())
   };
 }
 
-function monthKey(date = new Date()) {
-  const year = date.getUTCFullYear();
-  const month = String(date.getUTCMonth() + 1).padStart(2, "0");
-  return `${year}-${month}`;
-}
-
-function extensionForMime(mimeType: string, fallback: string) {
-  if (mimeType.includes("webp")) return "webp";
-  if (mimeType.includes("jpeg")) return "jpg";
-  if (mimeType.includes("png")) return "png";
-  if (mimeType.includes("mp4")) return "mp4";
-  if (mimeType.includes("quicktime")) return "mov";
-  if (mimeType.includes("webm")) return "webm";
-  return fallback;
-}
-
-function makeStoragePath(file: File, role: Role, folder: "videos" | "thumbnails") {
-  const extension = extensionForMime(file.type, folder === "videos" ? "mp4" : "jpg");
-  const base = role === "player_1" ? "p1" : "p2";
-  const nonce = `${Date.now()}_${Math.random().toString(36).slice(2, 10)}`;
-  return `${folder}/${monthKey()}/${base}_${nonce}.${extension}`;
-}
-
 function waitForMediaEvent(target: HTMLMediaElement, eventName: string, timeoutMs = 15000) {
   return new Promise<void>((resolve, reject) => {
     const timer = window.setTimeout(() => {
       cleanup();
-      reject(new Error("Lecture media impossible."));
+      reject(new Error("Lecture média impossible."));
     }, timeoutMs);
 
     const onEvent = () => {
@@ -286,7 +282,7 @@ function waitForMediaEvent(target: HTMLMediaElement, eventName: string, timeoutM
 
     const onError = () => {
       cleanup();
-      reject(new Error("Fichier media illisible."));
+      reject(new Error("Fichier média illisible."));
     };
 
     const cleanup = () => {
@@ -305,7 +301,7 @@ function canvasToBlob(canvas: HTMLCanvasElement, mimeType: string, quality: numb
     canvas.toBlob(
       (blob) => {
         if (blob) resolve(blob);
-        else reject(new Error("Compression canvas impossible."));
+        else reject(new Error("Export canvas impossible."));
       },
       mimeType,
       quality
@@ -334,7 +330,7 @@ async function compressImageToWebp(file: File) {
     if (!context) throw new Error("Canvas indisponible.");
 
     context.drawImage(bitmap, 0, 0, size.width, size.height);
-    const blob = await canvasToBlob(canvas, "image/webp", 0.82);
+    const blob = await canvasToBlob(canvas, "image/webp", 0.84);
     const name = `${file.name.replace(/\.[^.]+$/, "") || "capture"}.webp`;
     return new File([blob], name, { type: "image/webp" });
   } finally {
@@ -356,11 +352,7 @@ async function extractVideoThumbnail(file: File) {
     await waitForMediaEvent(video, "loadedmetadata");
 
     const duration = Number.isFinite(video.duration) ? video.duration : 0;
-    if (duration > MAX_VIDEO_SECONDS) {
-      throw new Error(`Video trop longue: ${Math.round(duration)}s. Limite: 4 min.`);
-    }
-
-    const seekTo = duration > 1 ? Math.min(0.75, duration / 2) : 0;
+    const seekTo = duration > 0.2 ? 0.1 : 0;
     if (seekTo > 0) {
       video.currentTime = seekTo;
       await waitForMediaEvent(video, "seeked");
@@ -368,7 +360,7 @@ async function extractVideoThumbnail(file: File) {
       await waitForMediaEvent(video, "loadeddata");
     }
 
-    const size = scaledSize(video.videoWidth || 720, video.videoHeight || 1280, 1280, 720);
+    const size = scaledSize(video.videoWidth || 720, video.videoHeight || 1280, 1440, 1080);
     const canvas = document.createElement("canvas");
     canvas.width = size.width;
     canvas.height = size.height;
@@ -376,9 +368,9 @@ async function extractVideoThumbnail(file: File) {
     if (!context) throw new Error("Canvas indisponible.");
 
     context.drawImage(video, 0, 0, size.width, size.height);
-    const blob = await canvasToBlob(canvas, "image/jpeg", 0.84);
+    const blob = await canvasToBlob(canvas, "image/jpeg", 0.86);
     const name = `${file.name.replace(/\.[^.]+$/, "") || "miniature"}.jpg`;
-    return { thumbnail: new File([blob], name, { type: "image/jpeg" }), duration };
+    return new File([blob], name, { type: "image/jpeg" });
   } finally {
     video.removeAttribute("src");
     video.load();
@@ -386,115 +378,41 @@ async function extractVideoThumbnail(file: File) {
   }
 }
 
-function preferredVideoMimeType() {
-  if (typeof MediaRecorder === "undefined") return null;
-  const candidates = [
-    "video/mp4;codecs=h264",
-    "video/mp4",
-    "video/webm;codecs=vp9",
-    "video/webm;codecs=vp8",
-    "video/webm"
-  ];
+async function uploadFileToSpaces(file: File, folder: "videos" | "miniatures") {
+  const signResponse = await fetch("/api/spaces/presign", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({
+      fileName: file.name,
+      contentType: file.type || "application/octet-stream",
+      size: file.size,
+      folder
+    })
+  });
 
-  return candidates.find((candidate) => MediaRecorder.isTypeSupported(candidate)) ?? null;
-}
-
-async function compressVideoToMobile(file: File, onProgress: (progress: number) => void) {
-  if (typeof MediaRecorder === "undefined") {
-    throw new Error("Compression video non supportee par ce navigateur.");
+  const payload = (await signResponse.json()) as Partial<SpacesUploadResult> & { error?: string };
+  if (!signResponse.ok || !payload.uploadUrl || !payload.publicUrl || !payload.key) {
+    throw new Error(payload.error || "Signature Spaces impossible.");
   }
 
-  const mimeType = preferredVideoMimeType();
-  if (!mimeType) {
-    throw new Error("Aucun codec video compatible pour la compression.");
+  const uploadResponse = await fetch(payload.uploadUrl, {
+    method: "PUT",
+    headers: { "Content-Type": file.type || "application/octet-stream" },
+    body: file
+  });
+
+  if (!uploadResponse.ok) {
+    throw new Error("Envoi DigitalOcean Spaces refusé.");
   }
 
-  const objectUrl = URL.createObjectURL(file);
-  const video = document.createElement("video");
-  let rafId = 0;
-
-  try {
-    video.preload = "auto";
-    video.muted = true;
-    video.playsInline = true;
-    video.src = objectUrl;
-    video.style.position = "fixed";
-    video.style.pointerEvents = "none";
-    video.style.opacity = "0";
-    video.style.width = "1px";
-    video.style.height = "1px";
-    video.style.left = "-10px";
-    video.style.top = "-10px";
-    document.body.appendChild(video);
-    video.load();
-
-    await waitForMediaEvent(video, "loadedmetadata");
-
-    const duration = Number.isFinite(video.duration) ? video.duration : 0;
-    if (duration > MAX_VIDEO_SECONDS) {
-      throw new Error(`Video trop longue: ${Math.round(duration)}s. Limite: 4 min.`);
-    }
-
-    const size = scaledSize(video.videoWidth || 720, video.videoHeight || 1280, 1280, 720);
-    const canvas = document.createElement("canvas");
-    canvas.width = size.width;
-    canvas.height = size.height;
-    const context = canvas.getContext("2d", { alpha: false });
-    if (!context) throw new Error("Canvas indisponible.");
-
-    const stream = canvas.captureStream(VIDEO_FPS);
-    const recorder = new MediaRecorder(stream, {
-      mimeType,
-      videoBitsPerSecond: VIDEO_BITRATE,
-      audioBitsPerSecond: AUDIO_BITRATE
-    });
-    const chunks: Blob[] = [];
-    const stopped = new Promise<void>((resolve, reject) => {
-      recorder.onstop = () => resolve();
-      recorder.onerror = () => reject(new Error("Compression video interrompue."));
-    });
-
-    recorder.ondataavailable = (event) => {
-      if (event.data.size > 0) chunks.push(event.data);
-    };
-
-    const finished = new Promise<void>((resolve) => {
-      const draw = () => {
-        context.drawImage(video, 0, 0, size.width, size.height);
-        onProgress(duration > 0 ? Math.min(0.98, video.currentTime / duration) : 0.5);
-        if (video.ended || video.currentTime >= duration) {
-          resolve();
-          return;
-        }
-        rafId = window.requestAnimationFrame(draw);
-      };
-      draw();
-    });
-
-    recorder.start(1000);
-    await video.play();
-    await finished;
-    recorder.stop();
-    await stopped;
-    stream.getTracks().forEach((track) => track.stop());
-
-    const blob = new Blob(chunks, { type: mimeType.split(";")[0] });
-    if (blob.size === 0) throw new Error("Compression video vide.");
-
-    const extension = extensionForMime(blob.type, "webm");
-    const name = `${file.name.replace(/\.[^.]+$/, "") || "video"}-mobile.${extension}`;
-    onProgress(1);
-    return new File([blob], name, { type: blob.type });
-  } finally {
-    if (rafId) window.cancelAnimationFrame(rafId);
-    video.pause();
-    video.remove();
-    URL.revokeObjectURL(objectUrl);
-  }
+  return {
+    key: payload.key,
+    publicUrl: payload.publicUrl
+  };
 }
 
 function verdictLabel(choice: VerdictChoice) {
-  return choice === "nominee" ? "Nomine" : "Ejecte";
+  return choice === "nominee" ? "SACRÉ" : "ÉJECTÉ";
 }
 
 function voteBurst(choice: VerdictChoice) {
@@ -535,7 +453,7 @@ function Sticker({
           ? "border-black bg-[#f0f0f0] text-black"
           : "border-black bg-red-600 text-white";
 
-  return <span className={`inline-flex border-2 px-2 py-1 text-[10px] font-black uppercase leading-none ${toneClass} ${className}`}>{children}</span>;
+  return <span className={`inline-flex border-4 px-2 py-1 text-[10px] font-black uppercase leading-none ${toneClass} ${className}`}>{children}</span>;
 }
 
 function BrutalCard({
@@ -582,10 +500,10 @@ function StarInput({
             onMouseEnter={() => !readonly && setHover(star)}
             onMouseLeave={() => !readonly && setHover(0)}
             onClick={() => onChange?.(star)}
-            className={`flex aspect-square items-center justify-center border-2 border-black transition active:translate-x-0.5 active:translate-y-0.5 disabled:cursor-default ${
+            className={`flex aspect-square items-center justify-center border-4 border-black transition active:translate-x-0.5 active:translate-y-0.5 disabled:cursor-default ${
               active ? "bg-yellow-300 text-black" : "bg-[#f0f0f0] text-zinc-500"
             }`}
-            aria-label={`${star} etoiles`}
+            aria-label={`${star} étoiles`}
           >
             <Star className={`${iconSizeClass} ${active ? "fill-black" : ""}`} strokeWidth={2} />
           </button>
@@ -633,13 +551,12 @@ function PaperBackdrop() {
 export default function Home() {
   const reduceMotion = useReducedMotion();
   const [supabase, setSupabase] = useState<ReturnType<typeof getSupabaseBrowserClient>>(null);
-  const [bootingRole, setBootingRole] = useState(true);
-  const [role, setRole] = useState<Role | null>(null);
+  const [bootingSession, setBootingSession] = useState(true);
+  const [participant, setParticipant] = useState<Participant | null>(null);
+  const [pseudoDraft, setPseudoDraft] = useState("");
   const [roomId, setRoomId] = useState<string | null>(null);
   const [roomCode, setRoomCode] = useState(DEFAULT_ROOM_CODE);
-  const [p1Name, setP1Name] = useState("Joueur 1");
-  const [p2Name, setP2Name] = useState("Joueur 2");
-  const [editingName, setEditingName] = useState<"p1" | "p2" | null>(null);
+  const [editingName, setEditingName] = useState(false);
   const [nameDraft, setNameDraft] = useState("");
 
   const [tab, setTab] = useState<Tab>("feed");
@@ -658,8 +575,8 @@ export default function Home() {
   const [mediaKind, setMediaKind] = useState<MediaKind | null>(null);
   const [previewUrl, setPreviewUrlState] = useState<string | null>(null);
   const [thumbnailPreviewUrl, setThumbnailPreviewUrlState] = useState<string | null>(null);
-  const [compressionProgress, setCompressionProgress] = useState(0);
-  const [compressionNote, setCompressionNote] = useState("");
+  const [mediaProgress, setMediaProgress] = useState(0);
+  const [mediaNote, setMediaNote] = useState("");
   const [isPreparingMedia, setIsPreparingMedia] = useState(false);
   const [catId, setCatId] = useState(CATEGORIES[0].id);
   const [comment, setComment] = useState("");
@@ -669,11 +586,8 @@ export default function Home() {
   const [ratingDraftById, setRatingDraftById] = useState<Record<string, number>>({});
   const [voteBusyId, setVoteBusyId] = useState<string | null>(null);
   const [shakeId, setShakeId] = useState<string | null>(null);
-  const [deleteBusyId, setDeleteBusyId] = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement | null>(null);
-
-  const myDisplayName = role === "player_1" ? p1Name : p2Name;
-  const otherDisplayName = role === "player_1" ? p2Name : p1Name;
+  const channelRef = useRef<RealtimeChannel | null>(null);
 
   const showToast = useCallback((tone: ToastTone, message: string) => {
     if (toastTimeoutRef.current) window.clearTimeout(toastTimeoutRef.current);
@@ -682,6 +596,11 @@ export default function Home() {
       setToast(null);
       toastTimeoutRef.current = null;
     }, 2800);
+  }, []);
+
+  const switchTab = useCallback((nextTab: Tab) => {
+    haptic(20);
+    setTab(nextTab);
   }, []);
 
   useEffect(() => {
@@ -696,12 +615,17 @@ export default function Home() {
 
   useEffect(() => {
     try {
-      setRole(normalizeRole(localStorage.getItem(ROLE_KEY)));
-      setP1Name(localStorage.getItem(P1_NAME_KEY) || "Joueur 1");
-      setP2Name(localStorage.getItem(P2_NAME_KEY) || "Joueur 2");
-      setRoomCode(sanitizeRoomCode(localStorage.getItem(ROOM_CODE_KEY) || DEFAULT_ROOM_CODE) || DEFAULT_ROOM_CODE);
+      const storedId = localStorage.getItem(SESSION_ID_KEY);
+      const storedPseudo = sanitizePseudo(localStorage.getItem(PSEUDO_KEY) || "");
+      const storedRoom = sanitizeRoomCode(localStorage.getItem(ROOM_CODE_KEY) || DEFAULT_ROOM_CODE) || DEFAULT_ROOM_CODE;
+      setRoomCode(storedRoom);
+      setPseudoDraft(storedPseudo);
+
+      if (storedId && storedPseudo) {
+        setParticipant({ id: storedId, pseudo: storedPseudo });
+      }
     } finally {
-      setBootingRole(false);
+      setBootingSession(false);
     }
   }, []);
 
@@ -729,8 +653,8 @@ export default function Home() {
     setThumbnailFile(null);
     setMediaKind(null);
     setSourceFileName("");
-    setCompressionProgress(0);
-    setCompressionNote("");
+    setMediaProgress(0);
+    setMediaNote("");
     setUrl(setPreviewUrlState, previewUrl, null);
     setUrl(setThumbnailPreviewUrlState, thumbnailPreviewUrl, null);
   }, [previewUrl, thumbnailPreviewUrl]);
@@ -742,28 +666,14 @@ export default function Home() {
     localStorage.setItem(ROOM_CODE_KEY, cleanCode);
     setRoomCode(cleanCode);
 
-    const { data, error } = await supabase
-      .from("rooms")
-      .upsert(
-        {
-          code: cleanCode,
-          player1_label: p1Name,
-          player2_label: p2Name
-        },
-        { onConflict: "code" }
-      )
-      .select("id,player1_label,player2_label")
-      .single();
+    const { data, error } = await supabase.from("rooms").upsert({ code: cleanCode }, { onConflict: "code" }).select("id").single();
 
     if (error) throw error;
 
     const nextRoomId = toText(data?.id);
     if (nextRoomId) setRoomId(nextRoomId);
-    if (typeof data?.player1_label === "string") setP1Name(data.player1_label);
-    if (typeof data?.player2_label === "string") setP2Name(data.player2_label);
-
     return nextRoomId || null;
-  }, [p1Name, p2Name, roomCode, supabase]);
+  }, [roomCode, supabase]);
 
   const fetchNominations = useCallback(
     async (silent = false, forcedRoomId?: string | null) => {
@@ -787,7 +697,7 @@ export default function Home() {
         setLastSyncAt(new Date());
       } catch (err) {
         if (!silent) {
-          const message = err instanceof Error ? err.message : "Sync impossible.";
+          const message = err instanceof Error ? err.message : "Synchronisation impossible.";
           showToast("error", message);
         }
       } finally {
@@ -799,7 +709,7 @@ export default function Home() {
   );
 
   useEffect(() => {
-    if (!role || !supabase) return;
+    if (!participant || !supabase) return;
 
     let cancelled = false;
 
@@ -818,32 +728,41 @@ export default function Home() {
     return () => {
       cancelled = true;
     };
-  }, [ensureRoom, fetchNominations, role, showToast, supabase]);
+  }, [ensureRoom, fetchNominations, participant, showToast, supabase]);
 
   useEffect(() => {
-    if (!role || !supabase || !roomId) return;
+    if (!participant || !supabase || !roomId) return;
 
     const poll = window.setInterval(() => {
       void fetchNominations(true);
     }, 20000);
 
     const channel = supabase
-      .channel(`nod_realtime_${roomId}`)
-      .on("postgres_changes", { event: "*", schema: "public", table: "nominations" }, () => {
+      .channel(`nod_salon_${roomId}`, { config: { broadcast: { self: false } } })
+      .on("postgres_changes", { event: "*", schema: "public", table: "nominations", filter: `room_id=eq.${roomId}` }, () => {
+        void fetchNominations(true);
+      })
+      .on("broadcast", { event: "vote" }, () => {
+        void fetchNominations(true);
+      })
+      .on("broadcast", { event: "dossier" }, () => {
         void fetchNominations(true);
       })
       .subscribe();
 
+    channelRef.current = channel;
+
     return () => {
       window.clearInterval(poll);
+      channelRef.current = null;
       void supabase.removeChannel(channel);
     };
-  }, [fetchNominations, role, roomId, supabase]);
+  }, [fetchNominations, participant, roomId, supabase]);
 
   const pendingForMe = useMemo(() => {
-    if (!role) return [];
-    return nominations.filter((nomination) => nomination.status === "pending" && !nomination.votes[role]);
-  }, [nominations, role]);
+    if (!participant) return [];
+    return nominations.filter((nomination) => nomination.status === "pending" && !nomination.votes[participant.id]);
+  }, [nominations, participant]);
 
   const archive = useMemo(() => {
     const data = nominations.filter((nomination) => nomination.status === "accepted" || nomination.status === "rejected");
@@ -866,7 +785,7 @@ export default function Home() {
   const lastSyncLabel = lastSyncAt ? lastSyncAt.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }) : "--:--";
   const progressTotal = pendingForMe.length + archive.length;
   const progressDone = progressTotal === 0 ? 0 : Math.round((archive.length / progressTotal) * 100);
-  const uploadReady = Boolean(preparedFile && comment.trim().length >= 3 && !isPreparingMedia);
+  const uploadReady = Boolean(preparedFile && thumbnailFile && comment.trim().length >= 3 && !isPreparingMedia);
 
   const revealContainer = reduceMotion
     ? {}
@@ -898,104 +817,105 @@ export default function Home() {
       const currentIndex = TAB_ORDER.indexOf(tab);
       const nextIndex = info.offset.x < 0 ? currentIndex + 1 : currentIndex - 1;
       const nextTab = TAB_ORDER[nextIndex];
-      if (nextTab) setTab(nextTab);
+      if (nextTab) switchTab(nextTab);
     },
-    [tab]
+    [switchTab, tab]
   );
 
-  const selectRole = (selected: Role) => {
+  const startSession = () => {
+    const cleanPseudo = sanitizePseudo(pseudoDraft);
     const cleanCode = sanitizeRoomCode(roomCode) || DEFAULT_ROOM_CODE;
+
+    if (cleanPseudo.length < 2) {
+      showToast("error", "Entre un pseudo valide.");
+      return;
+    }
+
+    const nextParticipant = {
+      id: localStorage.getItem(SESSION_ID_KEY) || makeSessionId(),
+      pseudo: cleanPseudo
+    };
+
+    localStorage.setItem(SESSION_ID_KEY, nextParticipant.id);
+    localStorage.setItem(PSEUDO_KEY, nextParticipant.pseudo);
     localStorage.setItem(ROOM_CODE_KEY, cleanCode);
-    localStorage.setItem(ROLE_KEY, selected);
     setRoomCode(cleanCode);
-    setRole(selected);
-    showToast("success", `${ROLE_LABEL[selected]} actif sur cet appareil.`);
+    setParticipant(nextParticipant);
+    haptic(20);
+    showToast("success", `Bienvenue ${nextParticipant.pseudo}.`);
   };
 
-  const logout = () => {
-    localStorage.removeItem(ROLE_KEY);
-    setRole(null);
+  const resetSession = () => {
+    haptic(20);
+    localStorage.removeItem(SESSION_ID_KEY);
+    localStorage.removeItem(PSEUDO_KEY);
+    setParticipant(null);
     setRoomId(null);
     setTab("feed");
   };
 
   const openNameEditor = () => {
-    if (!role) return;
-    setEditingName(role === "player_1" ? "p1" : "p2");
-    setNameDraft(myDisplayName);
+    if (!participant) return;
+    setEditingName(true);
+    setNameDraft(participant.pseudo);
   };
 
-  const saveName = async () => {
-    const cleaned = nameDraft.trim().slice(0, 20);
-    if (!cleaned || !editingName) return;
+  const saveName = () => {
+    if (!participant) return;
+    const cleaned = sanitizePseudo(nameDraft);
+    if (cleaned.length < 2) return;
 
-    const patch = editingName === "p1" ? { player1_label: cleaned } : { player2_label: cleaned };
-
-    if (editingName === "p1") {
-      localStorage.setItem(P1_NAME_KEY, cleaned);
-      setP1Name(cleaned);
-    } else {
-      localStorage.setItem(P2_NAME_KEY, cleaned);
-      setP2Name(cleaned);
-    }
-
-    setEditingName(null);
-    showToast("success", "Pseudo mis a jour.");
-
-    if (supabase && roomId) {
-      await supabase.from("rooms").update(patch).eq("id", roomId);
-    }
+    const nextParticipant = { ...participant, pseudo: cleaned };
+    localStorage.setItem(PSEUDO_KEY, cleaned);
+    setParticipant(nextParticipant);
+    setEditingName(false);
+    haptic(20);
+    showToast("success", "Pseudo mis à jour.");
   };
 
   const prepareMedia = async (nextFile: File | null) => {
     if (!nextFile) return;
     if (!nextFile.type.startsWith("video/") && !nextFile.type.startsWith("image/")) {
-      showToast("error", "Choisis une video ou une capture.");
+      showToast("error", "Choisis une vidéo, une photo ou une capture.");
       return;
     }
-    if (nextFile.size > MAX_SOURCE_FILE_BYTES) {
-      showToast("error", "Fichier source trop lourd.");
+    if (nextFile.size > MAX_DIRECT_UPLOAD_BYTES) {
+      showToast("error", "Fichier trop lourd pour un envoi direct.");
       return;
     }
 
     setIsPreparingMedia(true);
-    setCompressionProgress(0);
-    setCompressionNote("");
+    setMediaProgress(0);
+    setMediaNote("");
     clearPreparedMedia();
     setSourceFileName(nextFile.name);
 
     try {
       if (nextFile.type.startsWith("image/")) {
         const compressed = await compressImageToWebp(nextFile);
-        if (compressed.size > MAX_UPLOAD_BYTES) throw new Error("Capture encore trop lourde apres compression.");
         setPreparedFile(compressed);
         setThumbnailFile(compressed);
         setMediaKind("image");
         setUrl(setPreviewUrlState, null, compressed);
         setUrl(setThumbnailPreviewUrlState, null, compressed);
-        setCompressionProgress(1);
-        setCompressionNote(`Capture WebP: ${formatBytes(nextFile.size)} -> ${formatBytes(compressed.size)}`);
-        showToast("success", "Capture optimisee.");
+        setMediaProgress(1);
+        setMediaNote(`Image WebP: ${formatBytes(nextFile.size)} -> ${formatBytes(compressed.size)}`);
+        showToast("success", "Image optimisée.");
         return;
       }
 
-      const { thumbnail } = await extractVideoThumbnail(nextFile);
+      const thumbnail = await extractVideoThumbnail(nextFile);
+      setPreparedFile(nextFile);
       setThumbnailFile(thumbnail);
-      setUrl(setThumbnailPreviewUrlState, null, thumbnail);
-
-      const compressed = await compressVideoToMobile(nextFile, setCompressionProgress);
-      if (compressed.size > MAX_UPLOAD_BYTES) {
-        throw new Error(`Video optimisee encore trop lourde (${formatBytes(compressed.size)}).`);
-      }
-
-      setPreparedFile(compressed);
       setMediaKind("video");
-      setUrl(setPreviewUrlState, null, compressed);
-      setCompressionNote(`Video mobile: ${formatBytes(nextFile.size)} -> ${formatBytes(compressed.size)}`);
-      showToast("success", "Video compressee.");
+      setUrl(setPreviewUrlState, null, nextFile);
+      setUrl(setThumbnailPreviewUrlState, null, thumbnail);
+      setMediaProgress(1);
+      setMediaNote(`Vidéo originale conservée: ${formatBytes(nextFile.size)}. Miniature JPEG: ${formatBytes(thumbnail.size)}.`);
+      showToast("success", "Miniature générée, vidéo conservée.");
     } catch (err) {
       clearPreparedMedia();
-      const message = err instanceof Error ? err.message : "Media impossible a preparer.";
+      const message = err instanceof Error ? err.message : "Média impossible à préparer.";
       showToast("error", message);
     } finally {
       setIsPreparingMedia(false);
@@ -1003,102 +923,71 @@ export default function Home() {
   };
 
   const uploadNomination = async () => {
-    if (!role || !supabase) {
+    if (!participant || !supabase) {
       showToast("error", "Configure Supabase avant l'envoi.");
       return;
     }
 
     const cleanedComment = comment.trim();
     if (!preparedFile || !thumbnailFile || !mediaKind || cleanedComment.length < 3) {
-      showToast("error", "Ajoute un media et une note valide.");
+      showToast("error", "Ajoute un média et une note valide.");
       return;
     }
 
+    haptic(20);
     setUploadLoading(true);
-    const uploadedPaths: string[] = [];
+    setMediaProgress(0.15);
 
     try {
       const activeRoomId = roomId ?? (await ensureRoom());
       if (!activeRoomId) throw new Error("Salon introuvable.");
 
-      let imagePath: string;
-      let imageUrl: string;
-      let videoPath: string | null = null;
-      let videoUrl: string | null = null;
+      setMediaNote("Envoi de la miniature vers DigitalOcean Spaces...");
+      const imageUpload = await uploadFileToSpaces(thumbnailFile, "miniatures");
+      setMediaProgress(mediaKind === "video" ? 0.45 : 0.82);
 
+      let videoUpload: { key: string; publicUrl: string } | null = null;
       if (mediaKind === "video") {
-        videoPath = makeStoragePath(preparedFile, role, "videos");
-        const { error: videoUploadError } = await supabase.storage.from(BUCKET_NAME).upload(videoPath, preparedFile, {
-          cacheControl: "3600",
-          upsert: false,
-          contentType: preparedFile.type || "video/webm"
-        });
-        if (videoUploadError) throw videoUploadError;
-        uploadedPaths.push(videoPath);
-
-        imagePath = makeStoragePath(thumbnailFile, role, "thumbnails");
-        const { error: thumbnailUploadError } = await supabase.storage.from(BUCKET_NAME).upload(imagePath, thumbnailFile, {
-          cacheControl: "31536000",
-          upsert: false,
-          contentType: thumbnailFile.type || "image/jpeg"
-        });
-        if (thumbnailUploadError) throw thumbnailUploadError;
-        uploadedPaths.push(imagePath);
-
-        const {
-          data: { publicUrl }
-        } = supabase.storage.from(BUCKET_NAME).getPublicUrl(videoPath);
-        videoUrl = publicUrl;
-      } else {
-        imagePath = makeStoragePath(preparedFile, role, "thumbnails");
-        const { error: imageUploadError } = await supabase.storage.from(BUCKET_NAME).upload(imagePath, preparedFile, {
-          cacheControl: "31536000",
-          upsert: false,
-          contentType: preparedFile.type || "image/webp"
-        });
-        if (imageUploadError) throw imageUploadError;
-        uploadedPaths.push(imagePath);
+        setMediaNote("Envoi de la vidéo originale vers DigitalOcean Spaces...");
+        videoUpload = await uploadFileToSpaces(preparedFile, "videos");
+        setMediaProgress(0.82);
       }
-
-      const {
-        data: { publicUrl: resolvedImageUrl }
-      } = supabase.storage.from(BUCKET_NAME).getPublicUrl(imagePath);
-      imageUrl = resolvedImageUrl;
 
       const starterVote: VoteValue = {
         rating: clampRating(initialRating),
         choice: initialRating >= 3 ? "nominee" : "ejected",
+        pseudo: participant.pseudo,
         voted_at: new Date().toISOString()
       };
-      const votes: Votes = { [role]: starterVote };
+      const votes: Votes = { [participant.id]: starterVote };
 
       const { error: insertError } = await supabase.from("nominations").insert({
         room_id: activeRoomId,
-        image_url: imageUrl,
-        image_storage_path: imagePath,
-        video_url: videoUrl,
-        video_storage_path: videoPath,
+        image_url: imageUpload.publicUrl,
+        image_storage_path: imageUpload.key,
+        video_url: videoUpload?.publicUrl ?? null,
+        video_storage_path: videoUpload?.key ?? null,
         category_id: catId,
         comment: cleanedComment,
-        submitted_by: role,
+        submitted_by: participant.id,
         votes,
         status: computeStatus(votes)
       });
 
       if (insertError) throw insertError;
 
-      showToast("success", "Profil envoye au duel.");
+      setMediaProgress(1);
+      haptic([15, 40, 15]);
+      showToast("success", "Dossier uploadé dans le salon.");
       clearPreparedMedia();
       setComment("");
       setInitialRating(4);
       setCatId(CATEGORIES[0].id);
-      setTab("vote");
+      switchTab("vote");
+      await channelRef.current?.send({ type: "broadcast", event: "dossier", payload: { roomId: activeRoomId } });
       void fetchNominations(true, activeRoomId);
     } catch (err) {
-      if (uploadedPaths.length > 0 && supabase) {
-        await supabase.storage.from(BUCKET_NAME).remove(uploadedPaths);
-      }
-      const message = err instanceof Error ? err.message : "Echec de l'envoi.";
+      const message = err instanceof Error ? err.message : "Échec de l'envoi.";
       showToast("error", message);
     } finally {
       setUploadLoading(false);
@@ -1106,30 +995,41 @@ export default function Home() {
   };
 
   const applyVote = async (id: string, choice: VerdictChoice) => {
-    if (!role || !supabase || voteBusyId) return;
+    if (!participant || !supabase || voteBusyId) return;
 
     const nomination = nominations.find((item) => item.id === id);
     if (!nomination) return;
 
     const draft = clampRating(ratingDraftById[id] ?? 4);
     const finalRating = choice === "nominee" ? Math.max(3, draft) : Math.min(2, draft);
+    const votePayload: VoteValue = {
+      rating: finalRating,
+      choice,
+      pseudo: participant.pseudo,
+      voted_at: new Date().toISOString()
+    };
     const nextVotes: Votes = {
       ...nomination.votes,
-      [role]: {
-        rating: finalRating,
-        choice,
-        voted_at: new Date().toISOString()
-      }
+      [participant.id]: votePayload
     };
     const nextStatus = computeStatus(nextVotes);
 
     setVoteBusyId(id);
     setShakeId(id);
+    haptic([15, 40, 15]);
     window.setTimeout(() => setShakeId(null), 520);
 
     try {
-      const { error } = await supabase.from("nominations").update({ votes: nextVotes, status: nextStatus }).eq("id", id);
-      if (error) throw error;
+      const { error: rpcError } = await supabase.rpc("submit_nomination_vote", {
+        target_nomination_id: id,
+        voter_id: participant.id,
+        vote_payload: votePayload
+      });
+
+      if (rpcError) {
+        const { error: fallbackError } = await supabase.from("nominations").update({ votes: nextVotes, status: nextStatus }).eq("id", id);
+        if (fallbackError) throw fallbackError;
+      }
 
       setRatingDraftById((prev) => {
         const copy = { ...prev };
@@ -1138,7 +1038,8 @@ export default function Home() {
       });
 
       voteBurst(choice);
-      showToast("success", nextStatus === "accepted" ? "Profil sacre." : "Profil ejecte.");
+      showToast("success", nextStatus === "accepted" ? "Verdict collectif: SACRÉ." : nextStatus === "rejected" ? "Verdict collectif: ÉJECTÉ." : "Vote enregistré.");
+      await channelRef.current?.send({ type: "broadcast", event: "vote", payload: { id, status: nextStatus } });
       void fetchNominations(true);
     } catch (err) {
       const message = err instanceof Error ? err.message : "Impossible de voter.";
@@ -1148,35 +1049,7 @@ export default function Home() {
     }
   };
 
-  const deleteNomination = async (id: string) => {
-    if (!supabase || deleteBusyId) return;
-
-    const nomination = nominations.find((item) => item.id === id);
-    const confirmed = window.confirm("Supprimer ce profil ?");
-    if (!confirmed) return;
-
-    setDeleteBusyId(id);
-
-    try {
-      const storagePaths = [nomination?.video_storage_path, nomination?.image_storage_path].filter((path): path is string => Boolean(path));
-      if (storagePaths.length > 0) {
-        await supabase.storage.from(BUCKET_NAME).remove(storagePaths);
-      }
-
-      const { error } = await supabase.from("nominations").delete().eq("id", id);
-      if (error) throw error;
-
-      showToast("info", "Profil supprime.");
-      void fetchNominations(true);
-    } catch (err) {
-      const message = err instanceof Error ? err.message : "Suppression impossible.";
-      showToast("error", message);
-    } finally {
-      setDeleteBusyId(null);
-    }
-  };
-
-  if (bootingRole) {
+  if (bootingSession) {
     return (
       <div className="tabloid-app flex items-center justify-center">
         <PaperBackdrop />
@@ -1187,64 +1060,57 @@ export default function Home() {
     );
   }
 
-  if (!role) {
+  if (!participant) {
     return (
       <div className="tabloid-app">
         <PaperBackdrop />
         <motion.main
           {...revealContainer}
-          className="relative z-10 mx-auto flex min-h-svh w-full max-w-md flex-col justify-center px-4"
+          className="relative z-10 mx-auto flex min-h-svh w-full max-w-[30rem] flex-col justify-center px-4"
           style={{ paddingTop: "calc(env(safe-area-inset-top) + 18px)", paddingBottom: "calc(env(safe-area-inset-bottom) + 18px)" }}
         >
           <motion.div {...revealItem} className="mb-4 flex items-center justify-between border-b-4 border-black pb-2">
             <Sticker tone="red" className="-rotate-2">
-              Live dossier
+              Salon actif
             </Sticker>
-            <span className="text-xs font-black uppercase">Edition duo</span>
+            <span className="text-xs font-black uppercase">Session ouverte</span>
           </motion.div>
 
-          <motion.h1 {...revealItem} className="tabloid-headline mb-5 max-w-[7ch] text-[4.35rem] leading-[0.76] sm:text-8xl">
+          <motion.h1 {...revealItem} className="tabloid-headline mb-5 max-w-[7ch] text-[clamp(3.25rem,18vw,5.8rem)] leading-[0.76]">
             Nominees
             <span className="block bg-black px-2 text-white">or</span>
             <span className="block text-red-600">Denominees</span>
           </motion.h1>
 
-          <motion.p {...revealItem} className="mb-6 border-y-4 border-black py-3 text-xl font-black uppercase leading-none">
-            Un tabloide prive pour sacrer ou ejecter les captures TikTok du mois.
+          <motion.p {...revealItem} className="mb-6 border-y-4 border-black py-3 text-[clamp(1.15rem,5vw,1.55rem)] font-black uppercase leading-none">
+            Un salon collaboratif pour sacrer ou éjecter les dossiers TikTok du mois.
           </motion.p>
 
-          <motion.div {...revealItem}>
-            <BrutalCard className="mb-4 p-4">
+          <motion.div {...revealItem} className="space-y-4">
+            <BrutalCard className="p-4">
               <label className="block">
-                <span className="mb-2 block text-xs font-black uppercase">Code salon</span>
-                <input
-                  value={roomCode}
-                  onChange={(event) => setRoomCode(sanitizeRoomCode(event.target.value))}
-                  maxLength={24}
-                  className="brutal-input w-full px-3 py-3 text-xl font-black uppercase"
-                />
+                <span className="mb-2 block text-xs font-black uppercase">Pseudo</span>
+                <input value={pseudoDraft} onChange={(event) => setPseudoDraft(sanitizePseudo(event.target.value))} maxLength={24} className="brutal-input w-full px-3 py-3 text-xl font-black uppercase" placeholder="TON PSEUDO" />
               </label>
             </BrutalCard>
-          </motion.div>
 
-          {!supabase && (
-            <motion.div {...revealItem} className="mb-4 border-2 border-black bg-yellow-300 p-3 text-sm font-black uppercase">
-              Variables Supabase manquantes. La sync attend la configuration.
-            </motion.div>
-          )}
+            <BrutalCard className="p-4">
+              <label className="block">
+                <span className="mb-2 block text-xs font-black uppercase">Code salon</span>
+                <input value={roomCode} onChange={(event) => setRoomCode(sanitizeRoomCode(event.target.value))} maxLength={24} className="brutal-input w-full px-3 py-3 text-xl font-black uppercase" />
+              </label>
+            </BrutalCard>
 
-          <motion.div {...revealItem} className="grid gap-3">
-            {(["player_1", "player_2"] as const).map((item, index) => (
-              <button key={item} onClick={() => selectRole(item)} className="group text-left">
-                <BrutalCard tone={index === 0 ? "red" : "yellow"} className="flex items-center justify-between p-4 transition group-active:translate-x-1 group-active:translate-y-1">
-                  <span>
-                    <span className="block text-3xl font-black uppercase leading-none">{item === "player_1" ? p1Name : p2Name}</span>
-                    <span className="mt-1 block text-xs font-black uppercase">{ROLE_LABEL[item]}</span>
-                  </span>
-                  <UserCircle className="h-10 w-10" strokeWidth={1.5} />
-                </BrutalCard>
-              </button>
-            ))}
+            {!supabase && (
+              <div className="border-4 border-black bg-yellow-300 p-3 text-sm font-black uppercase">
+                Variables Supabase manquantes. La synchronisation attend la configuration.
+              </div>
+            )}
+
+            <button onClick={startSession} className="brutal-submit flex w-full items-center justify-center gap-2">
+              <UserCircle className="h-6 w-6" />
+              Entrer dans le salon
+            </button>
           </motion.div>
         </motion.main>
       </div>
@@ -1252,7 +1118,7 @@ export default function Home() {
   }
 
   return (
-    <div className="tabloid-app" style={{ paddingBottom: "calc(env(safe-area-inset-bottom) + 100px)" }}>
+    <div className="tabloid-app" style={{ paddingBottom: "calc(env(safe-area-inset-bottom) + 94px)" }}>
       <PaperBackdrop />
 
       <AnimatePresence>
@@ -1265,7 +1131,7 @@ export default function Home() {
             style={{ top: "calc(env(safe-area-inset-top) + 10px)" }}
           >
             <div
-              className={`flex items-center gap-2 border-2 border-black px-4 py-3 text-sm font-black uppercase shadow-[5px_5px_0_#000] ${
+              className={`flex items-center gap-2 border-4 border-black px-4 py-3 text-sm font-black uppercase shadow-[5px_5px_0_#000] ${
                 toast.tone === "success" ? "bg-yellow-300 text-black" : toast.tone === "error" ? "bg-red-600 text-white" : "bg-black text-white"
               }`}
             >
@@ -1276,33 +1142,31 @@ export default function Home() {
         )}
       </AnimatePresence>
 
-      <main className="relative z-10 mx-auto w-full max-w-md px-4" style={{ paddingTop: "calc(env(safe-area-inset-top) + 8px)" }}>
+      <main
+        className="relative z-10 mx-auto h-[calc(100svh-6.25rem)] w-full max-w-[30rem] overflow-y-auto overscroll-contain px-4 pb-7"
+        style={{ paddingTop: "calc(env(safe-area-inset-top) + 8px)" }}
+      >
         <header className="sticky top-0 z-30 mb-4 bg-[#f0f0f0] py-3">
           <div className="border-b-4 border-black pb-2">
             <div className="flex items-center justify-between">
               <button onClick={openNameEditor} className="min-w-0 text-left">
-                <p className="text-[10px] font-black uppercase text-red-600">Session active</p>
-                <p className="truncate text-2xl font-black uppercase leading-none">
-                  {myDisplayName} <Pencil className="mb-1 ml-1 inline h-4 w-4" />
+                <p className="text-[10px] font-black uppercase text-red-600">Salon actif</p>
+                <p className="truncate text-[clamp(1.45rem,7vw,2.25rem)] font-black uppercase leading-none">
+                  {participant.pseudo} <Pencil className="mb-1 ml-1 inline h-4 w-4" />
                 </p>
               </button>
               <div className="flex items-center gap-2">
-                <button
-                  onClick={() => void fetchNominations()}
-                  disabled={syncing || !supabase}
-                  className="brutal-icon-button disabled:opacity-50"
-                  aria-label="Synchroniser"
-                >
+                <button onClick={() => void fetchNominations()} disabled={syncing || !supabase} className="brutal-icon-button disabled:opacity-50" aria-label="Synchroniser">
                   <RefreshCw className={`h-4 w-4 ${syncing ? "animate-spin" : ""}`} />
                 </button>
-                <button onClick={logout} className="brutal-icon-button" aria-label="Quitter">
+                <button onClick={resetSession} className="brutal-icon-button" aria-label="Changer de session">
                   <LogOut className="h-4 w-4" />
                 </button>
               </div>
             </div>
-            <div className="ticker mt-3 border-2 border-black bg-black text-white">
+            <div className="ticker mt-3 border-4 border-black bg-black text-white">
               <span className="ticker-track">
-                ROOM {roomCode} / NEXT CEREMONY {countdown.days}J {countdown.hours}H {countdown.mins}M / SYNC {lastSyncLabel} / ROOM {roomCode} / NEXT CEREMONY {countdown.days}J {countdown.hours}H {countdown.mins}M
+                SALON {roomCode} / PROCHAINE CÉRÉMONIE {countdown.days}J {countdown.hours}H {countdown.mins}M / SYNCHRO {lastSyncLabel} / VOTES EN ATTENTE {pendingForMe.length} / SALON {roomCode}
               </span>
             </div>
           </div>
@@ -1311,15 +1175,15 @@ export default function Home() {
         <section className="mb-4 grid grid-cols-3 gap-2">
           <BrutalCard tone="yellow" className="p-2">
             <p className="text-[10px] font-black uppercase">A voter</p>
-            <p className="text-4xl font-black leading-none">{pendingForMe.length}</p>
+            <p className="text-[clamp(2rem,11vw,3rem)] font-black leading-none">{pendingForMe.length}</p>
           </BrutalCard>
           <BrutalCard tone="red" className="p-2">
-            <p className="text-[10px] font-black uppercase">Sacres</p>
-            <p className="text-4xl font-black leading-none">{accepted.length}</p>
+            <p className="text-[10px] font-black uppercase">Sacrés</p>
+            <p className="text-[clamp(2rem,11vw,3rem)] font-black leading-none">{accepted.length}</p>
           </BrutalCard>
           <BrutalCard tone="black" className="p-2">
-            <p className="text-[10px] font-black uppercase">Done</p>
-            <p className="text-4xl font-black leading-none">{progressDone}%</p>
+            <p className="text-[10px] font-black uppercase">Actés</p>
+            <p className="text-[clamp(2rem,11vw,3rem)] font-black leading-none">{progressDone}%</p>
           </BrutalCard>
         </section>
 
@@ -1338,15 +1202,15 @@ export default function Home() {
               <motion.div {...revealItem}>
                 <BrutalCard tone="red" className="relative overflow-hidden p-4">
                   <Sticker tone="yellow" className="-rotate-2">
-                    Exclusive
+                    Exclusif
                   </Sticker>
-                  <h2 className="tabloid-headline mt-3 text-[4rem] leading-[0.76] text-white">
-                    Trophy
+                  <h2 className="tabloid-headline mt-3 text-[clamp(3.2rem,17vw,5.5rem)] leading-[0.76] text-white">
+                    Cérémonie
                     <span className="block text-yellow-300">TikTok</span>
-                    <span className="block text-black">Ceremony</span>
+                    <span className="block text-black">du mois</span>
                   </h2>
-                  <p className="mt-4 border-t-4 border-black pt-3 text-xl font-black uppercase leading-none text-white">
-                    Upload. Vote. Sacre. Les videos lourdes disparaissent, les preuves restent.
+                  <p className="mt-4 border-t-4 border-black pt-3 text-[clamp(1.1rem,5vw,1.5rem)] font-black uppercase leading-none text-white">
+                    Uploader. Voter. Sacrer. L&apos;archive reste permanente.
                   </p>
                 </BrutalCard>
               </motion.div>
@@ -1354,17 +1218,17 @@ export default function Home() {
               <motion.div {...revealItem}>
                 <BrutalCard className="overflow-hidden">
                   <div className="relative border-b-4 border-black bg-black">
-                    {heroWinner ? <MediaFrame nomination={heroWinner} height="h-[24rem]" controls={false} /> : <div className="flex h-[24rem] items-center justify-center bg-black text-white"><Camera className="h-12 w-12" /></div>}
+                    {heroWinner ? <MediaFrame nomination={heroWinner} height="h-[min(58svh,28rem)]" controls={false} /> : <div className="flex h-[min(58svh,28rem)] items-center justify-center bg-black text-white"><Camera className="h-12 w-12" /></div>}
                     <Sticker tone="yellow" className="absolute left-3 top-3 rotate-2">
-                      Front page
+                      À la une
                     </Sticker>
                   </div>
                   <div className="grid grid-cols-[1fr_auto] gap-3 p-3">
                     <div>
                       <p className="text-[10px] font-black uppercase text-red-600">Flux public du salon</p>
-                      <p className="line-clamp-2 text-2xl font-black uppercase leading-none">{heroWinner ? heroWinner.comment : "Aucun profil publie"}</p>
+                      <p className="line-clamp-2 text-[clamp(1.35rem,7vw,2rem)] font-black uppercase leading-none">{heroWinner ? heroWinner.comment : "Aucun dossier publié"}</p>
                     </div>
-                    <button onClick={() => setTab("studio")} className="brutal-icon-button bg-yellow-300">
+                    <button onClick={() => switchTab("studio")} className="brutal-icon-button bg-yellow-300" aria-label="Uploader un dossier">
                       <UploadCloud className="h-5 w-5" />
                     </button>
                   </div>
@@ -1376,23 +1240,24 @@ export default function Home() {
                   <BrutalCard className="p-8 text-center">
                     <Camera className="mx-auto mb-3 h-9 w-9" />
                     <p className="text-2xl font-black uppercase leading-none">Aucune capture.</p>
-                    <p className="mt-2 text-sm font-bold uppercase">Le premier upload ouvre la ceremonie.</p>
+                    <p className="mt-2 text-sm font-bold uppercase">Le premier upload ouvre la cérémonie.</p>
                   </BrutalCard>
                 ) : (
                   feedItems.map((nomination, index) => {
                     const category = getCategoryMeta(nomination.category_id);
                     const Icon = category.icon;
+                    const rating = averageRating(nomination);
                     return (
                       <BrutalCard key={nomination.id} tone={index % 3 === 0 ? "yellow" : "paper"} className="overflow-hidden">
-                        <div className="grid grid-cols-[6rem_1fr] border-b-2 border-black">
-                          <div className="media-cut h-24 border-r-2 border-black">
+                        <div className="grid grid-cols-[6rem_1fr] border-b-4 border-black">
+                          <div className="media-cut h-24 border-r-4 border-black">
                             <MediaFrame nomination={nomination} height="h-24" controls={false} />
                           </div>
                           <div className="min-w-0 p-2">
-                            <span className={`inline-flex border-2 px-2 py-1 text-[10px] font-black uppercase ${statusClass(nomination.status)}`}>{statusLabel(nomination.status)}</span>
+                            <span className={`inline-flex border-4 px-2 py-1 text-[10px] font-black uppercase ${statusClass(nomination.status)}`}>{statusLabel(nomination.status)}</span>
                             <p className="mt-2 truncate text-lg font-black uppercase leading-none">&quot;{nomination.comment}&quot;</p>
                             <p className="mt-2 flex items-center gap-1 text-[11px] font-black uppercase">
-                              <Icon className="h-3.5 w-3.5 text-red-600" /> {category.label}
+                              <Icon className="h-3.5 w-3.5 text-red-600" /> {category.label} / {voteCount(nomination.votes)} votes / {rating ? rating.toFixed(1) : "-"} sur 5
                             </p>
                           </div>
                         </div>
@@ -1416,10 +1281,10 @@ export default function Home() {
             >
               <BrutalCard tone="black" className="p-4">
                 <Sticker tone="red" className="-rotate-2">
-                  Speed verdict
+                  Verdict express
                 </Sticker>
-                <h2 className="tabloid-headline mt-3 text-[3.8rem] leading-[0.78] text-white">Duel express</h2>
-                <p className="mt-3 text-xl font-black uppercase leading-none text-yellow-300">Un swipe, une note, un verdict.</p>
+                <h2 className="tabloid-headline mt-3 text-[clamp(3rem,16vw,5rem)] leading-[0.78] text-white">Duel express</h2>
+                <p className="mt-3 text-[clamp(1.1rem,5vw,1.45rem)] font-black uppercase leading-none text-yellow-300">Une note, un vote, un verdict collectif.</p>
               </BrutalCard>
 
               {loadingList ? (
@@ -1429,8 +1294,8 @@ export default function Home() {
               ) : pendingForMe.length === 0 ? (
                 <BrutalCard tone="yellow" className="p-8 text-center">
                   <BadgeCheck className="mx-auto mb-3 h-10 w-10" />
-                  <p className="text-3xl font-black uppercase leading-none">File vide.</p>
-                  <p className="mt-2 text-sm font-bold uppercase">Demande a {otherDisplayName} d&apos;envoyer une capture.</p>
+                  <p className="text-3xl font-black uppercase leading-none">File d&apos;attente vide.</p>
+                  <p className="mt-2 text-sm font-bold uppercase">Aucun dossier à voter pour toi.</p>
                 </BrutalCard>
               ) : (
                 pendingForMe.map((nomination) => {
@@ -1450,11 +1315,11 @@ export default function Home() {
                       className="brutal-card overflow-hidden"
                     >
                       <div className="relative border-b-4 border-black bg-black">
-                        <MediaFrame nomination={nomination} height="h-[25rem]" />
+                        <MediaFrame nomination={nomination} height="h-[min(62svh,30rem)]" />
                         <Sticker tone="red" className="absolute left-3 top-3 -rotate-2">
-                          Live evidence
+                          Preuve vidéo
                         </Sticker>
-                        <div className="absolute bottom-3 left-3 right-3 border-2 border-black bg-[#f0f0f0] p-2">
+                        <div className="absolute bottom-3 left-3 right-3 border-4 border-black bg-[#f0f0f0] p-2">
                           <p className="flex items-center gap-1 text-[10px] font-black uppercase text-red-600">
                             <Icon className="h-3.5 w-3.5" /> {category.label}
                           </p>
@@ -1464,19 +1329,11 @@ export default function Home() {
                       <div className="space-y-3 p-3">
                         <StarInput value={draftRating} onChange={(value) => setRatingDraftById((prev) => ({ ...prev, [nomination.id]: value }))} size="lg" />
                         <div className="grid grid-cols-2 gap-2">
-                          <button
-                            onClick={() => void applyVote(nomination.id, "nominee")}
-                            disabled={voteBusyId === nomination.id}
-                            className="brutal-action bg-yellow-300 text-black disabled:opacity-50"
-                          >
+                          <button onClick={() => void applyVote(nomination.id, "nominee")} disabled={voteBusyId === nomination.id} className="brutal-action bg-yellow-300 text-black disabled:opacity-50">
                             Sacrer
                           </button>
-                          <button
-                            onClick={() => void applyVote(nomination.id, "ejected")}
-                            disabled={voteBusyId === nomination.id}
-                            className="brutal-action bg-red-600 text-white disabled:opacity-50"
-                          >
-                            Ejecter
+                          <button onClick={() => void applyVote(nomination.id, "ejected")} disabled={voteBusyId === nomination.id} className="brutal-action bg-red-600 text-white disabled:opacity-50">
+                            Éjecter
                           </button>
                         </div>
                       </div>
@@ -1499,17 +1356,17 @@ export default function Home() {
             >
               <BrutalCard tone="red" className="p-4">
                 <Sticker tone="yellow" className="-rotate-2">
-                  Upload desk
+                  Uploader un dossier
                 </Sticker>
-                <h2 className="tabloid-headline mt-3 text-[3.6rem] leading-[0.78] text-white">Capture maintenant</h2>
-                <p className="mt-3 text-xl font-black uppercase leading-none text-white">Video 4 min, photo ou screenshot. Compression locale avant Supabase.</p>
+                <h2 className="tabloid-headline mt-3 text-[clamp(3rem,16vw,5rem)] leading-[0.78] text-white">Studio dossier</h2>
+                <p className="mt-3 text-[clamp(1.1rem,5vw,1.45rem)] font-black uppercase leading-none text-white">Vidéo originale, photo ou capture. Seule la miniature passe par canvas.</p>
               </BrutalCard>
 
               <BrutalCard className="p-3">
                 <button
                   onClick={() => fileInputRef.current?.click()}
                   disabled={isPreparingMedia || uploadLoading}
-                  className="relative flex min-h-[19rem] w-full items-center justify-center overflow-hidden border-4 border-black bg-black text-left transition active:translate-x-1 active:translate-y-1 disabled:opacity-70"
+                  className="relative flex min-h-[min(48svh,22rem)] w-full items-center justify-center overflow-hidden border-4 border-black bg-black text-left transition active:translate-x-1 active:translate-y-1 disabled:opacity-70"
                 >
                   {previewUrl ? (
                     mediaKind === "video" ? (
@@ -1520,25 +1377,25 @@ export default function Home() {
                   ) : (
                     <span className="flex flex-col items-center px-6 text-center text-white">
                       {isPreparingMedia ? <Loader2 className="mb-3 h-9 w-9 animate-spin text-yellow-300" /> : <UploadCloud className="mb-3 h-9 w-9 text-yellow-300" />}
-                      <span className="text-3xl font-black uppercase leading-none">{isPreparingMedia ? "Compression" : "Choisir media"}</span>
-                      <span className="mt-2 text-sm font-black uppercase text-yellow-300">Video, photo, capture d&apos;ecran</span>
+                      <span className="text-3xl font-black uppercase leading-none">{isPreparingMedia ? "Chargement du studio..." : "Choisir un média"}</span>
+                      <span className="mt-2 text-sm font-black uppercase text-yellow-300">Vidéo, photo, capture d&apos;écran</span>
                     </span>
                   )}
                   <input ref={fileInputRef} type="file" accept="video/*,image/*" onChange={(event) => void prepareMedia(event.target.files?.[0] ?? null)} className="hidden" />
                 </button>
               </BrutalCard>
 
-              {(isPreparingMedia || compressionNote) && (
+              {(isPreparingMedia || mediaNote || uploadLoading) && (
                 <BrutalCard tone="yellow" className="p-3">
                   <div className="flex items-center justify-between gap-3">
                     <div className="min-w-0">
-                      <p className="truncate text-sm font-black uppercase">{sourceFileName || "Media"}</p>
-                      <p className="mt-1 truncate text-xs font-black uppercase">{compressionNote || "Compression mobile 720p en cours..."}</p>
+                      <p className="truncate text-sm font-black uppercase">{sourceFileName || "Média"}</p>
+                      <p className="mt-1 truncate text-xs font-black uppercase">{mediaNote || "Préparation du média..."}</p>
                     </div>
-                    <p className="text-4xl font-black leading-none">{Math.round(compressionProgress * 100)}%</p>
+                    <p className="text-4xl font-black leading-none">{Math.round(mediaProgress * 100)}%</p>
                   </div>
-                  <div className="mt-3 h-5 border-2 border-black bg-[#f0f0f0]">
-                    <motion.div className="h-full bg-red-600" animate={{ width: `${Math.round(compressionProgress * 100)}%` }} />
+                  <div className="mt-3 h-5 border-4 border-black bg-[#f0f0f0]">
+                    <motion.div className="h-full bg-red-600" animate={{ width: `${Math.round(mediaProgress * 100)}%` }} />
                   </div>
                 </BrutalCard>
               )}
@@ -1554,7 +1411,7 @@ export default function Home() {
               <textarea
                 value={comment}
                 onChange={(event) => setComment(event.target.value)}
-                placeholder="Pourquoi ce profil merite un verdict ?"
+                placeholder="Pourquoi ce dossier mérite un verdict ?"
                 rows={3}
                 maxLength={240}
                 className="brutal-input w-full resize-none p-4 text-lg font-black uppercase"
@@ -1562,17 +1419,11 @@ export default function Home() {
 
               <BrutalCard tone="yellow" className="p-3">
                 <StarInput value={initialRating} onChange={setInitialRating} size="lg" />
-                <p className="mt-3 border-t-2 border-black pt-2 text-center text-sm font-black uppercase">
-                  Vote initial: {verdictLabel(initialRating >= 3 ? "nominee" : "ejected")}
-                </p>
+                <p className="mt-3 border-t-4 border-black pt-2 text-center text-sm font-black uppercase">Vote initial: {verdictLabel(initialRating >= 3 ? "nominee" : "ejected")}</p>
               </BrutalCard>
 
-              <button
-                onClick={() => void uploadNomination()}
-                disabled={uploadLoading || !uploadReady}
-                className="brutal-submit flex w-full items-center justify-center gap-2 disabled:opacity-50"
-              >
-                {uploadLoading ? <Loader2 className="h-6 w-6 animate-spin" /> : "Envoyer au duel"}
+              <button onClick={() => void uploadNomination()} disabled={uploadLoading || !uploadReady} className="brutal-submit flex w-full items-center justify-center gap-2 disabled:opacity-50">
+                {uploadLoading ? <Loader2 className="h-6 w-6 animate-spin" /> : "Uploader le dossier"}
               </button>
             </motion.section>
           )}
@@ -1589,15 +1440,15 @@ export default function Home() {
             >
               <BrutalCard tone="black" className="p-4 text-white">
                 <Medal className="mb-3 h-10 w-10 text-yellow-300" />
-                <h2 className="tabloid-headline text-[3.6rem] leading-[0.78]">Trophees du mois</h2>
-                <p className="mt-3 text-xl font-black uppercase leading-none text-yellow-300">Le premier jour du mois tranche le palmares.</p>
+                <h2 className="tabloid-headline text-[clamp(3rem,16vw,5rem)] leading-[0.78]">Trophées du mois</h2>
+                <p className="mt-3 text-[clamp(1.1rem,5vw,1.45rem)] font-black uppercase leading-none text-yellow-300">Le premier jour du mois révèle le palmarès.</p>
               </BrutalCard>
 
               {categoryWinners.length === 0 ? (
                 <BrutalCard tone="yellow" className="p-8 text-center">
                   <Trophy className="mx-auto mb-3 h-10 w-10" />
-                  <p className="text-3xl font-black uppercase leading-none">Aucun sacre.</p>
-                  <p className="mt-2 text-sm font-black uppercase">Deux votes Nomine ouvrent le palmares.</p>
+                  <p className="text-3xl font-black uppercase leading-none">Aucun sacré.</p>
+                  <p className="mt-2 text-sm font-black uppercase">Une moyenne collective de 3/5 ouvre le palmarès.</p>
                 </BrutalCard>
               ) : (
                 categoryWinners.map(({ category, winner }, index) => {
@@ -1613,7 +1464,7 @@ export default function Home() {
                             <Icon className="h-3.5 w-3.5" /> {category.label}
                           </p>
                           <p className="mt-2 truncate text-2xl font-black uppercase leading-none">&quot;{winner.comment}&quot;</p>
-                          <p className="mt-2 inline-flex border-2 border-black bg-red-600 px-2 py-1 text-xs font-black uppercase text-white">{averageRating(winner)?.toFixed(1)} / 5</p>
+                          <p className="mt-2 inline-flex border-4 border-black bg-red-600 px-2 py-1 text-xs font-black uppercase text-white">{averageRating(winner)?.toFixed(1)} / 5</p>
                         </div>
                       </div>
                     </BrutalCard>
@@ -1634,8 +1485,8 @@ export default function Home() {
               className="space-y-3"
             >
               <BrutalCard tone="red" className="p-4">
-                <h2 className="tabloid-headline text-[3.6rem] leading-[0.78] text-white">Archives</h2>
-                <p className="mt-3 text-xl font-black uppercase leading-none text-white">Les videos peuvent disparaitre. La miniature reste comme preuve.</p>
+                <h2 className="tabloid-headline text-[clamp(3rem,16vw,5rem)] leading-[0.78] text-white">Archives</h2>
+                <p className="mt-3 text-[clamp(1.1rem,5vw,1.45rem)] font-black uppercase leading-none text-white">Vidéos, miniatures et verdicts restent permanents.</p>
               </BrutalCard>
 
               {archive.length === 0 ? (
@@ -1648,18 +1499,15 @@ export default function Home() {
                   const rating = averageRating(nomination);
                   return (
                     <BrutalCard key={nomination.id} tone={nomination.status === "accepted" ? "yellow" : "paper"} className="overflow-hidden">
-                      <div className="grid grid-cols-[5.5rem_1fr_auto]">
-                        <div className="media-cut h-24 border-r-2 border-black">
+                      <div className="grid grid-cols-[5.5rem_1fr]">
+                        <div className="media-cut h-24 border-r-4 border-black">
                           <MediaFrame nomination={nomination} height="h-24" controls={false} />
                         </div>
                         <div className="min-w-0 p-2">
-                          <span className={`inline-flex border-2 px-2 py-1 text-[10px] font-black uppercase ${statusClass(nomination.status)}`}>{statusLabel(nomination.status)}</span>
+                          <span className={`inline-flex border-4 px-2 py-1 text-[10px] font-black uppercase ${statusClass(nomination.status)}`}>{statusLabel(nomination.status)}</span>
                           <p className="mt-2 truncate text-lg font-black uppercase leading-none">&quot;{nomination.comment}&quot;</p>
-                          <p className="mt-1 text-xs font-black uppercase">{rating ? rating.toFixed(1) : "-"} / 5</p>
+                          <p className="mt-1 text-xs font-black uppercase">{rating ? rating.toFixed(1) : "-"} / 5 / {voteCount(nomination.votes)} votes</p>
                         </div>
-                        <button onClick={() => void deleteNomination(nomination.id)} className="border-l-2 border-black px-3 text-black transition active:bg-red-600 active:text-white" aria-label="Supprimer">
-                          <Trash2 className="h-5 w-5" />
-                        </button>
                       </div>
                     </BrutalCard>
                   );
@@ -1674,10 +1522,10 @@ export default function Home() {
         <motion.button
           initial={reduceMotion ? { opacity: 1 } : { opacity: 0, scale: 0.96, y: 8 }}
           animate={{ opacity: 1, scale: 1, y: 0 }}
-          onClick={() => setTab("studio")}
+          onClick={() => switchTab("studio")}
           className="brutal-fab fixed right-5 z-40 flex h-16 w-16 items-center justify-center"
           style={{ bottom: "calc(env(safe-area-inset-bottom) + 84px)" }}
-          aria-label="Ajouter"
+          aria-label="Uploader un dossier"
         >
           <Plus className="h-8 w-8" />
         </motion.button>
@@ -1689,16 +1537,16 @@ export default function Home() {
             <BrutalCard className="w-full max-w-sm p-4">
               <div className="mb-4 flex items-center justify-between border-b-4 border-black pb-2">
                 <h3 className="text-3xl font-black uppercase leading-none">Changer pseudo</h3>
-                <button onClick={() => setEditingName(null)} className="brutal-icon-button" aria-label="Fermer">
+                <button onClick={() => setEditingName(false)} className="brutal-icon-button" aria-label="Fermer">
                   <X className="h-4 w-4" />
                 </button>
               </div>
-              <input autoFocus value={nameDraft} onChange={(event) => setNameDraft(event.target.value)} maxLength={20} className="brutal-input mb-4 w-full px-3 py-3 text-lg font-black uppercase" />
+              <input autoFocus value={nameDraft} onChange={(event) => setNameDraft(sanitizePseudo(event.target.value))} maxLength={24} className="brutal-input mb-4 w-full px-3 py-3 text-lg font-black uppercase" />
               <div className="grid grid-cols-2 gap-2">
-                <button onClick={() => setEditingName(null)} className="brutal-action bg-[#f0f0f0] text-black">
+                <button onClick={() => setEditingName(false)} className="brutal-action bg-[#f0f0f0] text-black">
                   Annuler
                 </button>
-                <button onClick={() => void saveName()} className="brutal-action bg-yellow-300 text-black">
+                <button onClick={saveName} className="brutal-action bg-yellow-300 text-black">
                   Valider
                 </button>
               </div>
@@ -1708,18 +1556,18 @@ export default function Home() {
       </AnimatePresence>
 
       <nav className="bottom-tabloid fixed bottom-0 left-0 right-0 z-40 px-2 pt-2" style={{ paddingBottom: "calc(env(safe-area-inset-bottom) + 10px)" }}>
-        <div className="mx-auto grid w-full max-w-md grid-cols-5 gap-1">
+        <div className="mx-auto grid w-full max-w-[30rem] grid-cols-5 gap-1">
           {TAB_ITEMS.map((item) => {
             const Icon = item.icon;
             const active = tab === item.id;
             const badge = item.id === "vote" ? pendingForMe.length : 0;
 
             return (
-              <button key={item.id} onClick={() => setTab(item.id)} className={`relative flex flex-col items-center justify-center gap-1 border-2 border-black px-1 py-2 transition active:translate-x-0.5 active:translate-y-0.5 ${active ? "bg-red-600 text-white" : "bg-[#f0f0f0] text-black"}`}>
+              <button key={item.id} onClick={() => switchTab(item.id)} className={`relative flex flex-col items-center justify-center gap-1 border-4 border-black px-1 py-2 transition active:translate-x-0.5 active:translate-y-0.5 ${active ? "bg-red-600 text-white" : "bg-[#f0f0f0] text-black"}`}>
                 <Icon className="relative z-10 h-5 w-5" strokeWidth={1.5} />
                 <span className="relative z-10 text-[9px] font-black uppercase">{item.label}</span>
                 {badge > 0 && (
-                  <span className="absolute right-0 top-0 z-20 inline-flex h-5 min-w-[20px] items-center justify-center border-b-2 border-l-2 border-black bg-yellow-300 px-1 text-[9px] font-black text-black">
+                  <span className="absolute right-0 top-0 z-20 inline-flex h-5 min-w-[20px] items-center justify-center border-b-4 border-l-4 border-black bg-yellow-300 px-1 text-[9px] font-black text-black">
                     {badge > 9 ? "9+" : badge}
                   </span>
                 )}
