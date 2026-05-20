@@ -2,10 +2,10 @@
 
 /* eslint-disable @next/next/no-img-element */
 
-import { useCallback, useEffect, useMemo, useRef, useState, type CSSProperties, type ReactNode } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import confetti from "canvas-confetti";
 import { getSupabaseBrowserClient } from "@/lib/supabase";
-import { AnimatePresence, motion, type PanInfo, useReducedMotion, useScroll, useTransform } from "framer-motion";
+import { AnimatePresence, motion, type PanInfo, useReducedMotion } from "framer-motion";
 import {
   Archive,
   BadgeCheck,
@@ -213,15 +213,15 @@ function getCategoryMeta(value: string): CategoryMeta {
 }
 
 function statusLabel(status: NominationStatus) {
-  if (status === "accepted") return "Sacre";
-  if (status === "rejected") return "Ejecte";
-  return "A voter";
+  if (status === "accepted") return "SACRE";
+  if (status === "rejected") return "EJECTE";
+  return "A VOTER";
 }
 
 function statusClass(status: NominationStatus) {
-  if (status === "accepted") return "border-emerald-400/30 bg-emerald-500/10 text-emerald-300";
-  if (status === "rejected") return "border-red-400/30 bg-red-500/10 text-red-300";
-  return "border-amber-400/30 bg-amber-500/10 text-amber-200";
+  if (status === "accepted") return "border-black bg-yellow-300 text-black";
+  if (status === "rejected") return "border-black bg-red-600 text-white";
+  return "border-black bg-black text-white";
 }
 
 function formatBytes(bytes: number) {
@@ -399,10 +399,7 @@ function preferredVideoMimeType() {
   return candidates.find((candidate) => MediaRecorder.isTypeSupported(candidate)) ?? null;
 }
 
-async function compressVideoToMobile(
-  file: File,
-  onProgress: (progress: number) => void
-) {
+async function compressVideoToMobile(file: File, onProgress: (progress: number) => void) {
   if (typeof MediaRecorder === "undefined") {
     throw new Error("Compression video non supportee par ce navigateur.");
   }
@@ -501,14 +498,14 @@ function verdictLabel(choice: VerdictChoice) {
 }
 
 function voteBurst(choice: VerdictChoice) {
-  const colors = choice === "nominee" ? ["#d97706", "#fbbf24", "#22c55e", "#38bdf8"] : ["#ef4444", "#f97316", "#71717a"];
-  const scalar = choice === "nominee" ? 1.15 : 0.85;
+  const colors = choice === "nominee" ? ["#facc15", "#dc2626", "#000000", "#f0f0f0"] : ["#dc2626", "#000000", "#facc15"];
 
   void confetti({
-    particleCount: choice === "nominee" ? 95 : 46,
-    spread: choice === "nominee" ? 78 : 44,
-    startVelocity: choice === "nominee" ? 42 : 28,
-    scalar,
+    particleCount: choice === "nominee" ? 120 : 72,
+    spread: choice === "nominee" ? 92 : 58,
+    startVelocity: choice === "nominee" ? 48 : 34,
+    scalar: choice === "nominee" ? 1.05 : 0.9,
+    ticks: 150,
     colors,
     origin: { y: 0.72 },
     disableForReducedMotion: true
@@ -520,30 +517,40 @@ function setUrl(urlSetter: (value: string | null) => void, currentUrl: string | 
   urlSetter(nextFile ? URL.createObjectURL(nextFile) : null);
 }
 
-function BentoCard({
+function Sticker({
+  children,
+  tone = "red",
+  className = ""
+}: {
+  children: ReactNode;
+  tone?: "red" | "yellow" | "black" | "paper";
+  className?: string;
+}) {
+  const toneClass =
+    tone === "yellow"
+      ? "border-black bg-yellow-300 text-black"
+      : tone === "black"
+        ? "border-black bg-black text-white"
+        : tone === "paper"
+          ? "border-black bg-[#f0f0f0] text-black"
+          : "border-black bg-red-600 text-white";
+
+  return <span className={`inline-flex border-2 px-2 py-1 text-[10px] font-black uppercase leading-none ${toneClass} ${className}`}>{children}</span>;
+}
+
+function BrutalCard({
   children,
   className = "",
-  glow = "blue"
+  tone = "paper"
 }: {
   children: ReactNode;
   className?: string;
-  glow?: "blue" | "amber" | "green" | "pink";
+  tone?: "paper" | "red" | "yellow" | "black";
 }) {
-  const glowMap = {
-    blue: ["rgba(14,165,233,0.38)", "rgba(217,119,6,0.16)", "rgba(34,197,94,0.16)"],
-    amber: ["rgba(217,119,6,0.42)", "rgba(250,204,21,0.22)", "rgba(14,165,233,0.12)"],
-    green: ["rgba(34,197,94,0.32)", "rgba(14,165,233,0.18)", "rgba(217,119,6,0.14)"],
-    pink: ["rgba(236,72,153,0.28)", "rgba(14,165,233,0.18)", "rgba(217,119,6,0.18)"]
-  } satisfies Record<string, string[]>;
-  const [a, b, c] = glowMap[glow];
+  const toneClass = tone === "red" ? "brutal-card-red" : tone === "yellow" ? "brutal-card-yellow" : tone === "black" ? "brutal-card-black" : "";
 
   return (
-    <motion.div
-      whileTap={{ scale: 0.992 }}
-      transition={{ type: "spring", stiffness: 420, damping: 34 }}
-      className={`nod-bento rounded-lg ${className}`}
-      style={{ "--glow-a": a, "--glow-b": b, "--glow-c": c } as CSSProperties}
-    >
+    <motion.div whileTap={{ x: 2, y: 2 }} transition={{ type: "spring", stiffness: 500, damping: 30 }} className={`brutal-card ${toneClass} ${className}`}>
       {children}
     </motion.div>
   );
@@ -564,7 +571,7 @@ function StarInput({
   const iconSizeClass = size === "sm" ? "h-4 w-4" : size === "lg" ? "h-7 w-7" : "h-5 w-5";
 
   return (
-    <div className="flex items-center justify-between gap-1">
+    <div className="grid grid-cols-5 gap-2">
       {STAR_VALUES.map((star) => {
         const active = star <= (hover || value);
         return (
@@ -575,10 +582,12 @@ function StarInput({
             onMouseEnter={() => !readonly && setHover(star)}
             onMouseLeave={() => !readonly && setHover(0)}
             onClick={() => onChange?.(star)}
-            className="rounded-md p-1.5 transition duration-150 active:scale-90 disabled:cursor-default"
+            className={`flex aspect-square items-center justify-center border-2 border-black transition active:translate-x-0.5 active:translate-y-0.5 disabled:cursor-default ${
+              active ? "bg-yellow-300 text-black" : "bg-[#f0f0f0] text-zinc-500"
+            }`}
             aria-label={`${star} etoiles`}
           >
-            <Star className={`${iconSizeClass} transition-colors ${active ? "fill-amber-400 text-amber-400 drop-shadow-[0_0_10px_rgba(217,119,6,0.42)]" : "text-zinc-700"}`} />
+            <Star className={`${iconSizeClass} ${active ? "fill-black" : ""}`} strokeWidth={2} />
           </button>
         );
       })}
@@ -603,38 +612,26 @@ function MediaFrame({
         controls={controls}
         playsInline
         preload="metadata"
-        className={`${height} block w-full object-cover`}
+        className={`${height} block w-full bg-black object-cover`}
       />
     );
   }
 
-  return <img src={nomination.image_url} alt="" className={`${height} block w-full object-cover`} />;
+  return <img src={nomination.image_url} alt="" className={`${height} block w-full bg-black object-cover`} />;
 }
 
-function ParticleField() {
+function PaperBackdrop() {
   return (
-    <div className="nod-particles" aria-hidden="true">
-      {Array.from({ length: 22 }).map((_, index) => (
-        <span
-          key={index}
-          className="nod-particle"
-          style={{
-            left: `${(index * 37) % 100}%`,
-            top: `${(index * 19) % 100}%`,
-            animationDelay: `${(index % 7) * 0.55}s`,
-            animationDuration: `${6 + (index % 5)}s`
-          }}
-        />
-      ))}
+    <div className="paper-backdrop" aria-hidden="true">
+      <span className="paper-mark paper-mark-one" />
+      <span className="paper-mark paper-mark-two" />
+      <span className="paper-mark paper-mark-three" />
     </div>
   );
 }
 
 export default function Home() {
   const reduceMotion = useReducedMotion();
-  const { scrollY } = useScroll();
-  const blueGlowY = useTransform(scrollY, [0, 900], [0, -70]);
-  const amberGlowY = useTransform(scrollY, [0, 900], [0, 55]);
   const [supabase, setSupabase] = useState<ReturnType<typeof getSupabaseBrowserClient>>(null);
   const [bootingRole, setBootingRole] = useState(true);
   const [role, setRole] = useState<Role | null>(null);
@@ -671,6 +668,7 @@ export default function Home() {
 
   const [ratingDraftById, setRatingDraftById] = useState<Record<string, number>>({});
   const [voteBusyId, setVoteBusyId] = useState<string | null>(null);
+  const [shakeId, setShakeId] = useState<string | null>(null);
   const [deleteBusyId, setDeleteBusyId] = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement | null>(null);
 
@@ -870,9 +868,29 @@ export default function Home() {
   const progressDone = progressTotal === 0 ? 0 : Math.round((archive.length / progressTotal) * 100);
   const uploadReady = Boolean(preparedFile && comment.trim().length >= 3 && !isPreparingMedia);
 
+  const revealContainer = reduceMotion
+    ? {}
+    : {
+        initial: "hidden",
+        animate: "show",
+        variants: {
+          hidden: {},
+          show: { transition: { staggerChildren: 0.08, delayChildren: 0.04 } }
+        }
+      };
+
+  const revealItem = reduceMotion
+    ? {}
+    : {
+        variants: {
+          hidden: { opacity: 0, y: 18, rotate: -1.5 },
+          show: { opacity: 1, y: 0, rotate: 0, transition: { type: "spring", stiffness: 210, damping: 23 } }
+        }
+      };
+
   const pageTransition = reduceMotion
     ? { initial: { opacity: 1 }, animate: { opacity: 1 }, exit: { opacity: 1 } }
-    : { initial: { opacity: 0, y: 14, scale: 0.992 }, animate: { opacity: 1, y: 0, scale: 1 }, exit: { opacity: 0, y: -10, scale: 0.992 } };
+    : { initial: { opacity: 0, y: 18 }, animate: { opacity: 1, y: 0 }, exit: { opacity: 0, y: -12 } };
 
   const handleSectionDrag = useCallback(
     (info: PanInfo) => {
@@ -1106,6 +1124,8 @@ export default function Home() {
     const nextStatus = computeStatus(nextVotes);
 
     setVoteBusyId(id);
+    setShakeId(id);
+    window.setTimeout(() => setShakeId(null), 520);
 
     try {
       const { error } = await supabase.from("nominations").update({ votes: nextVotes, status: nextStatus }).eq("id", id);
@@ -1158,113 +1178,95 @@ export default function Home() {
 
   if (bootingRole) {
     return (
-      <div className="nod-app flex items-center justify-center text-zinc-300">
-        <ParticleField />
-        <BentoCard className="flex h-16 w-16 items-center justify-center" glow="amber">
-          <Loader2 className="h-6 w-6 animate-spin text-amber-500" />
-        </BentoCard>
+      <div className="tabloid-app flex items-center justify-center">
+        <PaperBackdrop />
+        <BrutalCard tone="yellow" className="flex h-20 w-20 items-center justify-center">
+          <Loader2 className="h-8 w-8 animate-spin text-black" />
+        </BrutalCard>
       </div>
     );
   }
 
   if (!role) {
     return (
-      <div className="nod-app text-white">
-        <ParticleField />
-        <motion.div
-          aria-hidden="true"
-          className="pointer-events-none fixed -right-32 top-16 z-0 h-72 w-72 rounded-full bg-sky-500/20 blur-3xl"
-          style={{ y: blueGlowY }}
-        />
-        <motion.div
-          aria-hidden="true"
-          className="pointer-events-none fixed -left-28 bottom-20 z-0 h-80 w-80 rounded-full bg-amber-600/20 blur-3xl"
-          style={{ y: amberGlowY }}
-        />
-        <motion.div
-          initial={reduceMotion ? { opacity: 1 } : { opacity: 0, y: 18 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: reduceMotion ? 0.01 : 0.38, type: "spring", stiffness: 180, damping: 24 }}
-          className="nod-viewport flex min-h-screen flex-col justify-center"
-          style={{ paddingTop: "calc(env(safe-area-inset-top) + 12px)", paddingBottom: "calc(env(safe-area-inset-bottom) + 12px)" }}
+      <div className="tabloid-app">
+        <PaperBackdrop />
+        <motion.main
+          {...revealContainer}
+          className="relative z-10 mx-auto flex min-h-svh w-full max-w-md flex-col justify-center px-4"
+          style={{ paddingTop: "calc(env(safe-area-inset-top) + 18px)", paddingBottom: "calc(env(safe-area-inset-bottom) + 18px)" }}
         >
-          <div className="mb-6">
-            <div className="nod-chip mb-5 inline-flex h-12 items-center gap-2 rounded-lg px-3">
-              <span className="flex h-7 w-7 items-center justify-center rounded-md bg-amber-500 text-xs font-black text-black">N</span>
-              <span className="nod-eyebrow">Cérémonie TikTok</span>
-            </div>
-            <h1 className="nod-title max-w-[12ch] text-5xl">Nominees or Denominees</h1>
-            <p className="nod-copy mt-4 text-sm leading-6">Un duel prive pour sacrer ou ejecter les profils les plus memorables du mois.</p>
-          </div>
+          <motion.div {...revealItem} className="mb-4 flex items-center justify-between border-b-4 border-black pb-2">
+            <Sticker tone="red" className="-rotate-2">
+              Live dossier
+            </Sticker>
+            <span className="text-xs font-black uppercase">Edition duo</span>
+          </motion.div>
 
-          <BentoCard className="mb-4 p-4" glow="blue">
-            <label className="block">
-              <span className="nod-eyebrow mb-2 block text-zinc-500">Code salon</span>
-              <input
-                value={roomCode}
-                onChange={(event) => setRoomCode(sanitizeRoomCode(event.target.value))}
-                maxLength={24}
-                className="nod-input w-full rounded-lg px-4 py-3 text-sm font-black uppercase tracking-[0.14em]"
-              />
-            </label>
-          </BentoCard>
+          <motion.h1 {...revealItem} className="tabloid-headline mb-5 max-w-[7ch] text-[4.35rem] leading-[0.76] sm:text-8xl">
+            Nominees
+            <span className="block bg-black px-2 text-white">or</span>
+            <span className="block text-red-600">Denominees</span>
+          </motion.h1>
+
+          <motion.p {...revealItem} className="mb-6 border-y-4 border-black py-3 text-xl font-black uppercase leading-none">
+            Un tabloide prive pour sacrer ou ejecter les captures TikTok du mois.
+          </motion.p>
+
+          <motion.div {...revealItem}>
+            <BrutalCard className="mb-4 p-4">
+              <label className="block">
+                <span className="mb-2 block text-xs font-black uppercase">Code salon</span>
+                <input
+                  value={roomCode}
+                  onChange={(event) => setRoomCode(sanitizeRoomCode(event.target.value))}
+                  maxLength={24}
+                  className="brutal-input w-full px-3 py-3 text-xl font-black uppercase"
+                />
+              </label>
+            </BrutalCard>
+          </motion.div>
 
           {!supabase && (
-            <div className="mb-4 rounded-lg border border-amber-700/50 bg-amber-950/20 p-3 text-xs leading-5 text-amber-200 shadow-[inset_0_1px_0_rgba(255,255,255,0.06)]">
-              Variables Supabase manquantes. L&apos;interface charge, mais la sync attend la configuration.
-            </div>
+            <motion.div {...revealItem} className="mb-4 border-2 border-black bg-yellow-300 p-3 text-sm font-black uppercase">
+              Variables Supabase manquantes. La sync attend la configuration.
+            </motion.div>
           )}
 
-          <div className="space-y-3">
+          <motion.div {...revealItem} className="grid gap-3">
             {(["player_1", "player_2"] as const).map((item, index) => (
-              <button key={item} onClick={() => selectRole(item)} className="w-full text-left">
-                <BentoCard className="flex items-center justify-between p-5" glow={index === 0 ? "amber" : "green"}>
+              <button key={item} onClick={() => selectRole(item)} className="group text-left">
+                <BrutalCard tone={index === 0 ? "red" : "yellow"} className="flex items-center justify-between p-4 transition group-active:translate-x-1 group-active:translate-y-1">
                   <span>
-                    <span className="block text-lg font-black text-white">{item === "player_1" ? p1Name : p2Name}</span>
-                    <span className="text-[10px] font-bold uppercase tracking-[0.16em] text-zinc-500">{ROLE_LABEL[item]}</span>
+                    <span className="block text-3xl font-black uppercase leading-none">{item === "player_1" ? p1Name : p2Name}</span>
+                    <span className="mt-1 block text-xs font-black uppercase">{ROLE_LABEL[item]}</span>
                   </span>
-                  <span className="flex h-11 w-11 items-center justify-center rounded-lg border border-white/10 bg-white/[0.055]">
-                    <UserCircle className="h-6 w-6 text-zinc-200" />
-                  </span>
-                </BentoCard>
+                  <UserCircle className="h-10 w-10" strokeWidth={1.5} />
+                </BrutalCard>
               </button>
             ))}
-          </div>
-        </motion.div>
+          </motion.div>
+        </motion.main>
       </div>
     );
   }
 
   return (
-    <div className="nod-app text-zinc-100" style={{ paddingBottom: "calc(env(safe-area-inset-bottom) + 96px)" }}>
-      <ParticleField />
-      <motion.div
-        aria-hidden="true"
-        className="pointer-events-none fixed -right-36 top-14 z-0 h-80 w-80 rounded-full bg-sky-500/18 blur-3xl"
-        style={{ y: blueGlowY }}
-      />
-      <motion.div
-        aria-hidden="true"
-        className="pointer-events-none fixed -left-40 top-1/2 z-0 h-96 w-96 rounded-full bg-amber-600/16 blur-3xl"
-        style={{ y: amberGlowY }}
-      />
+    <div className="tabloid-app" style={{ paddingBottom: "calc(env(safe-area-inset-bottom) + 100px)" }}>
+      <PaperBackdrop />
 
       <AnimatePresence>
         {toast && (
           <motion.div
-            initial={{ opacity: 0, y: -16 }}
+            initial={{ opacity: 0, y: -18 }}
             animate={{ opacity: 1, y: 0 }}
-            exit={{ opacity: 0, y: -10 }}
+            exit={{ opacity: 0, y: -14 }}
             className="fixed left-1/2 z-[100] w-[92%] max-w-sm -translate-x-1/2"
             style={{ top: "calc(env(safe-area-inset-top) + 10px)" }}
           >
             <div
-              className={`flex items-center gap-2 rounded-lg border px-4 py-3 text-sm font-semibold shadow-[0_18px_50px_rgba(0,0,0,0.45)] backdrop-blur-2xl ${
-                toast.tone === "success"
-                  ? "border-emerald-400/30 bg-emerald-500/10 text-emerald-300"
-                  : toast.tone === "error"
-                    ? "border-red-400/30 bg-red-500/10 text-red-300"
-                    : "border-zinc-700 bg-zinc-950/90 text-zinc-100"
+              className={`flex items-center gap-2 border-2 border-black px-4 py-3 text-sm font-black uppercase shadow-[5px_5px_0_#000] ${
+                toast.tone === "success" ? "bg-yellow-300 text-black" : toast.tone === "error" ? "bg-red-600 text-white" : "bg-black text-white"
               }`}
             >
               {toast.tone === "success" ? <Check className="h-4 w-4" /> : toast.tone === "error" ? <ShieldAlert className="h-4 w-4" /> : <Sparkles className="h-4 w-4" />}
@@ -1274,134 +1276,131 @@ export default function Home() {
         )}
       </AnimatePresence>
 
-      <div className="nod-viewport" style={{ paddingTop: "calc(env(safe-area-inset-top) + 8px)" }}>
-        <header className="sticky top-0 z-30 mb-4 py-3">
-          <BentoCard className="flex items-center justify-between px-3 py-3" glow="blue">
-            <button onClick={openNameEditor} className="min-w-0 text-left">
-              <p className="nod-eyebrow">Session active</p>
-              <p className="truncate text-base font-black text-white">
-                {myDisplayName} <Pencil className="mb-0.5 ml-1 inline h-3.5 w-3.5 text-zinc-500" />
-              </p>
-            </button>
-            <div className="flex items-center gap-2">
-              <button
-                onClick={() => void fetchNominations()}
-                disabled={syncing || !supabase}
-                className="nod-btn-quiet rounded-lg p-2.5 transition active:scale-95 disabled:opacity-60"
-                aria-label="Synchroniser"
-              >
-                <RefreshCw className={`h-4 w-4 ${syncing ? "animate-spin" : ""}`} />
+      <main className="relative z-10 mx-auto w-full max-w-md px-4" style={{ paddingTop: "calc(env(safe-area-inset-top) + 8px)" }}>
+        <header className="sticky top-0 z-30 mb-4 bg-[#f0f0f0] py-3">
+          <div className="border-b-4 border-black pb-2">
+            <div className="flex items-center justify-between">
+              <button onClick={openNameEditor} className="min-w-0 text-left">
+                <p className="text-[10px] font-black uppercase text-red-600">Session active</p>
+                <p className="truncate text-2xl font-black uppercase leading-none">
+                  {myDisplayName} <Pencil className="mb-1 ml-1 inline h-4 w-4" />
+                </p>
               </button>
-              <button onClick={logout} className="nod-btn-quiet rounded-lg p-2.5 transition active:scale-95" aria-label="Quitter">
-                <LogOut className="h-4 w-4" />
-              </button>
+              <div className="flex items-center gap-2">
+                <button
+                  onClick={() => void fetchNominations()}
+                  disabled={syncing || !supabase}
+                  className="brutal-icon-button disabled:opacity-50"
+                  aria-label="Synchroniser"
+                >
+                  <RefreshCw className={`h-4 w-4 ${syncing ? "animate-spin" : ""}`} />
+                </button>
+                <button onClick={logout} className="brutal-icon-button" aria-label="Quitter">
+                  <LogOut className="h-4 w-4" />
+                </button>
+              </div>
             </div>
-          </BentoCard>
+            <div className="ticker mt-3 border-2 border-black bg-black text-white">
+              <span className="ticker-track">
+                ROOM {roomCode} / NEXT CEREMONY {countdown.days}J {countdown.hours}H {countdown.mins}M / SYNC {lastSyncLabel} / ROOM {roomCode} / NEXT CEREMONY {countdown.days}J {countdown.hours}H {countdown.mins}M
+              </span>
+            </div>
+          </div>
         </header>
 
-        <div className="mb-4 grid grid-cols-3 gap-2">
-          <BentoCard className="p-3" glow="amber">
-            <p className="mb-1 text-[10px] uppercase tracking-[0.16em] text-zinc-500">Cérémonie</p>
-            <p className="text-sm font-black text-white">
-              {countdown.days}j {countdown.hours}h {countdown.mins}m
-            </p>
-          </BentoCard>
-          <BentoCard className="p-3" glow="blue">
-            <p className="mb-1 text-[10px] uppercase tracking-[0.16em] text-zinc-500">A voter</p>
-            <p className="text-xl font-black text-sky-300">{pendingForMe.length}</p>
-          </BentoCard>
-          <BentoCard className="p-3" glow="green">
-            <p className="mb-1 text-[10px] uppercase tracking-[0.16em] text-zinc-500">Sacres</p>
-            <p className="text-xl font-black text-emerald-300">{accepted.length}</p>
-          </BentoCard>
-        </div>
+        <section className="mb-4 grid grid-cols-3 gap-2">
+          <BrutalCard tone="yellow" className="p-2">
+            <p className="text-[10px] font-black uppercase">A voter</p>
+            <p className="text-4xl font-black leading-none">{pendingForMe.length}</p>
+          </BrutalCard>
+          <BrutalCard tone="red" className="p-2">
+            <p className="text-[10px] font-black uppercase">Sacres</p>
+            <p className="text-4xl font-black leading-none">{accepted.length}</p>
+          </BrutalCard>
+          <BrutalCard tone="black" className="p-2">
+            <p className="text-[10px] font-black uppercase">Done</p>
+            <p className="text-4xl font-black leading-none">{progressDone}%</p>
+          </BrutalCard>
+        </section>
 
         <AnimatePresence mode="wait">
           {tab === "feed" && (
             <motion.section
               key="feed"
               {...pageTransition}
+              {...revealContainer}
               drag={reduceMotion ? false : "x"}
               dragConstraints={{ left: 0, right: 0 }}
               onDragEnd={(_, info) => handleSectionDrag(info)}
-              transition={{ duration: reduceMotion ? 0.01 : 0.28, type: "spring", stiffness: 230, damping: 26 }}
+              transition={{ duration: reduceMotion ? 0.01 : 0.26, type: "spring", stiffness: 230, damping: 25 }}
               className="space-y-4"
             >
-              <BentoCard className="overflow-hidden" glow="amber">
-                <div className="relative">
-                  {heroWinner ? (
-                    <div className="nod-media-shell">
-                      <MediaFrame nomination={heroWinner} height="h-[22rem]" controls={false} />
-                    </div>
-                  ) : (
-                    <div className="flex h-[22rem] items-center justify-center">
-                      <Sparkles className="h-10 w-10 text-zinc-700" />
-                    </div>
-                  )}
-                  <div className="absolute bottom-0 left-0 right-0 z-10 p-5">
-                    <p className="nod-eyebrow">Flux premium</p>
-                    <h2 className="nod-title mt-2 text-4xl text-white">Cérémonie TikTok</h2>
-                    <p className="mt-3 text-sm leading-6 text-zinc-300">Upload, duel express, classement mensuel. Aucun debat, juste du verdict.</p>
-                  </div>
-                </div>
-              </BentoCard>
+              <motion.div {...revealItem}>
+                <BrutalCard tone="red" className="relative overflow-hidden p-4">
+                  <Sticker tone="yellow" className="-rotate-2">
+                    Exclusive
+                  </Sticker>
+                  <h2 className="tabloid-headline mt-3 text-[4rem] leading-[0.76] text-white">
+                    Trophy
+                    <span className="block text-yellow-300">TikTok</span>
+                    <span className="block text-black">Ceremony</span>
+                  </h2>
+                  <p className="mt-4 border-t-4 border-black pt-3 text-xl font-black uppercase leading-none text-white">
+                    Upload. Vote. Sacre. Les videos lourdes disparaissent, les preuves restent.
+                  </p>
+                </BrutalCard>
+              </motion.div>
 
-              <div className="grid grid-cols-2 gap-3">
-                <BentoCard className="p-4" glow="blue">
-                  <p className="nod-eyebrow">Progression</p>
-                  <div className="mt-4 h-2 overflow-hidden rounded-full bg-white/[0.06]">
-                    <motion.div
-                      className="h-full rounded-full bg-sky-400 shadow-[0_0_18px_rgba(56,189,248,0.45)]"
-                      initial={{ width: 0 }}
-                      animate={{ width: `${progressDone}%` }}
-                      transition={{ duration: reduceMotion ? 0.01 : 0.55, ease: "easeOut" }}
-                    />
+              <motion.div {...revealItem}>
+                <BrutalCard className="overflow-hidden">
+                  <div className="relative border-b-4 border-black bg-black">
+                    {heroWinner ? <MediaFrame nomination={heroWinner} height="h-[24rem]" controls={false} /> : <div className="flex h-[24rem] items-center justify-center bg-black text-white"><Camera className="h-12 w-12" /></div>}
+                    <Sticker tone="yellow" className="absolute left-3 top-3 rotate-2">
+                      Front page
+                    </Sticker>
                   </div>
-                  <p className="mt-3 text-xs text-zinc-500">Sync {lastSyncLabel}</p>
-                </BentoCard>
-                <button onClick={() => setTab("studio")} className="text-left">
-                  <BentoCard className="flex h-full flex-col justify-between p-4" glow="green">
-                    <UploadCloud className="h-6 w-6 text-emerald-300" />
+                  <div className="grid grid-cols-[1fr_auto] gap-3 p-3">
                     <div>
-                      <p className="text-lg font-black text-white">Studio</p>
-                      <p className="text-xs text-zinc-500">Video 4 min ou capture</p>
+                      <p className="text-[10px] font-black uppercase text-red-600">Flux public du salon</p>
+                      <p className="line-clamp-2 text-2xl font-black uppercase leading-none">{heroWinner ? heroWinner.comment : "Aucun profil publie"}</p>
                     </div>
-                  </BentoCard>
-                </button>
-              </div>
+                    <button onClick={() => setTab("studio")} className="brutal-icon-button bg-yellow-300">
+                      <UploadCloud className="h-5 w-5" />
+                    </button>
+                  </div>
+                </BrutalCard>
+              </motion.div>
 
-              <div className="space-y-3">
+              <motion.div {...revealItem} className="space-y-3">
                 {feedItems.length === 0 ? (
-                  <BentoCard className="p-8 text-center" glow="blue">
-                    <Camera className="mx-auto mb-3 h-8 w-8 text-zinc-500" />
-                    <p className="font-semibold text-zinc-200">Aucun profil pour le moment.</p>
-                    <p className="mt-2 text-xs leading-5 text-zinc-500">Le premier upload lance la cérémonie.</p>
-                  </BentoCard>
+                  <BrutalCard className="p-8 text-center">
+                    <Camera className="mx-auto mb-3 h-9 w-9" />
+                    <p className="text-2xl font-black uppercase leading-none">Aucune capture.</p>
+                    <p className="mt-2 text-sm font-bold uppercase">Le premier upload ouvre la ceremonie.</p>
+                  </BrutalCard>
                 ) : (
-                  feedItems.map((nomination) => {
+                  feedItems.map((nomination, index) => {
                     const category = getCategoryMeta(nomination.category_id);
                     const Icon = category.icon;
                     return (
-                      <BentoCard key={nomination.id} className="overflow-hidden" glow={nomination.status === "accepted" ? "green" : nomination.status === "pending" ? "blue" : "pink"}>
-                        <div className="flex gap-3 p-2">
-                          <div className="nod-media-shell h-24 w-24 shrink-0 rounded-md">
+                      <BrutalCard key={nomination.id} tone={index % 3 === 0 ? "yellow" : "paper"} className="overflow-hidden">
+                        <div className="grid grid-cols-[6rem_1fr] border-b-2 border-black">
+                          <div className="media-cut h-24 border-r-2 border-black">
                             <MediaFrame nomination={nomination} height="h-24" controls={false} />
                           </div>
-                          <div className="min-w-0 flex-1 py-1 pr-2">
-                            <span className={`inline-flex rounded-md border px-2 py-1 text-[10px] font-black uppercase tracking-[0.14em] ${statusClass(nomination.status)}`}>
-                              {statusLabel(nomination.status)}
-                            </span>
-                            <p className="mt-2 truncate text-sm font-semibold text-white">&quot;{nomination.comment}&quot;</p>
-                            <p className="mt-2 flex items-center gap-1 text-[11px] text-zinc-500">
-                              <Icon className="h-3.5 w-3.5 text-amber-400" /> {category.label}
+                          <div className="min-w-0 p-2">
+                            <span className={`inline-flex border-2 px-2 py-1 text-[10px] font-black uppercase ${statusClass(nomination.status)}`}>{statusLabel(nomination.status)}</span>
+                            <p className="mt-2 truncate text-lg font-black uppercase leading-none">&quot;{nomination.comment}&quot;</p>
+                            <p className="mt-2 flex items-center gap-1 text-[11px] font-black uppercase">
+                              <Icon className="h-3.5 w-3.5 text-red-600" /> {category.label}
                             </p>
                           </div>
                         </div>
-                      </BentoCard>
+                      </BrutalCard>
                     );
                   })
                 )}
-              </div>
+              </motion.div>
             </motion.section>
           )}
 
@@ -1412,19 +1411,27 @@ export default function Home() {
               drag={reduceMotion ? false : "x"}
               dragConstraints={{ left: 0, right: 0 }}
               onDragEnd={(_, info) => handleSectionDrag(info)}
-              transition={{ duration: reduceMotion ? 0.01 : 0.28, type: "spring", stiffness: 230, damping: 26 }}
+              transition={{ duration: reduceMotion ? 0.01 : 0.26, type: "spring", stiffness: 230, damping: 25 }}
               className="space-y-4"
             >
+              <BrutalCard tone="black" className="p-4">
+                <Sticker tone="red" className="-rotate-2">
+                  Speed verdict
+                </Sticker>
+                <h2 className="tabloid-headline mt-3 text-[3.8rem] leading-[0.78] text-white">Duel express</h2>
+                <p className="mt-3 text-xl font-black uppercase leading-none text-yellow-300">Un swipe, une note, un verdict.</p>
+              </BrutalCard>
+
               {loadingList ? (
-                <BentoCard className="p-8 text-center" glow="blue">
-                  <Loader2 className="mx-auto h-6 w-6 animate-spin text-amber-500" />
-                </BentoCard>
+                <BrutalCard className="p-8 text-center">
+                  <Loader2 className="mx-auto h-7 w-7 animate-spin" />
+                </BrutalCard>
               ) : pendingForMe.length === 0 ? (
-                <BentoCard className="p-8 text-center" glow="green">
-                  <BadgeCheck className="mx-auto mb-3 h-9 w-9 text-emerald-300" />
-                  <p className="font-semibold text-zinc-200">Aucun duel en attente.</p>
-                  <p className="mt-2 text-xs leading-5 text-zinc-500">Demande a {otherDisplayName} d&apos;envoyer un profil.</p>
-                </BentoCard>
+                <BrutalCard tone="yellow" className="p-8 text-center">
+                  <BadgeCheck className="mx-auto mb-3 h-10 w-10" />
+                  <p className="text-3xl font-black uppercase leading-none">File vide.</p>
+                  <p className="mt-2 text-sm font-bold uppercase">Demande a {otherDisplayName} d&apos;envoyer une capture.</p>
+                </BrutalCard>
               ) : (
                 pendingForMe.map((nomination) => {
                   const category = getCategoryMeta(nomination.category_id);
@@ -1432,39 +1439,48 @@ export default function Home() {
                   const draftRating = clampRating(ratingDraftById[nomination.id] ?? 4);
 
                   return (
-                    <BentoCard key={nomination.id} className="overflow-hidden" glow="amber">
-                      <div className="relative">
-                        <div className="nod-media-shell">
-                          <MediaFrame nomination={nomination} height="h-[25rem]" />
-                        </div>
-                        <div className="absolute left-3 top-3 z-10 flex items-center gap-2 rounded-md border border-white/10 bg-black/55 px-3 py-1 text-xs font-black text-white backdrop-blur-xl">
-                          <Icon className="h-3.5 w-3.5 text-amber-400" />
-                          {category.label}
-                        </div>
-                        <div className="absolute bottom-0 left-0 right-0 z-10 p-4">
-                          <p className="text-sm font-semibold text-white">&quot;{nomination.comment}&quot;</p>
+                    <motion.article
+                      key={nomination.id}
+                      animate={
+                        shakeId === nomination.id
+                          ? { x: [0, -12, 12, -9, 9, 0], rotate: [0, -1.2, 1.2, -0.8, 0.8, 0] }
+                          : { x: 0, rotate: 0 }
+                      }
+                      transition={{ duration: 0.42 }}
+                      className="brutal-card overflow-hidden"
+                    >
+                      <div className="relative border-b-4 border-black bg-black">
+                        <MediaFrame nomination={nomination} height="h-[25rem]" />
+                        <Sticker tone="red" className="absolute left-3 top-3 -rotate-2">
+                          Live evidence
+                        </Sticker>
+                        <div className="absolute bottom-3 left-3 right-3 border-2 border-black bg-[#f0f0f0] p-2">
+                          <p className="flex items-center gap-1 text-[10px] font-black uppercase text-red-600">
+                            <Icon className="h-3.5 w-3.5" /> {category.label}
+                          </p>
+                          <p className="text-xl font-black uppercase leading-none">&quot;{nomination.comment}&quot;</p>
                         </div>
                       </div>
-                      <div className="space-y-4 p-4">
+                      <div className="space-y-3 p-3">
                         <StarInput value={draftRating} onChange={(value) => setRatingDraftById((prev) => ({ ...prev, [nomination.id]: value }))} size="lg" />
                         <div className="grid grid-cols-2 gap-2">
                           <button
                             onClick={() => void applyVote(nomination.id, "nominee")}
                             disabled={voteBusyId === nomination.id}
-                            className="rounded-lg border border-emerald-400/25 bg-emerald-500/12 py-3 text-xs font-black uppercase tracking-[0.14em] text-emerald-300 shadow-[inset_0_1px_0_rgba(255,255,255,0.08)] transition active:scale-[0.99] disabled:opacity-60"
+                            className="brutal-action bg-yellow-300 text-black disabled:opacity-50"
                           >
-                            Nominer
+                            Sacrer
                           </button>
                           <button
                             onClick={() => void applyVote(nomination.id, "ejected")}
                             disabled={voteBusyId === nomination.id}
-                            className="rounded-lg border border-red-400/25 bg-red-500/12 py-3 text-xs font-black uppercase tracking-[0.14em] text-red-300 shadow-[inset_0_1px_0_rgba(255,255,255,0.08)] transition active:scale-[0.99] disabled:opacity-60"
+                            className="brutal-action bg-red-600 text-white disabled:opacity-50"
                           >
                             Ejecter
                           </button>
                         </div>
                       </div>
-                    </BentoCard>
+                    </motion.article>
                   );
                 })
               )}
@@ -1478,20 +1494,22 @@ export default function Home() {
               drag={reduceMotion ? false : "x"}
               dragConstraints={{ left: 0, right: 0 }}
               onDragEnd={(_, info) => handleSectionDrag(info)}
-              transition={{ duration: reduceMotion ? 0.01 : 0.28, type: "spring", stiffness: 230, damping: 26 }}
+              transition={{ duration: reduceMotion ? 0.01 : 0.26, type: "spring", stiffness: 230, damping: 25 }}
               className="space-y-4"
             >
-              <BentoCard className="p-5" glow="blue">
-                <p className="nod-eyebrow">Studio upload</p>
-                <h2 className="nod-title mt-2 text-3xl text-white">Capture le moment.</h2>
-                <p className="mt-3 text-sm leading-6 text-zinc-400">Video jusqu&apos;a 4 min, capture TikTok Live ou photo. Compression locale avant Supabase.</p>
-              </BentoCard>
+              <BrutalCard tone="red" className="p-4">
+                <Sticker tone="yellow" className="-rotate-2">
+                  Upload desk
+                </Sticker>
+                <h2 className="tabloid-headline mt-3 text-[3.6rem] leading-[0.78] text-white">Capture maintenant</h2>
+                <p className="mt-3 text-xl font-black uppercase leading-none text-white">Video 4 min, photo ou screenshot. Compression locale avant Supabase.</p>
+              </BrutalCard>
 
-              <BentoCard className="p-3" glow={mediaKind === "video" ? "amber" : "green"}>
+              <BrutalCard className="p-3">
                 <button
                   onClick={() => fileInputRef.current?.click()}
                   disabled={isPreparingMedia || uploadLoading}
-                  className="relative flex min-h-[18rem] w-full items-center justify-center overflow-hidden rounded-lg border border-white/10 bg-black/35 text-left transition active:scale-[0.995] disabled:opacity-70"
+                  className="relative flex min-h-[19rem] w-full items-center justify-center overflow-hidden border-4 border-black bg-black text-left transition active:translate-x-1 active:translate-y-1 disabled:opacity-70"
                 >
                   {previewUrl ? (
                     mediaKind === "video" ? (
@@ -1500,32 +1518,32 @@ export default function Home() {
                       <img src={previewUrl} alt="" className="absolute inset-0 h-full w-full object-cover" />
                     )
                   ) : (
-                    <span className="flex flex-col items-center px-6 text-center">
-                      {isPreparingMedia ? <Loader2 className="mb-3 h-8 w-8 animate-spin text-amber-500" /> : <UploadCloud className="mb-3 h-8 w-8 text-zinc-500" />}
-                      <span className="text-sm font-black uppercase tracking-[0.16em] text-zinc-300">{isPreparingMedia ? "Compression..." : "Choisir un media"}</span>
-                      <span className="mt-2 text-xs leading-5 text-zinc-500">Video, photo ou capture d&apos;ecran</span>
+                    <span className="flex flex-col items-center px-6 text-center text-white">
+                      {isPreparingMedia ? <Loader2 className="mb-3 h-9 w-9 animate-spin text-yellow-300" /> : <UploadCloud className="mb-3 h-9 w-9 text-yellow-300" />}
+                      <span className="text-3xl font-black uppercase leading-none">{isPreparingMedia ? "Compression" : "Choisir media"}</span>
+                      <span className="mt-2 text-sm font-black uppercase text-yellow-300">Video, photo, capture d&apos;ecran</span>
                     </span>
                   )}
                   <input ref={fileInputRef} type="file" accept="video/*,image/*" onChange={(event) => void prepareMedia(event.target.files?.[0] ?? null)} className="hidden" />
                 </button>
-              </BentoCard>
+              </BrutalCard>
 
               {(isPreparingMedia || compressionNote) && (
-                <BentoCard className="p-4" glow="amber">
+                <BrutalCard tone="yellow" className="p-3">
                   <div className="flex items-center justify-between gap-3">
                     <div className="min-w-0">
-                      <p className="text-xs font-black uppercase tracking-[0.14em] text-zinc-400">{sourceFileName || "Media"}</p>
-                      <p className="mt-1 truncate text-xs text-zinc-500">{compressionNote || "Compression mobile 720p en cours..."}</p>
+                      <p className="truncate text-sm font-black uppercase">{sourceFileName || "Media"}</p>
+                      <p className="mt-1 truncate text-xs font-black uppercase">{compressionNote || "Compression mobile 720p en cours..."}</p>
                     </div>
-                    <p className="text-sm font-black text-amber-300">{Math.round(compressionProgress * 100)}%</p>
+                    <p className="text-4xl font-black leading-none">{Math.round(compressionProgress * 100)}%</p>
                   </div>
-                  <div className="mt-3 h-2 overflow-hidden rounded-full bg-white/[0.06]">
-                    <motion.div className="h-full rounded-full bg-amber-500" animate={{ width: `${Math.round(compressionProgress * 100)}%` }} />
+                  <div className="mt-3 h-5 border-2 border-black bg-[#f0f0f0]">
+                    <motion.div className="h-full bg-red-600" animate={{ width: `${Math.round(compressionProgress * 100)}%` }} />
                   </div>
-                </BentoCard>
+                </BrutalCard>
               )}
 
-              <select value={catId} onChange={(event) => setCatId(event.target.value)} className="nod-input w-full rounded-lg p-4 text-sm font-semibold">
+              <select value={catId} onChange={(event) => setCatId(event.target.value)} className="brutal-input w-full appearance-none px-4 py-4 text-lg font-black uppercase">
                 {CATEGORIES.map((category) => (
                   <option key={category.id} value={category.id}>
                     {category.label}
@@ -1539,22 +1557,22 @@ export default function Home() {
                 placeholder="Pourquoi ce profil merite un verdict ?"
                 rows={3}
                 maxLength={240}
-                className="nod-input w-full resize-none rounded-lg p-4 text-sm"
+                className="brutal-input w-full resize-none p-4 text-lg font-black uppercase"
               />
 
-              <BentoCard className="p-3" glow="green">
+              <BrutalCard tone="yellow" className="p-3">
                 <StarInput value={initialRating} onChange={setInitialRating} size="lg" />
-                <p className="mt-2 text-center text-[10px] font-black uppercase tracking-[0.14em] text-zinc-500">
+                <p className="mt-3 border-t-2 border-black pt-2 text-center text-sm font-black uppercase">
                   Vote initial: {verdictLabel(initialRating >= 3 ? "nominee" : "ejected")}
                 </p>
-              </BentoCard>
+              </BrutalCard>
 
               <button
                 onClick={() => void uploadNomination()}
                 disabled={uploadLoading || !uploadReady}
-                className="nod-btn-primary flex w-full items-center justify-center gap-2 rounded-lg py-4 text-sm font-black uppercase tracking-[0.16em] disabled:opacity-50"
+                className="brutal-submit flex w-full items-center justify-center gap-2 disabled:opacity-50"
               >
-                {uploadLoading ? <Loader2 className="h-5 w-5 animate-spin" /> : "Envoyer au duel"}
+                {uploadLoading ? <Loader2 className="h-6 w-6 animate-spin" /> : "Envoyer au duel"}
               </button>
             </motion.section>
           )}
@@ -1566,36 +1584,39 @@ export default function Home() {
               drag={reduceMotion ? false : "x"}
               dragConstraints={{ left: 0, right: 0 }}
               onDragEnd={(_, info) => handleSectionDrag(info)}
-              transition={{ duration: reduceMotion ? 0.01 : 0.28, type: "spring", stiffness: 230, damping: 26 }}
+              transition={{ duration: reduceMotion ? 0.01 : 0.26, type: "spring", stiffness: 230, damping: 25 }}
               className="space-y-4"
             >
-              <BentoCard className="p-5 text-center" glow="amber">
-                <Medal className="mx-auto h-9 w-9 text-amber-400" />
-                <h2 className="nod-title mt-3 text-3xl text-white">Trophees du mois</h2>
-                <p className="mt-3 text-sm text-zinc-500">Revelation automatique le 1er.</p>
-              </BentoCard>
+              <BrutalCard tone="black" className="p-4 text-white">
+                <Medal className="mb-3 h-10 w-10 text-yellow-300" />
+                <h2 className="tabloid-headline text-[3.6rem] leading-[0.78]">Trophees du mois</h2>
+                <p className="mt-3 text-xl font-black uppercase leading-none text-yellow-300">Le premier jour du mois tranche le palmares.</p>
+              </BrutalCard>
+
               {categoryWinners.length === 0 ? (
-                <BentoCard className="p-8 text-center" glow="blue">
-                  <Trophy className="mx-auto mb-3 h-8 w-8 text-zinc-500" />
-                  <p className="font-semibold text-zinc-200">Aucun profil sacre.</p>
-                  <p className="mt-2 text-xs leading-5 text-zinc-500">Deux votes Nomine ouvrent le palmares.</p>
-                </BentoCard>
+                <BrutalCard tone="yellow" className="p-8 text-center">
+                  <Trophy className="mx-auto mb-3 h-10 w-10" />
+                  <p className="text-3xl font-black uppercase leading-none">Aucun sacre.</p>
+                  <p className="mt-2 text-sm font-black uppercase">Deux votes Nomine ouvrent le palmares.</p>
+                </BrutalCard>
               ) : (
                 categoryWinners.map(({ category, winner }, index) => {
                   const Icon = category.icon;
                   return (
-                    <BentoCard key={winner.id} className="flex gap-3 p-3" glow={index % 2 === 0 ? "amber" : "green"}>
-                      <div className="nod-media-shell h-24 w-24 shrink-0 rounded-md">
-                        <MediaFrame nomination={winner} height="h-24" controls={false} />
+                    <BrutalCard key={winner.id} tone={index % 2 === 0 ? "yellow" : "paper"} className="overflow-hidden">
+                      <div className="grid grid-cols-[7rem_1fr]">
+                        <div className="media-cut h-28 border-r-4 border-black">
+                          <MediaFrame nomination={winner} height="h-28" controls={false} />
+                        </div>
+                        <div className="min-w-0 p-3">
+                          <p className="flex items-center gap-1 text-[10px] font-black uppercase text-red-600">
+                            <Icon className="h-3.5 w-3.5" /> {category.label}
+                          </p>
+                          <p className="mt-2 truncate text-2xl font-black uppercase leading-none">&quot;{winner.comment}&quot;</p>
+                          <p className="mt-2 inline-flex border-2 border-black bg-red-600 px-2 py-1 text-xs font-black uppercase text-white">{averageRating(winner)?.toFixed(1)} / 5</p>
+                        </div>
                       </div>
-                      <div className="min-w-0 flex-1">
-                        <p className="flex items-center gap-1 text-[10px] font-black uppercase tracking-[0.14em] text-amber-400">
-                          <Icon className="h-3.5 w-3.5" /> {category.label}
-                        </p>
-                        <p className="mt-2 truncate text-sm font-semibold text-white">&quot;{winner.comment}&quot;</p>
-                        <p className="mt-2 text-xs text-zinc-500">{averageRating(winner)?.toFixed(1)} / 5</p>
-                      </div>
-                    </BentoCard>
+                    </BrutalCard>
                   );
                 })
               )}
@@ -1609,86 +1630,84 @@ export default function Home() {
               drag={reduceMotion ? false : "x"}
               dragConstraints={{ left: 0, right: 0 }}
               onDragEnd={(_, info) => handleSectionDrag(info)}
-              transition={{ duration: reduceMotion ? 0.01 : 0.28, type: "spring", stiffness: 230, damping: 26 }}
+              transition={{ duration: reduceMotion ? 0.01 : 0.26, type: "spring", stiffness: 230, damping: 25 }}
               className="space-y-3"
             >
+              <BrutalCard tone="red" className="p-4">
+                <h2 className="tabloid-headline text-[3.6rem] leading-[0.78] text-white">Archives</h2>
+                <p className="mt-3 text-xl font-black uppercase leading-none text-white">Les videos peuvent disparaitre. La miniature reste comme preuve.</p>
+              </BrutalCard>
+
               {archive.length === 0 ? (
-                <BentoCard className="p-8 text-center" glow="blue">
-                  <ImageIcon className="mx-auto mb-3 h-8 w-8 text-zinc-500" />
-                  <p className="font-semibold text-zinc-200">Archive vide.</p>
-                  <p className="mt-2 text-xs leading-5 text-zinc-500">Les videos seront purgees, les miniatures restent.</p>
-                </BentoCard>
+                <BrutalCard className="p-8 text-center">
+                  <ImageIcon className="mx-auto mb-3 h-9 w-9" />
+                  <p className="text-3xl font-black uppercase leading-none">Archive vide.</p>
+                </BrutalCard>
               ) : (
                 archive.map((nomination) => {
                   const rating = averageRating(nomination);
                   return (
-                    <BentoCard key={nomination.id} className="flex gap-3 p-2" glow={nomination.status === "accepted" ? "green" : "pink"}>
-                      <div className="nod-media-shell h-20 w-20 shrink-0 rounded-md">
-                        <MediaFrame nomination={nomination} height="h-20" controls={false} />
+                    <BrutalCard key={nomination.id} tone={nomination.status === "accepted" ? "yellow" : "paper"} className="overflow-hidden">
+                      <div className="grid grid-cols-[5.5rem_1fr_auto]">
+                        <div className="media-cut h-24 border-r-2 border-black">
+                          <MediaFrame nomination={nomination} height="h-24" controls={false} />
+                        </div>
+                        <div className="min-w-0 p-2">
+                          <span className={`inline-flex border-2 px-2 py-1 text-[10px] font-black uppercase ${statusClass(nomination.status)}`}>{statusLabel(nomination.status)}</span>
+                          <p className="mt-2 truncate text-lg font-black uppercase leading-none">&quot;{nomination.comment}&quot;</p>
+                          <p className="mt-1 text-xs font-black uppercase">{rating ? rating.toFixed(1) : "-"} / 5</p>
+                        </div>
+                        <button onClick={() => void deleteNomination(nomination.id)} className="border-l-2 border-black px-3 text-black transition active:bg-red-600 active:text-white" aria-label="Supprimer">
+                          <Trash2 className="h-5 w-5" />
+                        </button>
                       </div>
-                      <div className="min-w-0 flex-1 py-1">
-                        <span className={`mb-2 inline-flex rounded-md border px-2 py-1 text-[10px] font-black uppercase tracking-[0.14em] ${statusClass(nomination.status)}`}>
-                          {statusLabel(nomination.status)}
-                        </span>
-                        <p className="truncate text-xs font-semibold text-zinc-100">&quot;{nomination.comment}&quot;</p>
-                        <p className="mt-1 text-[11px] text-zinc-500">{rating ? rating.toFixed(1) : "-"} / 5</p>
-                      </div>
-                      <button onClick={() => void deleteNomination(nomination.id)} className="rounded-md p-2 text-zinc-500 transition hover:text-zinc-300 active:scale-95" aria-label="Supprimer">
-                        <Trash2 className="h-4 w-4" />
-                      </button>
-                    </BentoCard>
+                    </BrutalCard>
                   );
                 })
               )}
             </motion.section>
           )}
         </AnimatePresence>
-      </div>
+      </main>
 
       {tab !== "studio" && (
         <motion.button
-          initial={reduceMotion ? { opacity: 1 } : { opacity: 0, scale: 0.95, y: 8 }}
+          initial={reduceMotion ? { opacity: 1 } : { opacity: 0, scale: 0.96, y: 8 }}
           animate={{ opacity: 1, scale: 1, y: 0 }}
           onClick={() => setTab("studio")}
-          className="nod-btn-primary fixed right-5 z-40 flex h-14 w-14 items-center justify-center rounded-lg active:scale-95"
+          className="brutal-fab fixed right-5 z-40 flex h-16 w-16 items-center justify-center"
           style={{ bottom: "calc(env(safe-area-inset-bottom) + 84px)" }}
           aria-label="Ajouter"
         >
-          <Plus className="h-6 w-6" />
+          <Plus className="h-8 w-8" />
         </motion.button>
       )}
 
       <AnimatePresence>
         {editingName && (
-          <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="fixed inset-0 z-50 flex items-center justify-center bg-black/85 px-5 backdrop-blur-md">
-            <BentoCard className="w-full max-w-sm p-5" glow="amber">
-              <div className="mb-4 flex items-center justify-between">
-                <h3 className="text-lg font-black text-white">Changer de pseudo</h3>
-                <button onClick={() => setEditingName(null)} className="nod-btn-quiet rounded-lg p-2 text-zinc-300" aria-label="Fermer">
+          <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="fixed inset-0 z-50 flex items-center justify-center bg-black/75 px-5">
+            <BrutalCard className="w-full max-w-sm p-4">
+              <div className="mb-4 flex items-center justify-between border-b-4 border-black pb-2">
+                <h3 className="text-3xl font-black uppercase leading-none">Changer pseudo</h3>
+                <button onClick={() => setEditingName(null)} className="brutal-icon-button" aria-label="Fermer">
                   <X className="h-4 w-4" />
                 </button>
               </div>
-              <input
-                autoFocus
-                value={nameDraft}
-                onChange={(event) => setNameDraft(event.target.value)}
-                maxLength={20}
-                className="nod-input mb-4 w-full rounded-lg px-3 py-3 text-sm font-semibold"
-              />
+              <input autoFocus value={nameDraft} onChange={(event) => setNameDraft(event.target.value)} maxLength={20} className="brutal-input mb-4 w-full px-3 py-3 text-lg font-black uppercase" />
               <div className="grid grid-cols-2 gap-2">
-                <button onClick={() => setEditingName(null)} className="nod-btn-quiet rounded-lg py-3 text-sm font-semibold text-zinc-400">
+                <button onClick={() => setEditingName(null)} className="brutal-action bg-[#f0f0f0] text-black">
                   Annuler
                 </button>
-                <button onClick={() => void saveName()} className="nod-btn-primary min-h-0 rounded-lg py-3 text-sm font-black text-black">
+                <button onClick={() => void saveName()} className="brutal-action bg-yellow-300 text-black">
                   Valider
                 </button>
               </div>
-            </BentoCard>
+            </BrutalCard>
           </motion.div>
         )}
       </AnimatePresence>
 
-      <nav className="nod-bottom-nav fixed bottom-0 left-0 right-0 z-40 px-2 pt-2" style={{ paddingBottom: "calc(env(safe-area-inset-bottom) + 10px)" }}>
+      <nav className="bottom-tabloid fixed bottom-0 left-0 right-0 z-40 px-2 pt-2" style={{ paddingBottom: "calc(env(safe-area-inset-bottom) + 10px)" }}>
         <div className="mx-auto grid w-full max-w-md grid-cols-5 gap-1">
           {TAB_ITEMS.map((item) => {
             const Icon = item.icon;
@@ -1696,12 +1715,11 @@ export default function Home() {
             const badge = item.id === "vote" ? pendingForMe.length : 0;
 
             return (
-              <button key={item.id} onClick={() => setTab(item.id)} className="relative flex flex-col items-center justify-center gap-1 rounded-lg px-1 py-2.5 transition active:scale-95">
-                {active && <motion.span layoutId="activeTab" className="absolute inset-0 rounded-lg border border-white/10 bg-white/[0.055]" transition={{ type: "spring", stiffness: 360, damping: 28 }} />}
-                <Icon className={`relative z-10 h-5 w-5 ${active ? "text-amber-400" : "text-zinc-500"}`} />
-                <span className={`relative z-10 text-[9px] font-black uppercase tracking-[0.08em] ${active ? "text-amber-400" : "text-zinc-500"}`}>{item.label}</span>
+              <button key={item.id} onClick={() => setTab(item.id)} className={`relative flex flex-col items-center justify-center gap-1 border-2 border-black px-1 py-2 transition active:translate-x-0.5 active:translate-y-0.5 ${active ? "bg-red-600 text-white" : "bg-[#f0f0f0] text-black"}`}>
+                <Icon className="relative z-10 h-5 w-5" strokeWidth={1.5} />
+                <span className="relative z-10 text-[9px] font-black uppercase">{item.label}</span>
                 {badge > 0 && (
-                  <span className="absolute right-1.5 top-1.5 z-20 inline-flex h-4 min-w-[16px] items-center justify-center rounded-full bg-amber-500 px-1 text-[9px] font-black text-black">
+                  <span className="absolute right-0 top-0 z-20 inline-flex h-5 min-w-[20px] items-center justify-center border-b-2 border-l-2 border-black bg-yellow-300 px-1 text-[9px] font-black text-black">
                     {badge > 9 ? "9+" : badge}
                   </span>
                 )}

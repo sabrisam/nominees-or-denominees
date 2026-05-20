@@ -3,26 +3,23 @@
 @tailwind utilities;
 
 :root {
-  color-scheme: dark;
-  background: #000000;
-  --nod-black: #000000;
-  --nod-ink: #f8fafc;
-  --nod-muted: #a1a1aa;
-  --nod-border: #18181b;
-  --nod-border-soft: rgba(255, 255, 255, 0.08);
-  --nod-panel: rgba(9, 9, 11, 0.82);
-  --nod-panel-strong: rgba(12, 12, 14, 0.96);
-  --nod-amber: #d97706;
-  --nod-amber-soft: rgba(217, 119, 6, 0.16);
+  color-scheme: light;
+  background: #f0f0f0;
+  --paper: #f0f0f0;
+  --ink: #050505;
+  --red: #dc2626;
+  --yellow: #fde047;
 }
 
 * {
   box-sizing: border-box;
+  border-radius: 0;
+  letter-spacing: 0;
 }
 
 html {
   min-height: 100%;
-  background: #000000;
+  background: var(--paper);
   -webkit-tap-highlight-color: transparent;
   overscroll-behavior: none;
 }
@@ -30,11 +27,9 @@ html {
 body {
   min-height: 100%;
   margin: 0;
-  background: #000000;
-  color: #f4f4f5;
-  font-family:
-    Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI",
-    sans-serif;
+  background: var(--paper);
+  color: var(--ink);
+  font-family: "Avenir Next Condensed", "DIN Condensed", "Franklin Gothic Medium", Impact, Haettenschweiler, sans-serif;
   text-rendering: geometricPrecision;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
@@ -64,272 +59,251 @@ video {
 }
 
 ::selection {
-  background: rgba(217, 119, 6, 0.4);
+  background: var(--red);
   color: #ffffff;
 }
 
 @layer components {
-  .nod-app {
+  .tabloid-app {
     position: relative;
     min-height: 100svh;
     overflow-x: hidden;
     background:
-      linear-gradient(180deg, rgba(255, 255, 255, 0.035), rgba(255, 255, 255, 0) 22rem),
-      linear-gradient(90deg, rgba(217, 119, 6, 0.04), transparent 42%, rgba(113, 113, 122, 0.05)),
-      #000000;
-    color: var(--nod-ink);
+      repeating-linear-gradient(0deg, rgba(0, 0, 0, 0.035) 0, rgba(0, 0, 0, 0.035) 1px, transparent 1px, transparent 5px),
+      repeating-linear-gradient(90deg, rgba(0, 0, 0, 0.024) 0, rgba(0, 0, 0, 0.024) 1px, transparent 1px, transparent 13px),
+      var(--paper);
+    color: var(--ink);
   }
 
-  .nod-app::before {
+  .paper-backdrop {
     pointer-events: none;
-    content: "";
     position: fixed;
     inset: 0;
     z-index: 0;
-    background-image:
-      linear-gradient(rgba(255, 255, 255, 0.027) 1px, transparent 1px),
-      linear-gradient(90deg, rgba(255, 255, 255, 0.02) 1px, transparent 1px);
-    background-size: 64px 64px;
-    mask-image: linear-gradient(to bottom, rgba(0, 0, 0, 0.76), transparent 76%);
+    overflow: hidden;
+    opacity: 0.9;
   }
 
-  .nod-app::after {
-    pointer-events: none;
+  .paper-backdrop::before {
     content: "";
-    position: fixed;
-    inset: 0;
-    z-index: 0;
+    position: absolute;
+    inset: -20%;
     background:
-      linear-gradient(180deg, rgba(0, 0, 0, 0) 0%, rgba(0, 0, 0, 0.86) 100%),
-      repeating-linear-gradient(0deg, rgba(255, 255, 255, 0.014) 0, rgba(255, 255, 255, 0.014) 1px, transparent 1px, transparent 4px);
-    opacity: 0.72;
+      radial-gradient(circle at 20% 12%, rgba(220, 38, 38, 0.18), transparent 20rem),
+      radial-gradient(circle at 90% 28%, rgba(253, 224, 71, 0.2), transparent 18rem),
+      radial-gradient(circle at 20% 92%, rgba(0, 0, 0, 0.12), transparent 18rem);
+    animation: paper-drift 18s steps(3, end) infinite alternate;
   }
 
-  .nod-viewport {
+  .paper-backdrop::after {
+    content: "";
+    position: absolute;
+    inset: 0;
+    background-image:
+      linear-gradient(rgba(0, 0, 0, 0.08) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(0, 0, 0, 0.08) 1px, transparent 1px);
+    background-size: 44px 44px;
+    mix-blend-mode: multiply;
+    opacity: 0.18;
+  }
+
+  .paper-mark {
+    position: absolute;
+    display: block;
+    border: 2px solid #000000;
+    background: rgba(240, 240, 240, 0.4);
+    box-shadow: 8px 8px 0 #000000;
+  }
+
+  .paper-mark-one {
+    left: -4rem;
+    top: 8rem;
+    width: 11rem;
+    height: 4rem;
+    transform: rotate(-11deg);
+  }
+
+  .paper-mark-two {
+    right: -5rem;
+    top: 38%;
+    width: 12rem;
+    height: 12rem;
+    background: rgba(220, 38, 38, 0.18);
+    transform: rotate(9deg);
+  }
+
+  .paper-mark-three {
+    bottom: 6rem;
+    left: 18%;
+    width: 8rem;
+    height: 3rem;
+    background: rgba(253, 224, 71, 0.2);
+    transform: rotate(5deg);
+  }
+
+  .tabloid-headline {
+    font-family: Impact, Haettenschweiler, "Franklin Gothic Heavy", "Avenir Next Condensed", sans-serif;
+    font-weight: 900;
+    text-transform: uppercase;
+  }
+
+  .brutal-card {
+    position: relative;
+    border: 2px solid #000000;
+    background: var(--paper);
+    box-shadow: 6px 6px 0 #000000;
+  }
+
+  .brutal-card::after {
+    pointer-events: none;
+    content: "";
+    position: absolute;
+    inset: 0;
+    background:
+      repeating-linear-gradient(135deg, rgba(0, 0, 0, 0.05) 0, rgba(0, 0, 0, 0.05) 1px, transparent 1px, transparent 8px);
+    opacity: 0.28;
+    mix-blend-mode: multiply;
+  }
+
+  .brutal-card > * {
     position: relative;
     z-index: 1;
-    width: 100%;
-    max-width: 28rem;
-    margin-inline: auto;
-    padding-inline: 1rem;
   }
 
-  .nod-panel {
-    border: 1px solid var(--nod-border-soft);
-    background:
-      linear-gradient(180deg, rgba(255, 255, 255, 0.048), rgba(255, 255, 255, 0.012)),
-      var(--nod-panel);
-    box-shadow:
-      inset 0 1px 0 rgba(255, 255, 255, 0.055),
-      0 18px 55px rgba(0, 0, 0, 0.42);
-    backdrop-filter: blur(24px) saturate(1.18);
-  }
-
-  .nod-panel-strong {
-    border: 1px solid var(--nod-border-soft);
-    background:
-      linear-gradient(180deg, rgba(255, 255, 255, 0.06), rgba(255, 255, 255, 0.016)),
-      var(--nod-panel-strong);
-    box-shadow:
-      inset 0 1px 0 rgba(255, 255, 255, 0.07),
-      0 24px 80px rgba(0, 0, 0, 0.52);
-    backdrop-filter: blur(28px) saturate(1.2);
-  }
-
-  .nod-hairline {
-    border-color: rgba(255, 255, 255, 0.075);
-  }
-
-  .nod-copy {
-    color: #d4d4d8;
-  }
-
-  .nod-muted {
-    color: var(--nod-muted);
-  }
-
-  .nod-eyebrow {
-    font-size: 0.625rem;
-    font-weight: 900;
-    letter-spacing: 0.16em;
-    text-transform: uppercase;
-    color: #d97706;
-  }
-
-  .nod-title {
-    font-weight: 950;
-    line-height: 0.96;
-    letter-spacing: 0;
-  }
-
-  .nod-btn-primary {
-    min-height: 3.5rem;
-    border: 1px solid rgba(255, 255, 255, 0.12);
-    background:
-      linear-gradient(180deg, #f59e0b, #d97706 52%, #a16207),
-      #d97706;
-    color: #050505;
-    box-shadow:
-      inset 0 1px 0 rgba(255, 255, 255, 0.38),
-      0 16px 42px rgba(217, 119, 6, 0.24);
-  }
-
-  .nod-btn-primary:disabled {
-    filter: grayscale(0.5);
-    box-shadow: none;
-  }
-
-  .nod-btn-quiet {
-    border: 1px solid var(--nod-border-soft);
-    background:
-      linear-gradient(180deg, rgba(255, 255, 255, 0.045), rgba(255, 255, 255, 0.012)),
-      rgba(9, 9, 11, 0.88);
-    color: #e4e4e7;
-  }
-
-  .nod-input {
-    min-height: 3.25rem;
-    border: 1px solid rgba(255, 255, 255, 0.09);
-    background: rgba(0, 0, 0, 0.45);
+  .brutal-card-red {
+    background: var(--red);
     color: #ffffff;
-    box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.035);
   }
 
-  .nod-input:focus {
-    border-color: rgba(217, 119, 6, 0.68);
+  .brutal-card-yellow {
+    background: var(--yellow);
+    color: #000000;
+  }
+
+  .brutal-card-black {
+    background: #000000;
+    color: #ffffff;
+  }
+
+  .brutal-input {
+    border: 2px solid #000000;
+    background: #ffffff;
+    color: #000000;
     outline: none;
-    box-shadow:
-      inset 0 1px 0 rgba(255, 255, 255, 0.06),
-      0 0 0 4px rgba(217, 119, 6, 0.12);
+    box-shadow: 4px 4px 0 #000000;
   }
 
-  .nod-metric {
-    min-height: 5.75rem;
-    border: 1px solid rgba(255, 255, 255, 0.075);
-    background:
-      linear-gradient(180deg, rgba(255, 255, 255, 0.045), rgba(255, 255, 255, 0.008)),
-      rgba(9, 9, 11, 0.78);
-    box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.035);
+  .brutal-input:focus {
+    background: var(--yellow);
   }
 
-  .nod-media {
-    overflow: hidden;
-    background: #050505;
-    box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.055);
+  .brutal-icon-button {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-width: 2.5rem;
+    min-height: 2.5rem;
+    border: 2px solid #000000;
+    background: var(--paper);
+    color: #000000;
+    box-shadow: 3px 3px 0 #000000;
   }
 
-  .nod-bottom-nav {
-    border-top: 1px solid rgba(255, 255, 255, 0.08);
-    background: rgba(0, 0, 0, 0.82);
-    backdrop-filter: blur(28px) saturate(1.22);
-    box-shadow: 0 -22px 55px rgba(0, 0, 0, 0.56);
+  .brutal-icon-button:active {
+    transform: translate(2px, 2px);
+    box-shadow: 1px 1px 0 #000000;
   }
 
-  .nod-sheet {
-    background:
-      linear-gradient(180deg, rgba(255, 255, 255, 0.05), rgba(255, 255, 255, 0.012)),
-      #030303;
+  .brutal-action {
+    border: 2px solid #000000;
+    padding-block: 0.95rem;
+    font-size: 1.25rem;
+    font-weight: 900;
+    line-height: 1;
+    text-transform: uppercase;
+    box-shadow: 4px 4px 0 #000000;
   }
 
-  .nod-bento {
-    position: relative;
-    isolation: isolate;
-    overflow: hidden;
-    border: 0.5px solid rgba(255, 255, 255, 0.11);
-    background:
-      linear-gradient(180deg, rgba(255, 255, 255, 0.085), rgba(255, 255, 255, 0.018)),
-      rgba(9, 9, 11, 0.76);
-    box-shadow:
-      inset 0 1px 0 rgba(255, 255, 255, 0.08),
-      0 24px 90px rgba(0, 0, 0, 0.55);
-    backdrop-filter: blur(30px) saturate(1.22);
+  .brutal-action:active {
+    transform: translate(2px, 2px);
+    box-shadow: 1px 1px 0 #000000;
   }
 
-  .nod-bento::before {
-    content: "";
-    position: absolute;
-    inset: -35%;
-    z-index: -2;
-    background:
-      radial-gradient(circle at 18% 12%, var(--glow-a, rgba(14, 165, 233, 0.36)), transparent 28%),
-      radial-gradient(circle at 82% 24%, var(--glow-b, rgba(217, 119, 6, 0.28)), transparent 30%),
-      radial-gradient(circle at 48% 105%, var(--glow-c, rgba(34, 197, 94, 0.18)), transparent 34%);
-    filter: blur(30px);
-    opacity: 0.82;
-    transform: translate3d(0, 0, 0);
-    animation: nod-glow-drift 13s ease-in-out infinite alternate;
+  .brutal-submit {
+    min-height: 4rem;
+    border: 2px solid #000000;
+    background: var(--red);
+    color: #ffffff;
+    font-size: 1.5rem;
+    font-weight: 900;
+    line-height: 1;
+    text-transform: uppercase;
+    box-shadow: 6px 6px 0 #000000;
   }
 
-  .nod-bento::after {
-    content: "";
-    position: absolute;
-    inset: 0;
-    z-index: -1;
-    background:
-      linear-gradient(135deg, rgba(255, 255, 255, 0.06), transparent 34%),
-      repeating-linear-gradient(90deg, rgba(255, 255, 255, 0.016) 0, rgba(255, 255, 255, 0.016) 1px, transparent 1px, transparent 7px);
-    opacity: 0.72;
+  .brutal-submit:active {
+    transform: translate(3px, 3px);
+    box-shadow: 2px 2px 0 #000000;
   }
 
-  .nod-chip {
-    border: 0.5px solid rgba(255, 255, 255, 0.11);
-    background: rgba(255, 255, 255, 0.055);
-    box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.06);
-    backdrop-filter: blur(18px);
+  .brutal-fab {
+    border: 2px solid #000000;
+    background: var(--yellow);
+    color: #000000;
+    box-shadow: 6px 6px 0 #000000;
   }
 
-  .nod-particles {
-    pointer-events: none;
-    position: fixed;
-    inset: 0;
-    z-index: 0;
-    overflow: hidden;
-  }
-
-  .nod-particle {
-    position: absolute;
-    width: 2px;
-    height: 2px;
-    border-radius: 999px;
-    background: rgba(255, 255, 255, 0.5);
-    opacity: 0.18;
-    animation: nod-float 7s ease-in-out infinite alternate;
-  }
-
-  .nod-media-shell {
+  .media-cut {
     position: relative;
     overflow: hidden;
-    background: #030303;
-    box-shadow:
-      inset 0 0 0 0.5px rgba(255, 255, 255, 0.12),
-      inset 0 1px 0 rgba(255, 255, 255, 0.05);
+    background: #000000;
   }
 
-  .nod-media-shell::after {
-    content: "";
+  .media-cut::after {
     pointer-events: none;
+    content: "";
     position: absolute;
     inset: 0;
     background:
-      linear-gradient(180deg, rgba(255, 255, 255, 0.05), transparent 24%),
-      linear-gradient(0deg, rgba(0, 0, 0, 0.72), transparent 42%);
+      repeating-linear-gradient(0deg, rgba(255, 255, 255, 0.08) 0, rgba(255, 255, 255, 0.08) 1px, transparent 1px, transparent 4px);
+    opacity: 0.22;
+  }
+
+  .ticker {
+    overflow: hidden;
+    white-space: nowrap;
+  }
+
+  .ticker-track {
+    display: inline-block;
+    padding: 0.35rem 0.6rem;
+    font-size: 0.75rem;
+    font-weight: 900;
+    text-transform: uppercase;
+    animation: ticker-move 18s linear infinite;
+  }
+
+  .bottom-tabloid {
+    border-top: 4px solid #000000;
+    background: var(--paper);
+    box-shadow: 0 -10px 0 rgba(0, 0, 0, 0.08);
   }
 }
 
-@keyframes nod-glow-drift {
+@keyframes paper-drift {
   from {
-    transform: translate3d(-2%, -1%, 0) scale(1);
+    transform: translate3d(-1.5rem, -1rem, 0) rotate(-1deg);
   }
   to {
-    transform: translate3d(2%, 2%, 0) scale(1.06);
+    transform: translate3d(1rem, 1.5rem, 0) rotate(1deg);
   }
 }
 
-@keyframes nod-float {
+@keyframes ticker-move {
   from {
-    transform: translate3d(0, 0, 0);
+    transform: translateX(0);
   }
   to {
-    transform: translate3d(16px, -34px, 0);
+    transform: translateX(-50%);
   }
 }
