@@ -16,9 +16,7 @@ import {
   Flame,
   Image as ImageIcon,
   Loader2,
-  LogOut,
   Medal,
-  Pencil,
   Plus,
   RefreshCw,
   ShieldAlert,
@@ -26,9 +24,7 @@ import {
   Star,
   Trophy,
   UploadCloud,
-  UserCircle,
   Video,
-  X,
   Zap
 } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
@@ -36,7 +32,7 @@ import type { RealtimeChannel } from "@supabase/supabase-js";
 
 type Tab = "feed" | "vote" | "studio" | "trophies" | "archive";
 type NominationStatus = "pending" | "accepted" | "rejected";
-type VerdictChoice = "nominee" | "ejected";
+type VerdictChoice = "propel" | "ban";
 type ToastTone = "success" | "error" | "info";
 type CategoryMood = "positive" | "critical" | "fun";
 type MediaKind = "video" | "image";
@@ -173,6 +169,12 @@ function normalizeStatus(value: unknown): NominationStatus | null {
   return null;
 }
 
+function normalizeChoice(value: unknown): VerdictChoice | null {
+  if (value === "propel" || value === "nominee") return "propel";
+  if (value === "ban" || value === "ejected") return "ban";
+  return null;
+}
+
 function parseVotes(value: unknown): Votes {
   if (!isRecord(value)) return {};
 
@@ -180,8 +182,8 @@ function parseVotes(value: unknown): Votes {
     if (!isRecord(rawVote)) return acc;
 
     const rating = toIntOrNull(rawVote.rating);
-    const choice = rawVote.choice;
-    if (rating === null || (choice !== "nominee" && choice !== "ejected")) return acc;
+    const choice = normalizeChoice(rawVote.choice);
+    if (rating === null || !choice) return acc;
 
     acc[sessionId] = {
       rating: clampRating(rating),
@@ -233,8 +235,8 @@ function getCategoryMeta(value: string): CategoryMeta {
 }
 
 function statusLabel(status: NominationStatus) {
-  if (status === "accepted") return "SACRÉ";
-  if (status === "rejected") return "ÉJECTÉ";
+  if (status === "accepted") return "PROPULSER";
+  if (status === "rejected") return "BANNIR";
   return "A VOTER";
 }
 
@@ -412,17 +414,17 @@ async function uploadFileToSpaces(file: File, folder: "videos" | "miniatures") {
 }
 
 function verdictLabel(choice: VerdictChoice) {
-  return choice === "nominee" ? "SACRÉ" : "ÉJECTÉ";
+  return choice === "propel" ? "PROPULSER" : "BANNIR";
 }
 
 function voteBurst(choice: VerdictChoice) {
-  const colors = choice === "nominee" ? ["#facc15", "#dc2626", "#000000", "#f0f0f0"] : ["#dc2626", "#000000", "#facc15"];
+  const colors = choice === "propel" ? ["#facc15", "#dc2626", "#000000", "#f0f0f0"] : ["#dc2626", "#000000", "#facc15"];
 
   void confetti({
-    particleCount: choice === "nominee" ? 120 : 72,
-    spread: choice === "nominee" ? 92 : 58,
-    startVelocity: choice === "nominee" ? 48 : 34,
-    scalar: choice === "nominee" ? 1.05 : 0.9,
+    particleCount: choice === "propel" ? 120 : 72,
+    spread: choice === "propel" ? 92 : 58,
+    startVelocity: choice === "propel" ? 48 : 34,
+    scalar: choice === "propel" ? 1.05 : 0.9,
     ticks: 150,
     colors,
     origin: { y: 0.72 },
@@ -553,11 +555,8 @@ export default function Home() {
   const [supabase, setSupabase] = useState<ReturnType<typeof getSupabaseBrowserClient>>(null);
   const [bootingSession, setBootingSession] = useState(true);
   const [participant, setParticipant] = useState<Participant | null>(null);
-  const [pseudoDraft, setPseudoDraft] = useState("");
   const [roomId, setRoomId] = useState<string | null>(null);
   const [roomCode, setRoomCode] = useState(DEFAULT_ROOM_CODE);
-  const [editingName, setEditingName] = useState(false);
-  const [nameDraft, setNameDraft] = useState("");
 
   const [tab, setTab] = useState<Tab>("feed");
   const [nominations, setNominations] = useState<Nomination[]>([]);
@@ -616,14 +615,14 @@ export default function Home() {
   useEffect(() => {
     try {
       const storedId = localStorage.getItem(SESSION_ID_KEY);
+      const nextId = storedId || makeSessionId();
       const storedPseudo = sanitizePseudo(localStorage.getItem(PSEUDO_KEY) || "");
-      const storedRoom = sanitizeRoomCode(localStorage.getItem(ROOM_CODE_KEY) || DEFAULT_ROOM_CODE) || DEFAULT_ROOM_CODE;
-      setRoomCode(storedRoom);
-      setPseudoDraft(storedPseudo);
-
-      if (storedId && storedPseudo) {
-        setParticipant({ id: storedId, pseudo: storedPseudo });
-      }
+      const nextPseudo = storedPseudo || `Joueur ${nextId.slice(0, 4).toUpperCase()}`;
+      localStorage.setItem(SESSION_ID_KEY, nextId);
+      localStorage.setItem(PSEUDO_KEY, nextPseudo);
+      localStorage.setItem(ROOM_CODE_KEY, DEFAULT_ROOM_CODE);
+      setRoomCode(DEFAULT_ROOM_CODE);
+      setParticipant({ id: nextId, pseudo: nextPseudo });
     } finally {
       setBootingSession(false);
     }
@@ -720,7 +719,7 @@ export default function Home() {
           await fetchNominations(false, activeRoomId);
         }
       } catch (err) {
-        const message = err instanceof Error ? err.message : "Salon inaccessible.";
+        const message = err instanceof Error ? err.message : "Flux inaccessible.";
         showToast("error", message);
       }
     })();
@@ -822,57 +821,6 @@ export default function Home() {
     [switchTab, tab]
   );
 
-  const startSession = () => {
-    const cleanPseudo = sanitizePseudo(pseudoDraft);
-    const cleanCode = sanitizeRoomCode(roomCode) || DEFAULT_ROOM_CODE;
-
-    if (cleanPseudo.length < 2) {
-      showToast("error", "Entre un pseudo valide.");
-      return;
-    }
-
-    const nextParticipant = {
-      id: localStorage.getItem(SESSION_ID_KEY) || makeSessionId(),
-      pseudo: cleanPseudo
-    };
-
-    localStorage.setItem(SESSION_ID_KEY, nextParticipant.id);
-    localStorage.setItem(PSEUDO_KEY, nextParticipant.pseudo);
-    localStorage.setItem(ROOM_CODE_KEY, cleanCode);
-    setRoomCode(cleanCode);
-    setParticipant(nextParticipant);
-    haptic(20);
-    showToast("success", `Bienvenue ${nextParticipant.pseudo}.`);
-  };
-
-  const resetSession = () => {
-    haptic(20);
-    localStorage.removeItem(SESSION_ID_KEY);
-    localStorage.removeItem(PSEUDO_KEY);
-    setParticipant(null);
-    setRoomId(null);
-    setTab("feed");
-  };
-
-  const openNameEditor = () => {
-    if (!participant) return;
-    setEditingName(true);
-    setNameDraft(participant.pseudo);
-  };
-
-  const saveName = () => {
-    if (!participant) return;
-    const cleaned = sanitizePseudo(nameDraft);
-    if (cleaned.length < 2) return;
-
-    const nextParticipant = { ...participant, pseudo: cleaned };
-    localStorage.setItem(PSEUDO_KEY, cleaned);
-    setParticipant(nextParticipant);
-    setEditingName(false);
-    haptic(20);
-    showToast("success", "Pseudo mis à jour.");
-  };
-
   const prepareMedia = async (nextFile: File | null) => {
     if (!nextFile) return;
     if (!nextFile.type.startsWith("video/") && !nextFile.type.startsWith("image/")) {
@@ -940,7 +888,7 @@ export default function Home() {
 
     try {
       const activeRoomId = roomId ?? (await ensureRoom());
-      if (!activeRoomId) throw new Error("Salon introuvable.");
+      if (!activeRoomId) throw new Error("Flux introuvable.");
 
       setMediaNote("Envoi de la miniature vers DigitalOcean Spaces...");
       const imageUpload = await uploadFileToSpaces(thumbnailFile, "miniatures");
@@ -955,7 +903,7 @@ export default function Home() {
 
       const starterVote: VoteValue = {
         rating: clampRating(initialRating),
-        choice: initialRating >= 3 ? "nominee" : "ejected",
+        choice: initialRating >= 3 ? "propel" : "ban",
         pseudo: participant.pseudo,
         voted_at: new Date().toISOString()
       };
@@ -977,8 +925,8 @@ export default function Home() {
       if (insertError) throw insertError;
 
       setMediaProgress(1);
-      haptic([15, 40, 15]);
-      showToast("success", "Dossier uploadé dans le salon.");
+      haptic(initialRating >= 3 ? [15, 30, 15] : [20, 50]);
+      showToast("success", "Dossier envoyé dans le flux.");
       clearPreparedMedia();
       setComment("");
       setInitialRating(4);
@@ -1001,7 +949,7 @@ export default function Home() {
     if (!nomination) return;
 
     const draft = clampRating(ratingDraftById[id] ?? 4);
-    const finalRating = choice === "nominee" ? Math.max(3, draft) : Math.min(2, draft);
+    const finalRating = choice === "propel" ? Math.max(3, draft) : Math.min(2, draft);
     const votePayload: VoteValue = {
       rating: finalRating,
       choice,
@@ -1014,9 +962,9 @@ export default function Home() {
     };
     const nextStatus = computeStatus(nextVotes);
 
+    haptic(choice === "propel" ? [15, 30, 15] : [20, 50]);
     setVoteBusyId(id);
     setShakeId(id);
-    haptic([15, 40, 15]);
     window.setTimeout(() => setShakeId(null), 520);
 
     try {
@@ -1038,7 +986,7 @@ export default function Home() {
       });
 
       voteBurst(choice);
-      showToast("success", nextStatus === "accepted" ? "Verdict collectif: SACRÉ." : nextStatus === "rejected" ? "Verdict collectif: ÉJECTÉ." : "Vote enregistré.");
+      showToast("success", nextStatus === "accepted" ? "Verdict collectif: PROPULSER." : nextStatus === "rejected" ? "Verdict collectif: BANNIR." : "Vote enregistré.");
       await channelRef.current?.send({ type: "broadcast", event: "vote", payload: { id, status: nextStatus } });
       void fetchNominations(true);
     } catch (err) {
@@ -1062,57 +1010,12 @@ export default function Home() {
 
   if (!participant) {
     return (
-      <div className="tabloid-app">
+      <div className="tabloid-app flex items-center justify-center">
         <PaperBackdrop />
-        <motion.main
-          {...revealContainer}
-          className="relative z-10 mx-auto flex min-h-svh w-full max-w-[30rem] flex-col justify-center px-4"
-          style={{ paddingTop: "calc(env(safe-area-inset-top) + 18px)", paddingBottom: "calc(env(safe-area-inset-bottom) + 18px)" }}
-        >
-          <motion.div {...revealItem} className="mb-4 flex items-center justify-between border-b-4 border-black pb-2">
-            <Sticker tone="red" className="-rotate-2">
-              Salon actif
-            </Sticker>
-            <span className="text-xs font-black uppercase">Session ouverte</span>
-          </motion.div>
-
-          <motion.h1 {...revealItem} className="tabloid-headline mb-5 max-w-[7ch] text-[clamp(3.25rem,18vw,5.8rem)] leading-[0.76]">
-            Nominees
-            <span className="block bg-black px-2 text-white">or</span>
-            <span className="block text-red-600">Denominees</span>
-          </motion.h1>
-
-          <motion.p {...revealItem} className="mb-6 border-y-4 border-black py-3 text-[clamp(1.15rem,5vw,1.55rem)] font-black uppercase leading-none">
-            Un salon collaboratif pour sacrer ou éjecter les dossiers TikTok du mois.
-          </motion.p>
-
-          <motion.div {...revealItem} className="space-y-4">
-            <BrutalCard className="p-4">
-              <label className="block">
-                <span className="mb-2 block text-xs font-black uppercase">Pseudo</span>
-                <input value={pseudoDraft} onChange={(event) => setPseudoDraft(sanitizePseudo(event.target.value))} maxLength={24} className="brutal-input w-full px-3 py-3 text-xl font-black uppercase" placeholder="TON PSEUDO" />
-              </label>
-            </BrutalCard>
-
-            <BrutalCard className="p-4">
-              <label className="block">
-                <span className="mb-2 block text-xs font-black uppercase">Code salon</span>
-                <input value={roomCode} onChange={(event) => setRoomCode(sanitizeRoomCode(event.target.value))} maxLength={24} className="brutal-input w-full px-3 py-3 text-xl font-black uppercase" />
-              </label>
-            </BrutalCard>
-
-            {!supabase && (
-              <div className="border-4 border-black bg-yellow-300 p-3 text-sm font-black uppercase">
-                Variables Supabase manquantes. La synchronisation attend la configuration.
-              </div>
-            )}
-
-            <button onClick={startSession} className="brutal-submit flex w-full items-center justify-center gap-2">
-              <UserCircle className="h-6 w-6" />
-              Entrer dans le salon
-            </button>
-          </motion.div>
-        </motion.main>
+        <BrutalCard tone="yellow" className="p-5 text-center">
+          <Loader2 className="mx-auto mb-3 h-8 w-8 animate-spin text-black" />
+          <p className="text-xl font-black uppercase leading-none">Chargement du jeu...</p>
+        </BrutalCard>
       </div>
     );
   }
@@ -1149,24 +1052,19 @@ export default function Home() {
         <header className="sticky top-0 z-30 mb-4 bg-[#f0f0f0] py-3">
           <div className="border-b-4 border-black pb-2">
             <div className="flex items-center justify-between">
-              <button onClick={openNameEditor} className="min-w-0 text-left">
-                <p className="text-[10px] font-black uppercase text-red-600">Salon actif</p>
-                <p className="truncate text-[clamp(1.45rem,7vw,2.25rem)] font-black uppercase leading-none">
-                  {participant.pseudo} <Pencil className="mb-1 ml-1 inline h-4 w-4" />
-                </p>
-              </button>
+              <div className="min-w-0 text-left">
+                <p className="text-[10px] font-black uppercase text-red-600">Jeu en direct</p>
+                <p className="truncate text-[clamp(1.65rem,8vw,2.65rem)] font-black uppercase leading-none">Flux collectif</p>
+              </div>
               <div className="flex items-center gap-2">
                 <button onClick={() => void fetchNominations()} disabled={syncing || !supabase} className="brutal-icon-button disabled:opacity-50" aria-label="Synchroniser">
                   <RefreshCw className={`h-4 w-4 ${syncing ? "animate-spin" : ""}`} />
-                </button>
-                <button onClick={resetSession} className="brutal-icon-button" aria-label="Changer de session">
-                  <LogOut className="h-4 w-4" />
                 </button>
               </div>
             </div>
             <div className="ticker mt-3 border-4 border-black bg-black text-white">
               <span className="ticker-track">
-                SALON {roomCode} / PROCHAINE CÉRÉMONIE {countdown.days}J {countdown.hours}H {countdown.mins}M / SYNCHRO {lastSyncLabel} / VOTES EN ATTENTE {pendingForMe.length} / SALON {roomCode}
+                PROCHAINE CÉRÉMONIE {countdown.days}J {countdown.hours}H {countdown.mins}M / SYNCHRO {lastSyncLabel} / VOTES EN ATTENTE {pendingForMe.length} / ARCHIVE PERMANENTE / JEU EN DIRECT
               </span>
             </div>
           </div>
@@ -1178,7 +1076,7 @@ export default function Home() {
             <p className="text-[clamp(2rem,11vw,3rem)] font-black leading-none">{pendingForMe.length}</p>
           </BrutalCard>
           <BrutalCard tone="red" className="p-2">
-            <p className="text-[10px] font-black uppercase">Sacrés</p>
+            <p className="text-[10px] font-black uppercase">Propulsés</p>
             <p className="text-[clamp(2rem,11vw,3rem)] font-black leading-none">{accepted.length}</p>
           </BrutalCard>
           <BrutalCard tone="black" className="p-2">
@@ -1210,7 +1108,7 @@ export default function Home() {
                     <span className="block text-black">du mois</span>
                   </h2>
                   <p className="mt-4 border-t-4 border-black pt-3 text-[clamp(1.1rem,5vw,1.5rem)] font-black uppercase leading-none text-white">
-                    Uploader. Voter. Sacrer. L&apos;archive reste permanente.
+                    Uploader. Voter. Propulser. L&apos;archive reste permanente.
                   </p>
                 </BrutalCard>
               </motion.div>
@@ -1225,7 +1123,7 @@ export default function Home() {
                   </div>
                   <div className="grid grid-cols-[1fr_auto] gap-3 p-3">
                     <div>
-                      <p className="text-[10px] font-black uppercase text-red-600">Flux public du salon</p>
+                      <p className="text-[10px] font-black uppercase text-red-600">Flux public</p>
                       <p className="line-clamp-2 text-[clamp(1.35rem,7vw,2rem)] font-black uppercase leading-none">{heroWinner ? heroWinner.comment : "Aucun dossier publié"}</p>
                     </div>
                     <button onClick={() => switchTab("studio")} className="brutal-icon-button bg-yellow-300" aria-label="Uploader un dossier">
@@ -1240,7 +1138,7 @@ export default function Home() {
                   <BrutalCard className="p-8 text-center">
                     <Camera className="mx-auto mb-3 h-9 w-9" />
                     <p className="text-2xl font-black uppercase leading-none">Aucune capture.</p>
-                    <p className="mt-2 text-sm font-bold uppercase">Le premier upload ouvre la cérémonie.</p>
+                    <p className="mt-2 text-sm font-bold uppercase">Le premier envoi ouvre la cérémonie.</p>
                   </BrutalCard>
                 ) : (
                   feedItems.map((nomination, index) => {
@@ -1329,11 +1227,11 @@ export default function Home() {
                       <div className="space-y-3 p-3">
                         <StarInput value={draftRating} onChange={(value) => setRatingDraftById((prev) => ({ ...prev, [nomination.id]: value }))} size="lg" />
                         <div className="grid grid-cols-2 gap-2">
-                          <button onClick={() => void applyVote(nomination.id, "nominee")} disabled={voteBusyId === nomination.id} className="brutal-action bg-yellow-300 text-black disabled:opacity-50">
-                            Sacrer
+                          <button onClick={() => void applyVote(nomination.id, "propel")} disabled={voteBusyId === nomination.id} className="brutal-action bg-yellow-300 text-black disabled:opacity-50">
+                            Propulser
                           </button>
-                          <button onClick={() => void applyVote(nomination.id, "ejected")} disabled={voteBusyId === nomination.id} className="brutal-action bg-red-600 text-white disabled:opacity-50">
-                            Éjecter
+                          <button onClick={() => void applyVote(nomination.id, "ban")} disabled={voteBusyId === nomination.id} className="brutal-action bg-red-600 text-white disabled:opacity-50">
+                            Bannir
                           </button>
                         </div>
                       </div>
@@ -1419,7 +1317,7 @@ export default function Home() {
 
               <BrutalCard tone="yellow" className="p-3">
                 <StarInput value={initialRating} onChange={setInitialRating} size="lg" />
-                <p className="mt-3 border-t-4 border-black pt-2 text-center text-sm font-black uppercase">Vote initial: {verdictLabel(initialRating >= 3 ? "nominee" : "ejected")}</p>
+                <p className="mt-3 border-t-4 border-black pt-2 text-center text-sm font-black uppercase">Vote initial: {verdictLabel(initialRating >= 3 ? "propel" : "ban")}</p>
               </BrutalCard>
 
               <button onClick={() => void uploadNomination()} disabled={uploadLoading || !uploadReady} className="brutal-submit flex w-full items-center justify-center gap-2 disabled:opacity-50">
@@ -1447,7 +1345,7 @@ export default function Home() {
               {categoryWinners.length === 0 ? (
                 <BrutalCard tone="yellow" className="p-8 text-center">
                   <Trophy className="mx-auto mb-3 h-10 w-10" />
-                  <p className="text-3xl font-black uppercase leading-none">Aucun sacré.</p>
+                  <p className="text-3xl font-black uppercase leading-none">Aucun propulsé.</p>
                   <p className="mt-2 text-sm font-black uppercase">Une moyenne collective de 3/5 ouvre le palmarès.</p>
                 </BrutalCard>
               ) : (
@@ -1530,30 +1428,6 @@ export default function Home() {
           <Plus className="h-8 w-8" />
         </motion.button>
       )}
-
-      <AnimatePresence>
-        {editingName && (
-          <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="fixed inset-0 z-50 flex items-center justify-center bg-black/75 px-5">
-            <BrutalCard className="w-full max-w-sm p-4">
-              <div className="mb-4 flex items-center justify-between border-b-4 border-black pb-2">
-                <h3 className="text-3xl font-black uppercase leading-none">Changer pseudo</h3>
-                <button onClick={() => setEditingName(false)} className="brutal-icon-button" aria-label="Fermer">
-                  <X className="h-4 w-4" />
-                </button>
-              </div>
-              <input autoFocus value={nameDraft} onChange={(event) => setNameDraft(sanitizePseudo(event.target.value))} maxLength={24} className="brutal-input mb-4 w-full px-3 py-3 text-lg font-black uppercase" />
-              <div className="grid grid-cols-2 gap-2">
-                <button onClick={() => setEditingName(false)} className="brutal-action bg-[#f0f0f0] text-black">
-                  Annuler
-                </button>
-                <button onClick={saveName} className="brutal-action bg-yellow-300 text-black">
-                  Valider
-                </button>
-              </div>
-            </BrutalCard>
-          </motion.div>
-        )}
-      </AnimatePresence>
 
       <nav className="bottom-tabloid fixed bottom-0 left-0 right-0 z-40 px-2 pt-2" style={{ paddingBottom: "calc(env(safe-area-inset-bottom) + 10px)" }}>
         <div className="mx-auto grid w-full max-w-[30rem] grid-cols-5 gap-1">

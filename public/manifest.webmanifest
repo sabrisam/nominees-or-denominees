@@ -1,10 +1,10 @@
 {
-  "name": "Nominees or Denominees",
-  "short_name": "NOD",
-  "description": "Journal culturel partage pour deux joueurs.",
+  "name": "Flux de verdicts",
+  "short_name": "Verdicts",
+  "description": "Terrain de jeu culturel multijoueur.",
   "start_url": "/",
   "display": "standalone",
-  "background_color": "#000000",
-  "theme_color": "#000000",
+  "background_color": "#f0f0f0",
+  "theme_color": "#dc2626",
   "orientation": "portrait"
 }

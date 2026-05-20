@@ -2,12 +2,12 @@ import type { Metadata, Viewport } from "next";
 import "./globals.css";
 
 export const metadata: Metadata = {
-  title: "Nominees or Denominees",
-  description: "Journal culturel partage pour deux joueurs.",
+  title: "Flux de verdicts",
+  description: "Terrain de jeu culturel multijoueur.",
   manifest: "/manifest.webmanifest",
   appleWebApp: {
     capable: true,
-    title: "NOD",
+    title: "Verdicts",
     statusBarStyle: "black-translucent"
   },
   formatDetection: {
