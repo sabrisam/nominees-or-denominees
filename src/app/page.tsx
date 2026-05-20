@@ -410,10 +410,10 @@ function StarInput({
             onMouseEnter={() => !readonly && setHover(star)}
             onMouseLeave={() => !readonly && setHover(0)}
             onClick={() => onChange?.(star)}
-            className="rounded-md p-1 transition active:scale-90 disabled:cursor-default"
+            className="rounded-md p-1.5 transition duration-150 active:scale-90 disabled:cursor-default"
             aria-label={`${star} etoiles`}
           >
-            <Star className={`${iconSizeClass} transition-colors ${active ? "fill-amber-500 text-amber-500" : "text-zinc-700"}`} />
+            <Star className={`${iconSizeClass} transition-colors ${active ? "fill-amber-500 text-amber-500 drop-shadow-[0_0_10px_rgba(217,119,6,0.35)]" : "text-zinc-700"}`} />
           </button>
         );
       })}
@@ -438,12 +438,12 @@ function MediaFrame({
         controls={controls}
         playsInline
         preload="metadata"
-        className={`${height} w-full object-cover`}
+        className={`${height} block w-full object-cover`}
       />
     );
   }
 
-  return <img src={nomination.image_url} alt="" className={`${height} w-full object-cover`} />;
+  return <img src={nomination.image_url} alt="" className={`${height} block w-full object-cover`} />;
 }
 
 export default function Home() {
@@ -1001,40 +1001,45 @@ export default function Home() {
 
   if (bootingRole) {
     return (
-      <div className="flex min-h-screen items-center justify-center bg-black text-zinc-300">
-        <Loader2 className="h-6 w-6 animate-spin" />
+      <div className="nod-app flex items-center justify-center text-zinc-300">
+        <div className="nod-panel flex h-16 w-16 items-center justify-center rounded-lg">
+          <Loader2 className="h-6 w-6 animate-spin text-amber-600" />
+        </div>
       </div>
     );
   }
 
   if (!role) {
     return (
-      <div className="min-h-screen bg-black text-white">
+      <div className="nod-app text-white">
         <motion.div
           initial={reduceMotion ? { opacity: 1 } : { opacity: 0, y: 18 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: reduceMotion ? 0.01 : 0.3 }}
-          className="mx-auto flex min-h-screen w-full max-w-sm flex-col justify-center px-5"
+          className="nod-viewport flex min-h-screen flex-col justify-center"
           style={{ paddingTop: "calc(env(safe-area-inset-top) + 12px)", paddingBottom: "calc(env(safe-area-inset-bottom) + 12px)" }}
         >
-          <div className="mb-8">
-            <p className="mb-2 text-[11px] font-black uppercase tracking-[0.24em] text-amber-600">NOD</p>
-            <h1 className="text-4xl font-black leading-none tracking-tight">Nominees or Denominees</h1>
-            <p className="mt-3 text-sm leading-6 text-zinc-400">Journal culturel partage en duo.</p>
+          <div className="mb-7">
+            <div className="mb-5 inline-flex h-12 items-center gap-2 rounded-lg border border-white/10 bg-white/[0.035] px-3 shadow-[inset_0_1px_0_rgba(255,255,255,0.08)]">
+              <span className="flex h-7 w-7 items-center justify-center rounded-md bg-amber-600 text-xs font-black text-black">N</span>
+              <span className="nod-eyebrow">NOD</span>
+            </div>
+            <h1 className="nod-title max-w-[12ch] text-5xl">Nominees or Denominees</h1>
+            <p className="nod-copy mt-4 text-sm leading-6">Journal culturel partage en duo, pense comme une app iOS native.</p>
           </div>
 
-          <label className="mb-4 block">
-            <span className="mb-2 block text-[10px] font-black uppercase tracking-[0.18em] text-zinc-500">Code salon</span>
+          <label className="mb-4 block rounded-lg">
+            <span className="nod-eyebrow mb-2 block text-zinc-500">Code salon</span>
             <input
               value={roomCode}
               onChange={(event) => setRoomCode(sanitizeRoomCode(event.target.value))}
               maxLength={24}
-              className="w-full rounded-lg border border-zinc-800 bg-zinc-950 px-4 py-3 text-sm font-black uppercase tracking-[0.14em] text-white outline-none focus:border-amber-700"
+              className="nod-input w-full rounded-lg px-4 py-3 text-sm font-black uppercase tracking-[0.14em]"
             />
           </label>
 
           {!supabase && (
-            <div className="mb-4 rounded-lg border border-amber-700/50 bg-amber-950/20 p-3 text-xs leading-5 text-amber-200">
+            <div className="mb-4 rounded-lg border border-amber-700/50 bg-amber-950/20 p-3 text-xs leading-5 text-amber-200 shadow-[inset_0_1px_0_rgba(255,255,255,0.06)]">
               Variables Supabase manquantes. L&apos;interface charge, mais la sync attend la configuration.
             </div>
           )}
@@ -1042,23 +1047,27 @@ export default function Home() {
           <div className="space-y-3">
             <button
               onClick={() => selectRole("player_1")}
-              className="flex w-full items-center justify-between rounded-lg border border-zinc-800 bg-zinc-950 p-5 text-left transition active:scale-[0.99]"
+              className="nod-panel flex w-full items-center justify-between rounded-lg p-5 text-left transition duration-150 active:scale-[0.99]"
             >
               <span>
                 <span className="block text-lg font-black text-white">{p1Name}</span>
                 <span className="text-[10px] font-bold uppercase tracking-[0.16em] text-zinc-500">Joueur 1</span>
               </span>
-              <UserCircle className="h-7 w-7 text-amber-600" />
+              <span className="flex h-11 w-11 items-center justify-center rounded-lg border border-amber-700/35 bg-amber-600/10">
+                <UserCircle className="h-6 w-6 text-amber-500" />
+              </span>
             </button>
             <button
               onClick={() => selectRole("player_2")}
-              className="flex w-full items-center justify-between rounded-lg border border-zinc-800 bg-zinc-950 p-5 text-left transition active:scale-[0.99]"
+              className="nod-panel flex w-full items-center justify-between rounded-lg p-5 text-left transition duration-150 active:scale-[0.99]"
             >
               <span>
                 <span className="block text-lg font-black text-white">{p2Name}</span>
                 <span className="text-[10px] font-bold uppercase tracking-[0.16em] text-zinc-500">Joueur 2</span>
               </span>
-              <UserCircle className="h-7 w-7 text-zinc-300" />
+              <span className="flex h-11 w-11 items-center justify-center rounded-lg border border-white/10 bg-white/[0.035]">
+                <UserCircle className="h-6 w-6 text-zinc-300" />
+              </span>
             </button>
           </div>
         </motion.div>
@@ -1067,7 +1076,7 @@ export default function Home() {
   }
 
   return (
-    <div className="relative min-h-screen overflow-x-hidden bg-black text-zinc-100" style={{ paddingBottom: "calc(env(safe-area-inset-bottom) + 96px)" }}>
+    <div className="nod-app text-zinc-100" style={{ paddingBottom: "calc(env(safe-area-inset-bottom) + 96px)" }}>
       <AnimatePresence>
         {toast && (
           <motion.div
@@ -1078,7 +1087,7 @@ export default function Home() {
             style={{ top: "calc(env(safe-area-inset-top) + 10px)" }}
           >
             <div
-              className={`flex items-center gap-2 rounded-lg border px-4 py-3 text-sm font-semibold backdrop-blur-xl ${
+              className={`flex items-center gap-2 rounded-lg border px-4 py-3 text-sm font-semibold shadow-[0_18px_50px_rgba(0,0,0,0.45)] backdrop-blur-2xl ${
                 toast.tone === "success"
                   ? "border-emerald-400/30 bg-emerald-500/10 text-emerald-300"
                   : toast.tone === "error"
@@ -1093,25 +1102,27 @@ export default function Home() {
         )}
       </AnimatePresence>
 
-      <div className="mx-auto w-full max-w-md px-4" style={{ paddingTop: "calc(env(safe-area-inset-top) + 8px)" }}>
-        <header className="sticky top-0 z-30 mb-4 border-b border-zinc-900 bg-black/90 py-3 backdrop-blur-xl">
+      <div className="nod-viewport" style={{ paddingTop: "calc(env(safe-area-inset-top) + 8px)" }}>
+        <header className="sticky top-0 z-30 mb-4 py-3">
+          <div className="nod-panel flex items-center justify-between rounded-lg px-3 py-3">
           <div className="flex items-center justify-between">
             <button onClick={openNameEditor} className="min-w-0 text-left">
-              <p className="text-[10px] font-black uppercase tracking-[0.2em] text-amber-600">Session active</p>
+              <p className="nod-eyebrow">Session active</p>
               <p className="truncate text-base font-black text-white">
                 {myDisplayName} <Pencil className="mb-0.5 ml-1 inline h-3.5 w-3.5 text-zinc-500" />
               </p>
             </button>
+          </div>
             <div className="flex items-center gap-2">
               <button
                 onClick={() => void fetchNominations()}
                 disabled={syncing || !supabase}
-                className="rounded-lg border border-zinc-800 bg-zinc-950 p-2 text-zinc-300 transition active:scale-95 disabled:opacity-60"
+                className="nod-btn-quiet rounded-lg p-2.5 transition active:scale-95 disabled:opacity-60"
                 aria-label="Synchroniser"
               >
                 <RefreshCw className={`h-4 w-4 ${syncing ? "animate-spin" : ""}`} />
               </button>
-              <button onClick={logout} className="rounded-lg border border-zinc-800 bg-zinc-950 p-2 text-zinc-300 transition active:scale-95" aria-label="Quitter">
+              <button onClick={logout} className="nod-btn-quiet rounded-lg p-2.5 transition active:scale-95" aria-label="Quitter">
                 <LogOut className="h-4 w-4" />
               </button>
             </div>
@@ -1119,17 +1130,17 @@ export default function Home() {
         </header>
 
         <div className="mb-5 grid grid-cols-3 gap-2">
-          <div className="rounded-lg border border-zinc-900 bg-zinc-950 p-3">
+          <div className="nod-metric rounded-lg p-3">
             <p className="mb-1 text-[10px] uppercase tracking-[0.16em] text-zinc-500">Fin du mois</p>
             <p className="text-sm font-black text-white">
               {countdown.days}j {countdown.hours}h {countdown.mins}m
             </p>
           </div>
-          <div className="rounded-lg border border-zinc-900 bg-zinc-950 p-3">
+          <div className="nod-metric rounded-lg p-3">
             <p className="mb-1 text-[10px] uppercase tracking-[0.16em] text-zinc-500">A juger</p>
             <p className="text-xl font-black text-amber-500">{pendingForMe.length}</p>
           </div>
-          <div className="rounded-lg border border-zinc-900 bg-zinc-950 p-3">
+          <div className="nod-metric rounded-lg p-3">
             <p className="mb-1 text-[10px] uppercase tracking-[0.16em] text-zinc-500">Arene</p>
             <p className="text-xl font-black text-red-300">{arena.length}</p>
           </div>
@@ -1146,11 +1157,23 @@ export default function Home() {
               transition={{ duration: reduceMotion ? 0.01 : 0.24 }}
               className="space-y-4"
             >
-              <div className="rounded-lg border border-zinc-900 bg-zinc-950 p-5">
-                <p className="text-[10px] font-black uppercase tracking-[0.2em] text-amber-600">Salon {roomCode}</p>
-                <h2 className="mt-2 text-2xl font-black tracking-tight text-white">Nouveau dossier</h2>
-                <div className="mt-4 h-2 overflow-hidden rounded-full bg-zinc-900">
-                  <div className="h-full rounded-full bg-amber-600" style={{ width: `${progressDone}%` }} />
+              <div className="nod-panel-strong overflow-hidden rounded-lg p-5">
+                <div className="flex items-start justify-between gap-4">
+                  <div>
+                    <p className="nod-eyebrow">Salon {roomCode}</p>
+                    <h2 className="nod-title mt-3 text-3xl text-white">Tableau de bord</h2>
+                  </div>
+                  <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-lg border border-amber-700/35 bg-amber-600/10 text-amber-500">
+                    <Sparkles className="h-5 w-5" />
+                  </span>
+                </div>
+                <div className="mt-5 h-2 overflow-hidden rounded-full bg-white/[0.055]">
+                  <motion.div
+                    className="h-full rounded-full bg-amber-600 shadow-[0_0_18px_rgba(217,119,6,0.45)]"
+                    initial={{ width: 0 }}
+                    animate={{ width: `${progressDone}%` }}
+                    transition={{ duration: reduceMotion ? 0.01 : 0.5, ease: "easeOut" }}
+                  />
                 </div>
                 <div className="mt-3 flex items-center justify-between text-[11px] font-semibold uppercase tracking-[0.14em] text-zinc-500">
                   <span>{archive.length} archives</span>
@@ -1159,7 +1182,7 @@ export default function Home() {
               </div>
               <button
                 onClick={() => setShowAddModal(true)}
-                className="flex w-full items-center justify-center gap-2 rounded-lg bg-amber-600 py-4 text-sm font-black uppercase tracking-[0.18em] text-black transition active:scale-[0.99]"
+                className="nod-btn-primary flex w-full items-center justify-center gap-2 rounded-lg py-4 text-sm font-black uppercase tracking-[0.18em] transition active:scale-[0.99]"
               >
                 <Plus className="h-4 w-4" /> Proposer
               </button>
@@ -1177,13 +1200,16 @@ export default function Home() {
               className="space-y-4"
             >
               {loadingList ? (
-                <div className="rounded-lg border border-zinc-900 bg-zinc-950 p-8 text-center">
+                <div className="nod-panel rounded-lg p-8 text-center">
                   <Loader2 className="mx-auto h-6 w-6 animate-spin text-amber-600" />
                 </div>
               ) : pendingForMe.length === 0 ? (
-                <div className="rounded-lg border border-zinc-900 bg-zinc-950 p-8 text-center">
-                  <Check className="mx-auto mb-3 h-8 w-8 text-emerald-400" />
+                <div className="nod-panel rounded-lg p-8 text-center">
+                  <span className="mx-auto mb-4 flex h-12 w-12 items-center justify-center rounded-lg border border-emerald-400/25 bg-emerald-500/10">
+                    <Check className="h-6 w-6 text-emerald-300" />
+                  </span>
                   <p className="font-semibold text-zinc-200">Aucun dossier a juger.</p>
+                  <p className="mt-2 text-xs leading-5 text-zinc-500">Tout est synchronise pour cette session.</p>
                 </div>
               ) : (
                 pendingForMe.map((nomination) => {
@@ -1192,10 +1218,10 @@ export default function Home() {
                   const draftRating = clampRating(ratingDraftById[nomination.id] ?? 3);
 
                   return (
-                    <article key={nomination.id} className="overflow-hidden rounded-lg border border-zinc-900 bg-zinc-950">
-                      <div className="relative">
+                    <article key={nomination.id} className="nod-panel overflow-hidden rounded-lg">
+                      <div className="nod-media relative">
                         <MediaFrame nomination={nomination} />
-                        <div className="absolute left-3 top-3 flex items-center gap-2 rounded-md border border-black/50 bg-black/75 px-3 py-1 text-xs font-black text-white backdrop-blur">
+                        <div className={`absolute left-3 top-3 flex items-center gap-2 rounded-md border px-3 py-1 text-xs font-black backdrop-blur ${moodBadgeClass(categoryMeta.mood)}`}>
                           <CategoryIcon className="h-3.5 w-3.5 text-amber-500" />
                           {categoryMeta.label}
                         </div>
@@ -1209,14 +1235,14 @@ export default function Home() {
                           <button
                             onClick={() => void applyVote(nomination.id, "nominee")}
                             disabled={voteBusyId === nomination.id}
-                            className="rounded-lg border border-emerald-400/20 bg-emerald-500/10 py-3 text-xs font-black uppercase tracking-[0.14em] text-emerald-300 disabled:opacity-60"
+                            className="rounded-lg border border-emerald-400/20 bg-emerald-500/10 py-3 text-xs font-black uppercase tracking-[0.14em] text-emerald-300 shadow-[inset_0_1px_0_rgba(255,255,255,0.05)] transition active:scale-[0.99] disabled:opacity-60"
                           >
                             Nomine
                           </button>
                           <button
                             onClick={() => void applyVote(nomination.id, "ejected")}
                             disabled={voteBusyId === nomination.id}
-                            className="rounded-lg border border-red-400/20 bg-red-500/10 py-3 text-xs font-black uppercase tracking-[0.14em] text-red-300 disabled:opacity-60"
+                            className="rounded-lg border border-red-400/20 bg-red-500/10 py-3 text-xs font-black uppercase tracking-[0.14em] text-red-300 shadow-[inset_0_1px_0_rgba(255,255,255,0.05)] transition active:scale-[0.99] disabled:opacity-60"
                           >
                             Ejecte
                           </button>
@@ -1240,9 +1266,12 @@ export default function Home() {
               className="space-y-4"
             >
               {arena.length === 0 ? (
-                <div className="rounded-lg border border-zinc-900 bg-zinc-950 p-8 text-center">
-                  <Scale className="mx-auto mb-3 h-8 w-8 text-zinc-500" />
+                <div className="nod-panel rounded-lg p-8 text-center">
+                  <span className="mx-auto mb-4 flex h-12 w-12 items-center justify-center rounded-lg border border-white/10 bg-white/[0.035]">
+                    <Scale className="h-6 w-6 text-zinc-500" />
+                  </span>
                   <p className="font-semibold text-zinc-200">Aucun debat en cours.</p>
+                  <p className="mt-2 text-xs leading-5 text-zinc-500">Les accords et rejets passent directement en galerie.</p>
                 </div>
               ) : (
                 arena.map((nomination) => {
@@ -1250,15 +1279,17 @@ export default function Home() {
                   const nextRound = role ? getNextRoundForRole(rounds, role) : null;
 
                   return (
-                    <article key={nomination.id} className="overflow-hidden rounded-lg border border-red-400/25 bg-zinc-950">
-                      <MediaFrame nomination={nomination} height="h-56" />
+                    <article key={nomination.id} className="nod-panel overflow-hidden rounded-lg border-red-400/25">
+                      <div className="nod-media">
+                        <MediaFrame nomination={nomination} height="h-56" />
+                      </div>
                       <div className="space-y-4 p-4">
                         <p className="text-sm font-semibold text-zinc-100">&quot;{nomination.comment}&quot;</p>
                         <div className="space-y-2">
                           {[1, 2, 3].map((round) => {
                             const roundItems = rounds.filter((item) => item.round_number === round);
                             return (
-                              <div key={round} className="rounded-lg border border-zinc-900 bg-black p-3">
+                              <div key={round} className="rounded-lg border border-white/[0.07] bg-black/45 p-3 shadow-[inset_0_1px_0_rgba(255,255,255,0.035)]">
                                 <p className="mb-2 text-[10px] font-black uppercase tracking-[0.18em] text-red-300">Round {round}</p>
                                 {roundItems.length === 0 ? (
                                   <p className="text-xs text-zinc-600">En attente.</p>
@@ -1283,12 +1314,12 @@ export default function Home() {
                               onChange={(event) => setArgumentDraftById((prev) => ({ ...prev, [nomination.id]: event.target.value }))}
                               maxLength={180}
                               placeholder={`Round ${nextRound}`}
-                              className="min-w-0 flex-1 rounded-lg border border-zinc-800 bg-black px-3 py-3 text-sm text-white outline-none focus:border-amber-700"
+                              className="nod-input min-w-0 flex-1 rounded-lg px-3 py-3 text-sm"
                             />
                             <button
                               onClick={() => void submitTrialArgument(nomination.id)}
                               disabled={argumentBusyId === nomination.id}
-                              className="rounded-lg bg-amber-600 px-4 text-black disabled:opacity-60"
+                              className="nod-btn-primary min-h-0 rounded-lg px-4 text-black disabled:opacity-60"
                               aria-label="Envoyer"
                             >
                               {argumentBusyId === nomination.id ? <Loader2 className="h-4 w-4 animate-spin" /> : <Send className="h-4 w-4" />}
@@ -1298,7 +1329,7 @@ export default function Home() {
                         <button
                           onClick={() => void deleteNomination(nomination.id)}
                           disabled={deleteBusyId === nomination.id}
-                          className="w-full rounded-lg border border-red-400/20 bg-red-500/10 py-3 text-xs font-black uppercase tracking-[0.14em] text-red-300 disabled:opacity-60"
+                          className="w-full rounded-lg border border-red-400/20 bg-red-500/10 py-3 text-xs font-black uppercase tracking-[0.14em] text-red-300 transition active:scale-[0.99] disabled:opacity-60"
                         >
                           Supprimer
                         </button>
@@ -1321,16 +1352,19 @@ export default function Home() {
               className="space-y-3"
             >
               {archive.length === 0 ? (
-                <div className="rounded-lg border border-zinc-900 bg-zinc-950 p-8 text-center">
-                  <ImageIcon className="mx-auto mb-3 h-8 w-8 text-zinc-500" />
+                <div className="nod-panel rounded-lg p-8 text-center">
+                  <span className="mx-auto mb-4 flex h-12 w-12 items-center justify-center rounded-lg border border-white/10 bg-white/[0.035]">
+                    <ImageIcon className="h-6 w-6 text-zinc-500" />
+                  </span>
                   <p className="font-semibold text-zinc-200">La galerie est vide.</p>
+                  <p className="mt-2 text-xs leading-5 text-zinc-500">Les dossiers juges seront conserves en miniature.</p>
                 </div>
               ) : (
                 archive.map((nomination) => {
                   const rating = averageRating(nomination);
                   return (
-                    <article key={nomination.id} className="flex gap-3 rounded-lg border border-zinc-900 bg-zinc-950 p-2">
-                      <div className="h-20 w-20 shrink-0 overflow-hidden rounded-md">
+                    <article key={nomination.id} className="nod-panel flex gap-3 rounded-lg p-2">
+                      <div className="nod-media h-20 w-20 shrink-0 rounded-md">
                         <MediaFrame nomination={nomination} height="h-20" controls={false} />
                       </div>
                       <div className="min-w-0 flex-1 py-1">
@@ -1346,7 +1380,7 @@ export default function Home() {
                         <p className="truncate text-xs font-semibold text-zinc-100">&quot;{nomination.comment}&quot;</p>
                         <p className="mt-1 text-[11px] text-zinc-500">{rating ? rating.toFixed(1) : "-"} / 5</p>
                       </div>
-                      <button onClick={() => void deleteNomination(nomination.id)} className="p-2 text-zinc-500" aria-label="Supprimer">
+                      <button onClick={() => void deleteNomination(nomination.id)} className="rounded-md p-2 text-zinc-500 transition hover:text-zinc-300 active:scale-95" aria-label="Supprimer">
                         <Trash2 className="h-4 w-4" />
                       </button>
                     </article>
@@ -1366,20 +1400,23 @@ export default function Home() {
               transition={{ duration: reduceMotion ? 0.01 : 0.24 }}
               className="space-y-4"
             >
-              <div className="rounded-lg border border-amber-700/30 bg-zinc-950 p-5 text-center">
-                <Trophy className="mx-auto h-8 w-8 text-amber-600" />
-                <h2 className="mt-2 text-xl font-black text-white">Palmares du mois</h2>
+              <div className="nod-panel-strong rounded-lg p-5 text-center">
+                <span className="mx-auto flex h-12 w-12 items-center justify-center rounded-lg border border-amber-700/35 bg-amber-600/10">
+                  <Trophy className="h-6 w-6 text-amber-500" />
+                </span>
+                <h2 className="mt-3 text-xl font-black text-white">Palmares du mois</h2>
               </div>
               {categoryWinners.length === 0 ? (
-                <div className="rounded-lg border border-zinc-900 bg-zinc-950 p-8 text-center">
+                <div className="nod-panel rounded-lg p-8 text-center">
                   <p className="font-semibold text-zinc-200">Aucun gagnant pour le moment.</p>
+                  <p className="mt-2 text-xs leading-5 text-zinc-500">La ceremonie se remplit avec les dossiers acceptes.</p>
                 </div>
               ) : (
                 categoryWinners.map(({ category, winner }) => {
                   const CategoryIcon = category.icon;
                   return (
-                    <article key={winner.id} className="flex gap-3 rounded-lg border border-amber-700/30 bg-zinc-950 p-3">
-                      <div className="h-20 w-20 shrink-0 overflow-hidden rounded-md">
+                    <article key={winner.id} className="nod-panel flex gap-3 rounded-lg border-amber-700/30 p-3">
+                      <div className="nod-media h-20 w-20 shrink-0 rounded-md">
                         <MediaFrame nomination={winner} height="h-20" controls={false} />
                       </div>
                       <div className="min-w-0 flex-1">
@@ -1403,7 +1440,7 @@ export default function Home() {
           initial={reduceMotion ? { opacity: 1 } : { opacity: 0, scale: 0.95, y: 8 }}
           animate={{ opacity: 1, scale: 1, y: 0 }}
           onClick={() => setShowAddModal(true)}
-          className="fixed right-5 z-40 flex h-14 w-14 items-center justify-center rounded-lg bg-amber-600 text-black shadow-amber active:scale-95"
+          className="nod-btn-primary fixed right-5 z-40 flex h-14 w-14 items-center justify-center rounded-lg active:scale-95"
           style={{ bottom: "calc(env(safe-area-inset-bottom) + 84px)" }}
           aria-label="Ajouter"
         >
@@ -1417,18 +1454,18 @@ export default function Home() {
             initial={reduceMotion ? { opacity: 1 } : { opacity: 0, y: 28 }}
             animate={{ opacity: 1, y: 0 }}
             exit={reduceMotion ? { opacity: 0 } : { opacity: 0, y: 30 }}
-            className="fixed inset-0 z-50 overflow-y-auto bg-black px-4"
+            className="nod-sheet fixed inset-0 z-50 overflow-y-auto px-4"
             style={{ paddingTop: "calc(env(safe-area-inset-top) + 14px)", paddingBottom: "calc(env(safe-area-inset-bottom) + 16px)" }}
           >
             <div className="mx-auto w-full max-w-md">
               <div className="mb-5 flex items-center justify-between">
                 <h3 className="text-xl font-black text-white">Nouveau dossier</h3>
-                <button onClick={closeAddModal} className="rounded-lg border border-zinc-800 bg-zinc-950 p-2 text-zinc-300" aria-label="Fermer">
+                <button onClick={closeAddModal} className="nod-btn-quiet rounded-lg p-2.5 text-zinc-300" aria-label="Fermer">
                   <X className="h-5 w-5" />
                 </button>
               </div>
               <div className="space-y-5">
-                <label className="relative flex h-64 cursor-pointer items-center justify-center overflow-hidden rounded-lg border border-zinc-800 bg-zinc-950 active:scale-[0.995]">
+                <label className="nod-panel relative flex h-64 cursor-pointer items-center justify-center overflow-hidden rounded-lg active:scale-[0.995]">
                   {previewUrl ? (
                     <video src={previewUrl} poster={thumbnailPreviewUrl ?? undefined} className="absolute inset-0 h-full w-full object-cover" controls playsInline muted preload="metadata" />
                   ) : (
@@ -1441,8 +1478,8 @@ export default function Home() {
                 </label>
 
                 {thumbnailPreviewUrl && (
-                  <div className="flex items-center gap-3 rounded-lg border border-zinc-900 bg-zinc-950 p-3">
-                    <img src={thumbnailPreviewUrl} alt="" className="h-14 w-14 rounded-md object-cover" />
+                  <div className="nod-panel flex items-center gap-3 rounded-lg p-3">
+                    <img src={thumbnailPreviewUrl} alt="" className="h-14 w-14 rounded-md object-cover shadow-[inset_0_0_0_1px_rgba(255,255,255,0.08)]" />
                     <div className="min-w-0">
                       <p className="text-xs font-black uppercase tracking-[0.14em] text-zinc-400">Miniature</p>
                       <p className="text-xs text-zinc-500">{videoDuration ? `${videoDuration.toFixed(1)}s` : "Pret"}</p>
@@ -1453,7 +1490,7 @@ export default function Home() {
                 <select
                   value={catId}
                   onChange={(event) => setCatId(event.target.value)}
-                  className="w-full rounded-lg border border-zinc-800 bg-zinc-950 p-4 text-sm font-semibold text-white outline-none focus:border-amber-700"
+                  className="nod-input w-full rounded-lg p-4 text-sm font-semibold"
                 >
                   {CATEGORIES.map((cat) => (
                     <option key={cat.id} value={cat.id}>
@@ -1468,10 +1505,10 @@ export default function Home() {
                   placeholder="Pourquoi ce dossier ?"
                   rows={3}
                   maxLength={240}
-                  className="w-full resize-none rounded-lg border border-zinc-800 bg-zinc-950 p-4 text-sm text-white outline-none focus:border-amber-700"
+                  className="nod-input w-full resize-none rounded-lg p-4 text-sm"
                 />
 
-                <div className="rounded-lg border border-zinc-900 bg-zinc-950 p-3">
+                <div className="nod-panel rounded-lg p-3">
                   <StarInput value={initialRating} onChange={setInitialRating} size="lg" />
                   <p className="mt-2 text-center text-[10px] font-black uppercase tracking-[0.14em] text-zinc-500">
                     Vote initial: {verdictLabel(initialRating >= 3 ? "nominee" : "ejected")}
@@ -1481,7 +1518,7 @@ export default function Home() {
                 <button
                   onClick={() => void uploadNomination()}
                   disabled={uploadLoading || processingMedia || !file || !thumbnailFile || comment.trim().length < 3}
-                  className="flex w-full items-center justify-center gap-2 rounded-lg bg-amber-600 py-4 text-sm font-black uppercase tracking-[0.16em] text-black disabled:opacity-50"
+                  className="nod-btn-primary flex w-full items-center justify-center gap-2 rounded-lg py-4 text-sm font-black uppercase tracking-[0.16em] disabled:opacity-50"
                 >
                   {uploadLoading ? <Loader2 className="h-5 w-5 animate-spin" /> : "Soumettre"}
                 </button>
@@ -1494,20 +1531,20 @@ export default function Home() {
       <AnimatePresence>
         {editingName && (
           <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="fixed inset-0 z-50 flex items-center justify-center bg-black/85 px-5 backdrop-blur-md">
-            <div className="w-full max-w-sm rounded-lg border border-zinc-800 bg-zinc-950 p-5">
+            <div className="nod-panel-strong w-full max-w-sm rounded-lg p-5">
               <h3 className="mb-3 text-lg font-black text-white">Changer de pseudo</h3>
               <input
                 autoFocus
                 value={nameDraft}
                 onChange={(event) => setNameDraft(event.target.value)}
                 maxLength={20}
-                className="mb-4 w-full rounded-lg border border-zinc-800 bg-black px-3 py-3 text-sm font-semibold text-white outline-none focus:border-amber-700"
+                className="nod-input mb-4 w-full rounded-lg px-3 py-3 text-sm font-semibold"
               />
               <div className="grid grid-cols-2 gap-2">
-                <button onClick={() => setEditingName(null)} className="rounded-lg border border-zinc-800 py-3 text-sm font-semibold text-zinc-400">
+                <button onClick={() => setEditingName(null)} className="nod-btn-quiet rounded-lg py-3 text-sm font-semibold text-zinc-400">
                   Annuler
                 </button>
-                <button onClick={() => void saveName()} className="rounded-lg bg-amber-600 py-3 text-sm font-black text-black">
+                <button onClick={() => void saveName()} className="nod-btn-primary min-h-0 rounded-lg py-3 text-sm font-black text-black">
                   Valider
                 </button>
               </div>
@@ -1516,7 +1553,7 @@ export default function Home() {
         )}
       </AnimatePresence>
 
-      <nav className="fixed bottom-0 left-0 right-0 z-40 border-t border-zinc-900 bg-black/90 px-2 pt-2 backdrop-blur-xl" style={{ paddingBottom: "calc(env(safe-area-inset-bottom) + 10px)" }}>
+      <nav className="nod-bottom-nav fixed bottom-0 left-0 right-0 z-40 px-2 pt-2" style={{ paddingBottom: "calc(env(safe-area-inset-bottom) + 10px)" }}>
         <div className="mx-auto grid w-full max-w-md grid-cols-5 gap-1">
           {TAB_ITEMS.map((item) => {
             const Icon = item.icon;
@@ -1525,7 +1562,7 @@ export default function Home() {
 
             return (
               <button key={item.id} onClick={() => setTab(item.id)} className="relative flex flex-col items-center justify-center gap-1 rounded-lg px-1 py-2.5 transition active:scale-95">
-                {active && <motion.span layoutId="activeTab" className="absolute inset-0 rounded-lg bg-zinc-900" transition={{ type: "spring", stiffness: 360, damping: 28 }} />}
+                {active && <motion.span layoutId="activeTab" className="absolute inset-0 rounded-lg border border-white/10 bg-white/[0.055]" transition={{ type: "spring", stiffness: 360, damping: 28 }} />}
                 <Icon className={`relative z-10 h-5 w-5 ${active ? "text-amber-500" : "text-zinc-500"}`} />
                 <span className={`relative z-10 text-[9px] font-black uppercase tracking-[0.08em] ${active ? "text-amber-500" : "text-zinc-500"}`}>{item.label}</span>
                 {badge > 0 && (
