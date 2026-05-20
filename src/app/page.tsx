@@ -88,6 +88,9 @@ const DEFAULT_ROOM_CODE = "NOD-CLUB";
 const MIN_VERDICT_VOTES = 2;
 const MAX_DIRECT_UPLOAD_BYTES = 5 * 1024 * 1024 * 1024;
 const STAR_VALUES = [1, 2, 3, 4, 5] as const;
+const HIGH_SCORE_TITLE = "LA FIERTÉ DES NÔTRES : LES ZINS DU MOIS";
+const LOW_SCORE_TITLE = "LA HONTE DU MOIS : LES DOSSIERS BANNIS";
+const ZINE_TITLE = "LE ZINE DU MOIS : DERNIÈRES COMPRESSIONS MOBILES";
 
 const CATEGORIES: CategoryMeta[] = [
   { id: "moment_marquant", label: "Moment marquant", mood: "positive", icon: Sparkles },
@@ -110,9 +113,9 @@ const CATEGORIES: CategoryMeta[] = [
 const CATEGORY_BY_ID = Object.fromEntries(CATEGORIES.map((category) => [category.id, category])) as Record<string, CategoryMeta>;
 
 const TAB_ITEMS: Array<{ id: Tab; label: string; icon: LucideIcon }> = [
-  { id: "feed", label: "Flux", icon: Sparkles },
-  { id: "vote", label: "Vote", icon: Zap },
-  { id: "studio", label: "Uploader", icon: Plus },
+  { id: "feed", label: "Direct", icon: Sparkles },
+  { id: "vote", label: "Duel", icon: Zap },
+  { id: "studio", label: "Studio", icon: Plus },
   { id: "trophies", label: "Trophées", icon: Crown },
   { id: "archive", label: "Archive", icon: ImageIcon }
 ];
@@ -235,15 +238,15 @@ function getCategoryMeta(value: string): CategoryMeta {
 }
 
 function statusLabel(status: NominationStatus) {
-  if (status === "accepted") return "PROPULSER";
-  if (status === "rejected") return "BANNIR";
-  return "A VOTER";
+  if (status === "accepted") return "VALIDÉ";
+  if (status === "rejected") return "BANNI";
+  return "À VOTER";
 }
 
 function statusClass(status: NominationStatus) {
   if (status === "accepted") return "border-black bg-yellow-300 text-black";
   if (status === "rejected") return "border-black bg-red-600 text-white";
-  return "border-black bg-black text-white";
+  return "border-black bg-yellow-300 text-black";
 }
 
 function formatBytes(bytes: number) {
@@ -394,7 +397,7 @@ async function uploadFileToSpaces(file: File, folder: "videos" | "miniatures") {
 
   const payload = (await signResponse.json()) as Partial<SpacesUploadResult> & { error?: string };
   if (!signResponse.ok || !payload.uploadUrl || !payload.publicUrl || !payload.key) {
-    throw new Error(payload.error || "Signature Spaces impossible.");
+    throw new Error(payload.error || "Signature d'archive impossible.");
   }
 
   const uploadResponse = await fetch(payload.uploadUrl, {
@@ -404,7 +407,7 @@ async function uploadFileToSpaces(file: File, folder: "videos" | "miniatures") {
   });
 
   if (!uploadResponse.ok) {
-    throw new Error("Envoi DigitalOcean Spaces refusé.");
+    throw new Error("Envoi vers l'archive refusé.");
   }
 
   return {
@@ -456,6 +459,15 @@ function Sticker({
           : "border-black bg-red-600 text-white";
 
   return <span className={`inline-flex border-4 px-2 py-1 text-[10px] font-black uppercase leading-none ${toneClass} ${className}`}>{children}</span>;
+}
+
+function SectionTitle({ children, tone = "black" }: { children: ReactNode; tone?: "black" | "red" | "yellow" }) {
+  const toneClass = tone === "red" ? "bg-red-600 text-white" : tone === "yellow" ? "bg-yellow-300 text-black" : "bg-black text-white";
+  return (
+    <div className={`border-4 border-black px-2 py-1.5 ${toneClass}`}>
+      <h2 className="tabloid-headline text-[clamp(1.55rem,8.4vw,2.75rem)] leading-[0.82]">{children}</h2>
+    </div>
+  );
 }
 
 function BrutalCard({
@@ -540,6 +552,27 @@ function MediaFrame({
   return <img src={nomination.image_url} alt="" className={`${height} block w-full bg-black object-cover`} />;
 }
 
+function NominationTile({ nomination, index = 0 }: { nomination: Nomination; index?: number }) {
+  const category = getCategoryMeta(nomination.category_id);
+  const Icon = category.icon;
+  const rating = averageRating(nomination);
+
+  return (
+    <BrutalCard tone={index % 3 === 0 ? "yellow" : "paper"} className="overflow-hidden">
+      <div className="media-cut h-[clamp(5.4rem,27vw,7.25rem)] border-b-4 border-black">
+        <MediaFrame nomination={nomination} height="h-full" controls={false} />
+      </div>
+      <div className="min-w-0 p-1.5">
+        <span className={`inline-flex border-4 px-1.5 py-1 text-[9px] font-black uppercase leading-none ${statusClass(nomination.status)}`}>{statusLabel(nomination.status)}</span>
+        <p className="mt-1.5 line-clamp-2 text-[clamp(1rem,5.6vw,1.55rem)] font-black uppercase leading-[0.86]">&quot;{nomination.comment || "Dossier à juger"}&quot;</p>
+        <p className="mt-1.5 flex min-w-0 items-center gap-1 truncate text-[10px] font-black uppercase leading-none">
+          <Icon className="h-3 w-3 shrink-0 text-red-600" /> {category.label} / {voteCount(nomination.votes)} votes / {rating ? rating.toFixed(1) : "-"} sur 5
+        </p>
+      </div>
+    </BrutalCard>
+  );
+}
+
 function PaperBackdrop() {
   return (
     <div className="paper-backdrop" aria-hidden="true">
@@ -598,7 +631,7 @@ export default function Home() {
   }, []);
 
   const switchTab = useCallback((nextTab: Tab) => {
-    haptic(20);
+    haptic(15);
     setTab(nextTab);
   }, []);
 
@@ -769,6 +802,7 @@ export default function Home() {
   }, [nominations]);
 
   const accepted = useMemo(() => archive.filter((nomination) => nomination.status === "accepted"), [archive]);
+  const rejected = useMemo(() => archive.filter((nomination) => nomination.status === "rejected"), [archive]);
   const feedItems = useMemo(() => nominations.slice(0, 8), [nominations]);
 
   const categoryWinners = useMemo(() => {
@@ -781,9 +815,14 @@ export default function Home() {
   }, [accepted]);
 
   const heroWinner = categoryWinners[0]?.winner ?? accepted[0] ?? nominations[0] ?? null;
+  const headlineItems = useMemo(() => {
+    const byCategory = new Map<string, Nomination>();
+    for (const nomination of nominations) {
+      if (!byCategory.has(nomination.category_id)) byCategory.set(nomination.category_id, nomination);
+    }
+    return Array.from(byCategory.values()).slice(0, 4);
+  }, [nominations]);
   const lastSyncLabel = lastSyncAt ? lastSyncAt.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }) : "--:--";
-  const progressTotal = pendingForMe.length + archive.length;
-  const progressDone = progressTotal === 0 ? 0 : Math.round((archive.length / progressTotal) * 100);
   const uploadReady = Boolean(preparedFile && thumbnailFile && comment.trim().length >= 3 && !isPreparingMedia);
 
   const revealContainer = reduceMotion
@@ -859,7 +898,7 @@ export default function Home() {
       setUrl(setPreviewUrlState, null, nextFile);
       setUrl(setThumbnailPreviewUrlState, null, thumbnail);
       setMediaProgress(1);
-      setMediaNote(`Vidéo originale conservée: ${formatBytes(nextFile.size)}. Miniature JPEG: ${formatBytes(thumbnail.size)}.`);
+      setMediaNote(`Vidéo originale gardée: ${formatBytes(nextFile.size)}. Aperçu JPEG: ${formatBytes(thumbnail.size)}.`);
       showToast("success", "Miniature générée, vidéo conservée.");
     } catch (err) {
       clearPreparedMedia();
@@ -882,7 +921,7 @@ export default function Home() {
       return;
     }
 
-    haptic(20);
+    haptic(15);
     setUploadLoading(true);
     setMediaProgress(0.15);
 
@@ -890,13 +929,13 @@ export default function Home() {
       const activeRoomId = roomId ?? (await ensureRoom());
       if (!activeRoomId) throw new Error("Flux introuvable.");
 
-      setMediaNote("Envoi de la miniature vers DigitalOcean Spaces...");
+      setMediaNote("Archivage de l'aperçu permanent...");
       const imageUpload = await uploadFileToSpaces(thumbnailFile, "miniatures");
       setMediaProgress(mediaKind === "video" ? 0.45 : 0.82);
 
       let videoUpload: { key: string; publicUrl: string } | null = null;
       if (mediaKind === "video") {
-        setMediaNote("Envoi de la vidéo originale vers DigitalOcean Spaces...");
+        setMediaNote("Archivage de la vidéo originale...");
         videoUpload = await uploadFileToSpaces(preparedFile, "videos");
         setMediaProgress(0.82);
       }
@@ -925,7 +964,7 @@ export default function Home() {
       if (insertError) throw insertError;
 
       setMediaProgress(1);
-      haptic(initialRating >= 3 ? [15, 30, 15] : [20, 50]);
+      haptic(initialRating >= 3 ? [20, 30, 20] : [25, 60]);
       showToast("success", "Dossier envoyé dans le flux.");
       clearPreparedMedia();
       setComment("");
@@ -962,7 +1001,7 @@ export default function Home() {
     };
     const nextStatus = computeStatus(nextVotes);
 
-    haptic(choice === "propel" ? [15, 30, 15] : [20, 50]);
+    haptic(choice === "propel" ? [20, 30, 20] : [25, 60]);
     setVoteBusyId(id);
     setShakeId(id);
     window.setTimeout(() => setShakeId(null), 520);
@@ -986,7 +1025,7 @@ export default function Home() {
       });
 
       voteBurst(choice);
-      showToast("success", nextStatus === "accepted" ? "Verdict collectif: PROPULSER." : nextStatus === "rejected" ? "Verdict collectif: BANNIR." : "Vote enregistré.");
+      showToast("success", nextStatus === "accepted" ? "Verdict collectif: VALIDÉ." : nextStatus === "rejected" ? "Verdict collectif: REJETÉ." : "Vote enregistré.");
       await channelRef.current?.send({ type: "broadcast", event: "vote", payload: { id, status: nextStatus } });
       void fetchNominations(true);
     } catch (err) {
@@ -1021,7 +1060,7 @@ export default function Home() {
   }
 
   return (
-    <div className="tabloid-app" style={{ paddingBottom: "calc(env(safe-area-inset-bottom) + 94px)" }}>
+    <div className="tabloid-app h-svh overflow-hidden" style={{ paddingBottom: "calc(env(safe-area-inset-bottom) + 94px)" }}>
       <PaperBackdrop />
 
       <AnimatePresence>
@@ -1046,15 +1085,15 @@ export default function Home() {
       </AnimatePresence>
 
       <main
-        className="relative z-10 mx-auto h-[calc(100svh-6.25rem)] w-full max-w-[30rem] overflow-y-auto overscroll-contain px-4 pb-7"
-        style={{ paddingTop: "calc(env(safe-area-inset-top) + 8px)" }}
+        className="relative z-10 mx-auto h-[calc(100svh-5.85rem)] w-full max-w-[30rem] overflow-y-auto overscroll-contain px-2 pb-4"
+        style={{ paddingTop: "calc(env(safe-area-inset-top) + 6px)" }}
       >
-        <header className="sticky top-0 z-30 mb-4 bg-[#f0f0f0] py-3">
-          <div className="border-b-4 border-black pb-2">
+        <header className="sticky top-0 z-30 mb-2 bg-[#f0f0f0] py-1.5">
+          <div className="border-b-4 border-black pb-1.5">
             <div className="flex items-center justify-between">
               <div className="min-w-0 text-left">
-                <p className="text-[10px] font-black uppercase text-red-600">Jeu en direct</p>
-                <p className="truncate text-[clamp(1.65rem,8vw,2.65rem)] font-black uppercase leading-none">Flux collectif</p>
+                <p className="text-[10px] font-black uppercase text-red-600">Édition sauvage</p>
+                <p className="truncate text-[clamp(1.45rem,7vw,2.2rem)] font-black uppercase leading-none">Verdicts en direct</p>
               </div>
               <div className="flex items-center gap-2">
                 <button onClick={() => void fetchNominations()} disabled={syncing || !supabase} className="brutal-icon-button disabled:opacity-50" aria-label="Synchroniser">
@@ -1062,26 +1101,26 @@ export default function Home() {
                 </button>
               </div>
             </div>
-            <div className="ticker mt-3 border-4 border-black bg-black text-white">
+            <div className="ticker mt-1.5 border-4 border-black bg-black text-white">
               <span className="ticker-track">
-                PROCHAINE CÉRÉMONIE {countdown.days}J {countdown.hours}H {countdown.mins}M / SYNCHRO {lastSyncLabel} / VOTES EN ATTENTE {pendingForMe.length} / ARCHIVE PERMANENTE / JEU EN DIRECT
+                PROCHAINE CÉRÉMONIE {countdown.days}J {countdown.hours}H {countdown.mins}M / ÉDITION {lastSyncLabel} / À VOTER {pendingForMe.length} / ARCHIVE PERMANENTE / DUEL COLLECTIF
               </span>
             </div>
           </div>
         </header>
 
-        <section className="mb-4 grid grid-cols-3 gap-2">
-          <BrutalCard tone="yellow" className="p-2">
-            <p className="text-[10px] font-black uppercase">A voter</p>
+        <section className="mb-2 grid grid-cols-3 gap-1.5">
+          <BrutalCard tone="yellow" className="p-1.5">
+            <p className="text-[10px] font-black uppercase leading-none">À voter</p>
             <p className="text-[clamp(2rem,11vw,3rem)] font-black leading-none">{pendingForMe.length}</p>
           </BrutalCard>
-          <BrutalCard tone="red" className="p-2">
-            <p className="text-[10px] font-black uppercase">Propulsés</p>
+          <BrutalCard tone="red" className="p-1.5">
+            <p className="text-[10px] font-black uppercase leading-none">Validés</p>
             <p className="text-[clamp(2rem,11vw,3rem)] font-black leading-none">{accepted.length}</p>
           </BrutalCard>
-          <BrutalCard tone="black" className="p-2">
-            <p className="text-[10px] font-black uppercase">Actés</p>
-            <p className="text-[clamp(2rem,11vw,3rem)] font-black leading-none">{progressDone}%</p>
+          <BrutalCard tone="black" className="p-1.5">
+            <p className="text-[10px] font-black uppercase leading-none">Bannis</p>
+            <p className="text-[clamp(2rem,11vw,3rem)] font-black leading-none">{rejected.length}</p>
           </BrutalCard>
         </section>
 
@@ -1095,36 +1134,33 @@ export default function Home() {
               dragConstraints={{ left: 0, right: 0 }}
               onDragEnd={(_, info) => handleSectionDrag(info)}
               transition={{ duration: reduceMotion ? 0.01 : 0.26, type: "spring", stiffness: 230, damping: 25 }}
-              className="space-y-4"
+              className="space-y-2"
             >
               <motion.div {...revealItem}>
-                <BrutalCard tone="red" className="relative overflow-hidden p-4">
-                  <Sticker tone="yellow" className="-rotate-2">
-                    Exclusif
-                  </Sticker>
-                  <h2 className="tabloid-headline mt-3 text-[clamp(3.2rem,17vw,5.5rem)] leading-[0.76] text-white">
-                    Cérémonie
-                    <span className="block text-yellow-300">TikTok</span>
-                    <span className="block text-black">du mois</span>
-                  </h2>
-                  <p className="mt-4 border-t-4 border-black pt-3 text-[clamp(1.1rem,5vw,1.5rem)] font-black uppercase leading-none text-white">
-                    Uploader. Voter. Propulser. L&apos;archive reste permanente.
-                  </p>
+                <BrutalCard className="relative overflow-hidden p-2">
+                  <h1 className="tabloid-headline text-[clamp(3.25rem,18vw,6rem)] leading-[0.78]">
+                    Nominees
+                    <span className="mx-2 inline-block -rotate-2 border-4 border-black bg-red-600 px-2 text-[clamp(1.4rem,7vw,2.3rem)] leading-none text-white">or</span>
+                    <span className="block text-red-600">Denominees</span>
+                  </h1>
+                  <div className="-mt-[2px] border-4 border-black bg-black px-2 py-1 text-white">
+                    <p className="tabloid-headline text-[clamp(1.35rem,7.6vw,2.35rem)] leading-[0.85]">LE FLUX DE SCANDALES DU MOIS</p>
+                  </div>
                 </BrutalCard>
               </motion.div>
 
               <motion.div {...revealItem}>
                 <BrutalCard className="overflow-hidden">
                   <div className="relative border-b-4 border-black bg-black">
-                    {heroWinner ? <MediaFrame nomination={heroWinner} height="h-[min(58svh,28rem)]" controls={false} /> : <div className="flex h-[min(58svh,28rem)] items-center justify-center bg-black text-white"><Camera className="h-12 w-12" /></div>}
+                    {heroWinner ? <MediaFrame nomination={heroWinner} height="h-[min(40svh,19rem)]" controls={false} /> : <div className="flex h-[min(40svh,19rem)] items-center justify-center bg-black text-white"><Camera className="h-12 w-12" /></div>}
                     <Sticker tone="yellow" className="absolute left-3 top-3 rotate-2">
                       À la une
                     </Sticker>
                   </div>
-                  <div className="grid grid-cols-[1fr_auto] gap-3 p-3">
+                  <div className="grid grid-cols-[1fr_auto] gap-2 p-2">
                     <div>
-                      <p className="text-[10px] font-black uppercase text-red-600">Flux public</p>
-                      <p className="line-clamp-2 text-[clamp(1.35rem,7vw,2rem)] font-black uppercase leading-none">{heroWinner ? heroWinner.comment : "Aucun dossier publié"}</p>
+                      <p className="text-[10px] font-black uppercase leading-none text-red-600">{HIGH_SCORE_TITLE}</p>
+                      <p className="line-clamp-2 text-[clamp(1.25rem,7vw,2rem)] font-black uppercase leading-[0.86]">{heroWinner ? heroWinner.comment : "Aucun dossier publié"}</p>
                     </div>
                     <button onClick={() => switchTab("studio")} className="brutal-icon-button bg-yellow-300" aria-label="Uploader un dossier">
                       <UploadCloud className="h-5 w-5" />
@@ -1133,35 +1169,50 @@ export default function Home() {
                 </BrutalCard>
               </motion.div>
 
-              <motion.div {...revealItem} className="space-y-3">
+              <motion.div {...revealItem} className="space-y-2">
+                <SectionTitle>{ZINE_TITLE}</SectionTitle>
                 {feedItems.length === 0 ? (
-                  <BrutalCard className="p-8 text-center">
+                  <BrutalCard className="p-4 text-center">
                     <Camera className="mx-auto mb-3 h-9 w-9" />
                     <p className="text-2xl font-black uppercase leading-none">Aucune capture.</p>
                     <p className="mt-2 text-sm font-bold uppercase">Le premier envoi ouvre la cérémonie.</p>
                   </BrutalCard>
                 ) : (
-                  feedItems.map((nomination, index) => {
-                    const category = getCategoryMeta(nomination.category_id);
-                    const Icon = category.icon;
-                    const rating = averageRating(nomination);
-                    return (
-                      <BrutalCard key={nomination.id} tone={index % 3 === 0 ? "yellow" : "paper"} className="overflow-hidden">
-                        <div className="grid grid-cols-[6rem_1fr] border-b-4 border-black">
-                          <div className="media-cut h-24 border-r-4 border-black">
-                            <MediaFrame nomination={nomination} height="h-24" controls={false} />
-                          </div>
-                          <div className="min-w-0 p-2">
-                            <span className={`inline-flex border-4 px-2 py-1 text-[10px] font-black uppercase ${statusClass(nomination.status)}`}>{statusLabel(nomination.status)}</span>
-                            <p className="mt-2 truncate text-lg font-black uppercase leading-none">&quot;{nomination.comment}&quot;</p>
-                            <p className="mt-2 flex items-center gap-1 text-[11px] font-black uppercase">
-                              <Icon className="h-3.5 w-3.5 text-red-600" /> {category.label} / {voteCount(nomination.votes)} votes / {rating ? rating.toFixed(1) : "-"} sur 5
-                            </p>
-                          </div>
-                        </div>
-                      </BrutalCard>
-                    );
-                  })
+                  <div className="grid grid-cols-2 gap-2">
+                    {(headlineItems.length ? headlineItems : feedItems).map((nomination, index) => (
+                      <NominationTile key={nomination.id} nomination={nomination} index={index} />
+                    ))}
+                  </div>
+                )}
+              </motion.div>
+
+              <motion.div {...revealItem} className="space-y-2">
+                <SectionTitle tone="yellow">{HIGH_SCORE_TITLE}</SectionTitle>
+                {accepted.length === 0 ? (
+                  <BrutalCard className="p-3">
+                    <p className="text-xl font-black uppercase leading-none">Aucun dossier validé pour l&apos;instant.</p>
+                  </BrutalCard>
+                ) : (
+                  <div className="grid grid-cols-2 gap-2">
+                    {accepted.slice(0, 4).map((nomination, index) => (
+                      <NominationTile key={nomination.id} nomination={nomination} index={index} />
+                    ))}
+                  </div>
+                )}
+              </motion.div>
+
+              <motion.div {...revealItem} className="space-y-2">
+                <SectionTitle tone="red">{LOW_SCORE_TITLE}</SectionTitle>
+                {rejected.length === 0 ? (
+                  <BrutalCard className="p-3">
+                    <p className="text-xl font-black uppercase leading-none">Aucun dossier banni pour l&apos;instant.</p>
+                  </BrutalCard>
+                ) : (
+                  <div className="grid grid-cols-2 gap-2">
+                    {rejected.slice(0, 4).map((nomination, index) => (
+                      <NominationTile key={nomination.id} nomination={nomination} index={index} />
+                    ))}
+                  </div>
                 )}
               </motion.div>
             </motion.section>
@@ -1175,22 +1226,19 @@ export default function Home() {
               dragConstraints={{ left: 0, right: 0 }}
               onDragEnd={(_, info) => handleSectionDrag(info)}
               transition={{ duration: reduceMotion ? 0.01 : 0.26, type: "spring", stiffness: 230, damping: 25 }}
-              className="space-y-4"
+              className="space-y-2"
             >
-              <BrutalCard tone="black" className="p-4">
-                <Sticker tone="red" className="-rotate-2">
-                  Verdict express
-                </Sticker>
-                <h2 className="tabloid-headline mt-3 text-[clamp(3rem,16vw,5rem)] leading-[0.78] text-white">Duel express</h2>
-                <p className="mt-3 text-[clamp(1.1rem,5vw,1.45rem)] font-black uppercase leading-none text-yellow-300">Une note, un vote, un verdict collectif.</p>
+              <BrutalCard tone="black" className="p-2">
+                <h2 className="tabloid-headline text-[clamp(2.2rem,11.5vw,3.65rem)] leading-[0.84] text-white">Duel express collaboratif</h2>
+                <p className="-mt-[2px] border-4 border-black bg-yellow-300 px-2 py-1 text-[clamp(1rem,5vw,1.35rem)] font-black uppercase leading-none text-black">Une note, un vote, un verdict collectif.</p>
               </BrutalCard>
 
               {loadingList ? (
-                <BrutalCard className="p-8 text-center">
+                <BrutalCard className="p-4 text-center">
                   <Loader2 className="mx-auto h-7 w-7 animate-spin" />
                 </BrutalCard>
               ) : pendingForMe.length === 0 ? (
-                <BrutalCard tone="yellow" className="p-8 text-center">
+                <BrutalCard tone="yellow" className="p-4 text-center">
                   <BadgeCheck className="mx-auto mb-3 h-10 w-10" />
                   <p className="text-3xl font-black uppercase leading-none">File d&apos;attente vide.</p>
                   <p className="mt-2 text-sm font-bold uppercase">Aucun dossier à voter pour toi.</p>
@@ -1213,18 +1261,18 @@ export default function Home() {
                       className="brutal-card overflow-hidden"
                     >
                       <div className="relative border-b-4 border-black bg-black">
-                        <MediaFrame nomination={nomination} height="h-[min(62svh,30rem)]" />
-                        <Sticker tone="red" className="absolute left-3 top-3 -rotate-2">
-                          Preuve vidéo
+                        <MediaFrame nomination={nomination} height="h-[min(47svh,23rem)]" />
+                        <Sticker tone="red" className="absolute left-2 top-2 -rotate-2">
+                          Nouveau dossier à juger
                         </Sticker>
-                        <div className="absolute bottom-3 left-3 right-3 border-4 border-black bg-[#f0f0f0] p-2">
+                        <div className="absolute bottom-2 left-2 right-2 border-4 border-black bg-[#f0f0f0] p-2">
                           <p className="flex items-center gap-1 text-[10px] font-black uppercase text-red-600">
                             <Icon className="h-3.5 w-3.5" /> {category.label}
                           </p>
-                          <p className="text-xl font-black uppercase leading-none">&quot;{nomination.comment}&quot;</p>
+                          <p className="text-[clamp(1.8rem,10vw,3rem)] font-black uppercase leading-[0.84]">&quot;{nomination.comment}&quot;</p>
                         </div>
                       </div>
-                      <div className="space-y-3 p-3">
+                      <div className="space-y-2 p-2">
                         <StarInput value={draftRating} onChange={(value) => setRatingDraftById((prev) => ({ ...prev, [nomination.id]: value }))} size="lg" />
                         <div className="grid grid-cols-2 gap-2">
                           <button onClick={() => void applyVote(nomination.id, "propel")} disabled={voteBusyId === nomination.id} className="brutal-action bg-yellow-300 text-black disabled:opacity-50">
@@ -1250,21 +1298,18 @@ export default function Home() {
               dragConstraints={{ left: 0, right: 0 }}
               onDragEnd={(_, info) => handleSectionDrag(info)}
               transition={{ duration: reduceMotion ? 0.01 : 0.26, type: "spring", stiffness: 230, damping: 25 }}
-              className="space-y-4"
+              className="space-y-2"
             >
-              <BrutalCard tone="red" className="p-4">
-                <Sticker tone="yellow" className="-rotate-2">
-                  Uploader un dossier
-                </Sticker>
-                <h2 className="tabloid-headline mt-3 text-[clamp(3rem,16vw,5rem)] leading-[0.78] text-white">Studio dossier</h2>
-                <p className="mt-3 text-[clamp(1.1rem,5vw,1.45rem)] font-black uppercase leading-none text-white">Vidéo originale, photo ou capture. Seule la miniature passe par canvas.</p>
+              <BrutalCard tone="black" className="p-2">
+                <h2 className="tabloid-headline text-[clamp(2rem,10.5vw,3.45rem)] leading-[0.84] text-white">STUDIO DE CAPTURE : TON DOSSIER</h2>
+                <p className="-mt-[2px] border-4 border-black bg-red-600 px-2 py-1 text-[clamp(1rem,5vw,1.3rem)] font-black uppercase leading-none text-white">Vidéo originale, photo ou capture prise sur le vif.</p>
               </BrutalCard>
 
-              <BrutalCard className="p-3">
+              <BrutalCard className="p-1.5">
                 <button
                   onClick={() => fileInputRef.current?.click()}
                   disabled={isPreparingMedia || uploadLoading}
-                  className="relative flex min-h-[min(48svh,22rem)] w-full items-center justify-center overflow-hidden border-4 border-black bg-black text-left transition active:translate-x-1 active:translate-y-1 disabled:opacity-70"
+                  className="relative flex min-h-[min(38svh,18rem)] w-full items-center justify-center overflow-hidden border-4 border-black bg-black text-left transition active:translate-x-1 active:translate-y-1 disabled:opacity-70"
                 >
                   {previewUrl ? (
                     mediaKind === "video" ? (
@@ -1275,7 +1320,7 @@ export default function Home() {
                   ) : (
                     <span className="flex flex-col items-center px-6 text-center text-white">
                       {isPreparingMedia ? <Loader2 className="mb-3 h-9 w-9 animate-spin text-yellow-300" /> : <UploadCloud className="mb-3 h-9 w-9 text-yellow-300" />}
-                      <span className="text-3xl font-black uppercase leading-none">{isPreparingMedia ? "Chargement du studio..." : "Choisir un média"}</span>
+                      <span className="text-3xl font-black uppercase leading-none">{isPreparingMedia ? "Chargement du studio..." : "Aperçu vidéo original"}</span>
                       <span className="mt-2 text-sm font-black uppercase text-yellow-300">Vidéo, photo, capture d&apos;écran</span>
                     </span>
                   )}
@@ -1284,7 +1329,7 @@ export default function Home() {
               </BrutalCard>
 
               {(isPreparingMedia || mediaNote || uploadLoading) && (
-                <BrutalCard tone="yellow" className="p-3">
+                <BrutalCard tone="yellow" className="p-2">
                   <div className="flex items-center justify-between gap-3">
                     <div className="min-w-0">
                       <p className="truncate text-sm font-black uppercase">{sourceFileName || "Média"}</p>
@@ -1292,13 +1337,13 @@ export default function Home() {
                     </div>
                     <p className="text-4xl font-black leading-none">{Math.round(mediaProgress * 100)}%</p>
                   </div>
-                  <div className="mt-3 h-5 border-4 border-black bg-[#f0f0f0]">
+                  <div className="mt-2 h-5 border-4 border-black bg-[#f0f0f0]">
                     <motion.div className="h-full bg-red-600" animate={{ width: `${Math.round(mediaProgress * 100)}%` }} />
                   </div>
                 </BrutalCard>
               )}
 
-              <select value={catId} onChange={(event) => setCatId(event.target.value)} className="brutal-input w-full appearance-none px-4 py-4 text-lg font-black uppercase">
+              <select value={catId} onChange={(event) => setCatId(event.target.value)} className="brutal-input w-full appearance-none px-3 py-3 text-lg font-black uppercase">
                 {CATEGORIES.map((category) => (
                   <option key={category.id} value={category.id}>
                     {category.label}
@@ -1309,15 +1354,15 @@ export default function Home() {
               <textarea
                 value={comment}
                 onChange={(event) => setComment(event.target.value)}
-                placeholder="Pourquoi ce dossier mérite un verdict ?"
+                placeholder="Pourquoi ce profil mériterait un PROPULSER ou un BANNIR ?"
                 rows={3}
                 maxLength={240}
-                className="brutal-input w-full resize-none p-4 text-lg font-black uppercase"
+                className="brutal-input w-full resize-none p-3 text-lg font-black uppercase"
               />
 
-              <BrutalCard tone="yellow" className="p-3">
+              <BrutalCard tone="yellow" className="p-2">
                 <StarInput value={initialRating} onChange={setInitialRating} size="lg" />
-                <p className="mt-3 border-t-4 border-black pt-2 text-center text-sm font-black uppercase">Vote initial: {verdictLabel(initialRating >= 3 ? "propel" : "ban")}</p>
+                <p className="mt-2 border-t-4 border-black pt-2 text-center text-sm font-black uppercase">Vote initial : {verdictLabel(initialRating >= 3 ? "propel" : "ban")}</p>
               </BrutalCard>
 
               <button onClick={() => void uploadNomination()} disabled={uploadLoading || !uploadReady} className="brutal-submit flex w-full items-center justify-center gap-2 disabled:opacity-50">
@@ -1334,18 +1379,18 @@ export default function Home() {
               dragConstraints={{ left: 0, right: 0 }}
               onDragEnd={(_, info) => handleSectionDrag(info)}
               transition={{ duration: reduceMotion ? 0.01 : 0.26, type: "spring", stiffness: 230, damping: 25 }}
-              className="space-y-4"
+              className="space-y-2"
             >
-              <BrutalCard tone="black" className="p-4 text-white">
-                <Medal className="mb-3 h-10 w-10 text-yellow-300" />
-                <h2 className="tabloid-headline text-[clamp(3rem,16vw,5rem)] leading-[0.78]">Trophées du mois</h2>
-                <p className="mt-3 text-[clamp(1.1rem,5vw,1.45rem)] font-black uppercase leading-none text-yellow-300">Le premier jour du mois révèle le palmarès.</p>
+              <BrutalCard tone="black" className="p-2 text-white">
+                <Medal className="mb-2 h-9 w-9 text-yellow-300" />
+                <h2 className="tabloid-headline text-[clamp(2.8rem,14vw,4.7rem)] leading-[0.8]">Trophées du mois</h2>
+                <p className="mt-2 text-[clamp(1rem,5vw,1.35rem)] font-black uppercase leading-none text-yellow-300">Le premier jour du mois révèle le palmarès.</p>
               </BrutalCard>
 
               {categoryWinners.length === 0 ? (
-                <BrutalCard tone="yellow" className="p-8 text-center">
+                <BrutalCard tone="yellow" className="p-4 text-center">
                   <Trophy className="mx-auto mb-3 h-10 w-10" />
-                  <p className="text-3xl font-black uppercase leading-none">Aucun propulsé.</p>
+                  <p className="text-3xl font-black uppercase leading-none">Aucun dossier validé.</p>
                   <p className="mt-2 text-sm font-black uppercase">Une moyenne collective de 3/5 ouvre le palmarès.</p>
                 </BrutalCard>
               ) : (
@@ -1357,7 +1402,7 @@ export default function Home() {
                         <div className="media-cut h-28 border-r-4 border-black">
                           <MediaFrame nomination={winner} height="h-28" controls={false} />
                         </div>
-                        <div className="min-w-0 p-3">
+                        <div className="min-w-0 p-2">
                           <p className="flex items-center gap-1 text-[10px] font-black uppercase text-red-600">
                             <Icon className="h-3.5 w-3.5" /> {category.label}
                           </p>
@@ -1380,15 +1425,15 @@ export default function Home() {
               dragConstraints={{ left: 0, right: 0 }}
               onDragEnd={(_, info) => handleSectionDrag(info)}
               transition={{ duration: reduceMotion ? 0.01 : 0.26, type: "spring", stiffness: 230, damping: 25 }}
-              className="space-y-3"
+              className="space-y-2"
             >
-              <BrutalCard tone="red" className="p-4">
-                <h2 className="tabloid-headline text-[clamp(3rem,16vw,5rem)] leading-[0.78] text-white">Archives</h2>
-                <p className="mt-3 text-[clamp(1.1rem,5vw,1.45rem)] font-black uppercase leading-none text-white">Vidéos, miniatures et verdicts restent permanents.</p>
+              <BrutalCard tone="red" className="p-2">
+                <h2 className="tabloid-headline text-[clamp(2.8rem,14vw,4.7rem)] leading-[0.8] text-white">Archives</h2>
+                <p className="mt-2 text-[clamp(1rem,5vw,1.35rem)] font-black uppercase leading-none text-white">Vidéos, miniatures et verdicts restent permanents.</p>
               </BrutalCard>
 
               {archive.length === 0 ? (
-                <BrutalCard className="p-8 text-center">
+                <BrutalCard className="p-4 text-center">
                   <ImageIcon className="mx-auto mb-3 h-9 w-9" />
                   <p className="text-3xl font-black uppercase leading-none">Archive vide.</p>
                 </BrutalCard>

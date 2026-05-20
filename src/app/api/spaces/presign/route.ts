@@ -81,7 +81,7 @@ export async function POST(request: Request) {
     const folder = typeof body.folder === "string" ? body.folder : "";
 
     if (!ALLOWED_FOLDERS.has(folder)) {
-      return NextResponse.json({ ok: false, error: "Dossier Spaces invalide." }, { status: 400 });
+      return NextResponse.json({ ok: false, error: "Dossier média invalide." }, { status: 400 });
     }
 
     if (size <= 0 || size > MAX_SINGLE_PUT_BYTES) {
@@ -127,7 +127,8 @@ export async function POST(request: Request) {
       uploadUrl
     });
   } catch (error) {
-    const message = error instanceof Error ? error.message : "Signature Spaces impossible.";
+    const rawMessage = error instanceof Error ? error.message : "Signature d'archive impossible.";
+    const message = rawMessage.startsWith("Variable manquante") ? "Archive média non configurée." : rawMessage;
     return NextResponse.json({ ok: false, error: message }, { status: 500 });
   }
 }

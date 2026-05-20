@@ -1,7 +1,7 @@
 {
-  "name": "Flux de verdicts",
-  "short_name": "Verdicts",
-  "description": "Terrain de jeu culturel multijoueur.",
+  "name": "Nominees or Denominees",
+  "short_name": "NOD",
+  "description": "Flux culturel collectif et verdicts du mois.",
   "start_url": "/",
   "display": "standalone",
   "background_color": "#f0f0f0",
