@@ -230,4 +230,106 @@ video {
       linear-gradient(180deg, rgba(255, 255, 255, 0.05), rgba(255, 255, 255, 0.012)),
       #030303;
   }
+
+  .nod-bento {
+    position: relative;
+    isolation: isolate;
+    overflow: hidden;
+    border: 0.5px solid rgba(255, 255, 255, 0.11);
+    background:
+      linear-gradient(180deg, rgba(255, 255, 255, 0.085), rgba(255, 255, 255, 0.018)),
+      rgba(9, 9, 11, 0.76);
+    box-shadow:
+      inset 0 1px 0 rgba(255, 255, 255, 0.08),
+      0 24px 90px rgba(0, 0, 0, 0.55);
+    backdrop-filter: blur(30px) saturate(1.22);
+  }
+
+  .nod-bento::before {
+    content: "";
+    position: absolute;
+    inset: -35%;
+    z-index: -2;
+    background:
+      radial-gradient(circle at 18% 12%, var(--glow-a, rgba(14, 165, 233, 0.36)), transparent 28%),
+      radial-gradient(circle at 82% 24%, var(--glow-b, rgba(217, 119, 6, 0.28)), transparent 30%),
+      radial-gradient(circle at 48% 105%, var(--glow-c, rgba(34, 197, 94, 0.18)), transparent 34%);
+    filter: blur(30px);
+    opacity: 0.82;
+    transform: translate3d(0, 0, 0);
+    animation: nod-glow-drift 13s ease-in-out infinite alternate;
+  }
+
+  .nod-bento::after {
+    content: "";
+    position: absolute;
+    inset: 0;
+    z-index: -1;
+    background:
+      linear-gradient(135deg, rgba(255, 255, 255, 0.06), transparent 34%),
+      repeating-linear-gradient(90deg, rgba(255, 255, 255, 0.016) 0, rgba(255, 255, 255, 0.016) 1px, transparent 1px, transparent 7px);
+    opacity: 0.72;
+  }
+
+  .nod-chip {
+    border: 0.5px solid rgba(255, 255, 255, 0.11);
+    background: rgba(255, 255, 255, 0.055);
+    box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.06);
+    backdrop-filter: blur(18px);
+  }
+
+  .nod-particles {
+    pointer-events: none;
+    position: fixed;
+    inset: 0;
+    z-index: 0;
+    overflow: hidden;
+  }
+
+  .nod-particle {
+    position: absolute;
+    width: 2px;
+    height: 2px;
+    border-radius: 999px;
+    background: rgba(255, 255, 255, 0.5);
+    opacity: 0.18;
+    animation: nod-float 7s ease-in-out infinite alternate;
+  }
+
+  .nod-media-shell {
+    position: relative;
+    overflow: hidden;
+    background: #030303;
+    box-shadow:
+      inset 0 0 0 0.5px rgba(255, 255, 255, 0.12),
+      inset 0 1px 0 rgba(255, 255, 255, 0.05);
+  }
+
+  .nod-media-shell::after {
+    content: "";
+    pointer-events: none;
+    position: absolute;
+    inset: 0;
+    background:
+      linear-gradient(180deg, rgba(255, 255, 255, 0.05), transparent 24%),
+      linear-gradient(0deg, rgba(0, 0, 0, 0.72), transparent 42%);
+  }
+}
+
+@keyframes nod-glow-drift {
+  from {
+    transform: translate3d(-2%, -1%, 0) scale(1);
+  }
+  to {
+    transform: translate3d(2%, 2%, 0) scale(1.06);
+  }
+}
+
+@keyframes nod-float {
+  from {
+    transform: translate3d(0, 0, 0);
+  }
+  to {
+    transform: translate3d(16px, -34px, 0);
+  }
 }

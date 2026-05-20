@@ -10,7 +10,7 @@ exception
 end $$;
 
 do $$ begin
-  create type public.nomination_status as enum ('pending', 'accepted', 'rejected', 'arena');
+  create type public.nomination_status as enum ('pending', 'accepted', 'rejected');
 exception
   when duplicate_object then null;
 end $$;
@@ -50,23 +50,13 @@ create table if not exists public.nominations (
   updated_at timestamptz not null default now()
 );
 
-create table if not exists public.trial_rounds (
-  id uuid primary key default gen_random_uuid(),
-  nomination_id uuid not null references public.nominations(id) on delete cascade,
-  round_number integer not null check (round_number between 1 and 3),
-  player_role public.nod_player_role not null,
-  body text not null check (char_length(body) between 3 and 180),
-  created_at timestamptz not null default now(),
-  unique (nomination_id, round_number, player_role)
-);
+drop table if exists public.trial_rounds;
 
 create index if not exists rooms_code_idx on public.rooms(code);
 create index if not exists nominations_room_created_idx on public.nominations(room_id, created_at desc);
 create index if not exists nominations_room_status_idx on public.nominations(room_id, status);
 create index if not exists nominations_video_path_idx on public.nominations(video_storage_path)
   where video_storage_path is not null;
-create index if not exists trial_rounds_nomination_idx on public.trial_rounds(nomination_id, round_number);
-
 create or replace function public.set_updated_at()
 returns trigger
 language plpgsql
@@ -112,8 +102,6 @@ on conflict (id) do update set
 alter table public.rooms enable row level security;
 alter table public.categories enable row level security;
 alter table public.nominations enable row level security;
-alter table public.trial_rounds enable row level security;
-
 drop policy if exists "NOD rooms read" on public.rooms;
 create policy "NOD rooms read" on public.rooms
 for select to anon using (true);
@@ -134,21 +122,13 @@ drop policy if exists "NOD nominations write" on public.nominations;
 create policy "NOD nominations write" on public.nominations
 for all to anon using (true) with check (true);
 
-drop policy if exists "NOD trial rounds read" on public.trial_rounds;
-create policy "NOD trial rounds read" on public.trial_rounds
-for select to anon using (true);
-
-drop policy if exists "NOD trial rounds write" on public.trial_rounds;
-create policy "NOD trial rounds write" on public.trial_rounds
-for all to anon using (true) with check (true);
-
 insert into storage.buckets (id, name, public, file_size_limit, allowed_mime_types)
 values (
   'nod-media',
   'nod-media',
   true,
   52428800,
-  array['video/mp4', 'video/quicktime', 'video/webm', 'image/jpeg', 'image/png']::text[]
+  array['video/mp4', 'video/quicktime', 'video/webm', 'image/jpeg', 'image/png', 'image/webp']::text[]
 )
 on conflict (id) do update set
   public = excluded.public,
