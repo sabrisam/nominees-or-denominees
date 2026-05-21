@@ -3,7 +3,7 @@ import "./globals.css";
 
 export const metadata: Metadata = {
   title: "Nominees or Denominees",
-  description: "Le club des recs et trophées du mois.",
+  description: "La saison des prix TikTok du club.",
   manifest: "/manifest.webmanifest",
   icons: {
     icon: [
@@ -28,7 +28,7 @@ export const viewport: Viewport = {
   initialScale: 1,
   maximumScale: 1,
   viewportFit: "cover",
-  themeColor: "#000000"
+  themeColor: "#D4AF37"
 };
 
 export default function RootLayout({

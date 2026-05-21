@@ -28,7 +28,7 @@ import {
 import type { LucideIcon } from "lucide-react";
 import type { RealtimeChannel, SupabaseClient } from "@supabase/supabase-js";
 
-type Tab = "direct" | "vote" | "studio" | "trophees" | "bannis";
+type Tab = "direct" | "vote" | "studio" | "palmares" | "winners";
 type NominationStatus = "pending" | "accepted" | "rejected";
 type VerdictChoice = "propel" | "ban";
 type ToastTone = "success" | "error" | "info";
@@ -96,6 +96,18 @@ type ScoreBoard = {
   nominations: number;
 };
 
+type PalmaresRow = {
+  tiktokerName: string;
+  avatarUrl: string;
+  points: number;
+  votes: number;
+  average: number;
+  totalDossiers: number;
+  acceptedDossiers: number;
+  successRate: number;
+  categoryCounts: Record<string, number>;
+};
+
 const LEGACY_SESSION_ID_KEY = "nod_session_id";
 const USER_DEVICE_ID_KEY = "nod_user_device_id";
 const PSEUDO_KEY = "nod_pseudo";
@@ -104,10 +116,10 @@ const DEFAULT_ROOM_CODE = "NOD-CLUB";
 const MIN_PUBLIC_RATINGS = 2;
 const STAR_VALUES = [1, 2, 3, 4, 5] as const;
 const DIRECT_TITLE = "DIRECT";
-const VOTE_TITLE = "À VOTER";
+const VOTE_TITLE = "VOTING";
 const STUDIO_TITLE = "STUDIO";
-const TROPHY_TITLE = "GRANDE CÉRÉMONIE";
-const BANNIS_TITLE = "LES DOSSIERS BANNIS";
+const PALMARES_TITLE = "PALMARÈS";
+const WINNERS_TITLE = "WINNERS";
 const SUPABASE_STORAGE_BUCKET = process.env.NEXT_PUBLIC_SUPABASE_STORAGE_BUCKET || "nod-media";
 const SUPABASE_STORAGE_NOTICE = "Stockage de secours Supabase activé.";
 const STORAGE_UNAVAILABLE_NOTICE = "Stockage indisponible : vérifie Supabase Storage ou Spaces.";
@@ -121,27 +133,18 @@ const CATEGORIES: CategoryMeta[] = [
   { id: "le_zin_du_mois", label: "Le Zin du mois", mood: "positive", icon: Crown },
   { id: "fierte_des_notres", label: "La Fierté des Nôtres", mood: "positive", icon: BadgeCheck },
   { id: "xptdr", label: "Xptdr", mood: "fun", icon: Sparkles },
-  { id: "roue_libre", label: "Roue Libre", mood: "fun", icon: Flame },
-  { id: "trop_genant", label: "Trop gênant", mood: "critical", icon: ShieldAlert },
-  { id: "masterclass", label: "Masterclass", mood: "positive", icon: Trophy },
-  { id: "derape_sec", label: "Dérape sec", mood: "critical", icon: Zap },
-  { id: "dossier_lourd", label: "Dossier lourd", mood: "surprise", icon: Camera },
-  { id: "mythomane", label: "Mythomane", mood: "critical", icon: ShieldAlert },
-  { id: "frappe_chirurgicale", label: "Frappe chirurgicale", mood: "positive", icon: BadgeCheck },
-  { id: "silence_assourdissant", label: "Silence assourdissant", mood: "critical", icon: Clock3 },
-  { id: "performance_surprise", label: "Performance surprise", mood: "surprise", icon: Sparkles },
-  { id: "honte_absolue", label: "Honte Absolue", mood: "critical", icon: ShieldAlert },
-  { id: "surprise_totale", label: "Surprise Totale", mood: "surprise", icon: Sparkles }
+  { id: "honte_absolue", label: "Honte Absolue", mood: "critical", icon: ShieldAlert }
 ];
 
 const CATEGORY_BY_ID = Object.fromEntries(CATEGORIES.map((category) => [category.id, category])) as Record<string, CategoryMeta>;
+const FEATURED_CATEGORY_IDS = ["le_zin_du_mois", "fierte_des_notres", "xptdr", "honte_absolue"] as const;
 
 const TAB_ITEMS: Array<{ id: Tab; label: string; icon: LucideIcon }> = [
   { id: "direct", label: "Direct", icon: Sparkles },
-  { id: "vote", label: "À voter", icon: Zap },
+  { id: "vote", label: "Voting", icon: Zap },
   { id: "studio", label: "Studio", icon: Plus },
-  { id: "trophees", label: "Trophées", icon: Crown },
-  { id: "bannis", label: "Bannis", icon: ShieldAlert }
+  { id: "palmares", label: "Palmarès", icon: Trophy },
+  { id: "winners", label: "Winners", icon: Crown }
 ];
 
 const TAB_ORDER: Tab[] = TAB_ITEMS.map((item) => item.id);
@@ -221,9 +224,9 @@ function statusLabel(status: NominationStatus) {
 }
 
 function statusClass(status: NominationStatus) {
-  if (status === "accepted") return "border-black bg-[#b5f42b] text-black";
-  if (status === "rejected") return "border-black bg-[#e11d48] text-white";
-  return "border-black bg-[#b5f42b] text-black";
+  if (status === "accepted") return "border-[#d4af37]/60 bg-[#d4af37]/15 text-[#f0d889]";
+  if (status === "rejected") return "border-red-400/30 bg-red-950/40 text-red-100";
+  return "border-[#d4af37]/50 bg-white/5 text-[#f0d889]";
 }
 
 function averageRating(ratings: Rating[]) {
@@ -548,6 +551,51 @@ function bestSubmission(nominations: Nomination[]) {
     .sort((a, b) => totalPoints(b.ratings) - totalPoints(a.ratings) || averageRating(b.ratings) - averageRating(a.ratings))[0];
 }
 
+function buildPalmaresRows(nominations: Nomination[]) {
+  const rows = new Map<string, PalmaresRow>();
+  const monthly = nominations.filter((nomination) => isCurrentMonth(nomination.created_at));
+
+  for (const nomination of monthly) {
+    const current = rows.get(nomination.tiktoker_name) ?? {
+      tiktokerName: nomination.tiktoker_name,
+      avatarUrl: nomination.thumbnail_url || nomination.media_url || FALLBACK_IMAGE_URL,
+      points: 0,
+      votes: 0,
+      average: 0,
+      totalDossiers: 0,
+      acceptedDossiers: 0,
+      successRate: 0,
+      categoryCounts: Object.fromEntries(FEATURED_CATEGORY_IDS.map((id) => [id, 0])) as Record<string, number>
+    };
+
+    current.totalDossiers += 1;
+    if (nomination.status === "accepted") current.acceptedDossiers += 1;
+    if (FEATURED_CATEGORY_IDS.includes(nomination.category_id as (typeof FEATURED_CATEGORY_IDS)[number])) {
+      current.categoryCounts[nomination.category_id] = (current.categoryCounts[nomination.category_id] ?? 0) + 1;
+    }
+
+    for (const rating of nomination.ratings) {
+      current.points += rating.rating_stars;
+      current.votes += 1;
+    }
+
+    current.average = current.votes > 0 ? current.points / current.votes : 0;
+    current.successRate = current.totalDossiers > 0 ? Math.round((current.acceptedDossiers / current.totalDossiers) * 100) : 0;
+    rows.set(nomination.tiktoker_name, current);
+  }
+
+  return Array.from(rows.values()).sort((a, b) => b.points - a.points || b.successRate - a.successRate || b.average - a.average || a.tiktokerName.localeCompare(b.tiktokerName));
+}
+
+function initialsFor(name: string) {
+  return name
+    .split(/\s+/)
+    .filter(Boolean)
+    .slice(0, 2)
+    .map((part) => part[0]?.toUpperCase())
+    .join("");
+}
+
 function Sticker({
   children,
   tone = "red",
@@ -559,21 +607,21 @@ function Sticker({
 }) {
   const toneClass =
     tone === "yellow"
-      ? "border-black bg-[#b5f42b] text-black"
+      ? "border-[#d4af37]/60 bg-[#d4af37]/15 text-[#f0d889]"
       : tone === "black"
-        ? "border-black bg-black text-white"
+        ? "border-white/10 bg-black/70 text-white"
         : tone === "paper"
-          ? "border-black bg-[#f2efe3] text-black"
-          : "border-black bg-[#e11d48] text-white";
+          ? "border-white/10 bg-white/5 text-white"
+          : "border-red-400/30 bg-red-950/40 text-red-100";
 
-  return <span className={`inline-flex border-4 px-2 py-1 text-[10px] font-black uppercase leading-none ${toneClass} ${className}`}>{children}</span>;
+  return <span className={`inline-flex rounded-full border px-2.5 py-1 text-[10px] font-bold uppercase tracking-[0.12em] leading-none ${toneClass} ${className}`}>{children}</span>;
 }
 
 function SectionTitle({ children, tone = "black" }: { children: ReactNode; tone?: "black" | "red" | "yellow" }) {
-  const toneClass = tone === "red" ? "bg-[#e11d48] text-white" : tone === "yellow" ? "bg-[#b5f42b] text-black" : "bg-black text-white";
+  const toneClass = tone === "red" ? "border-red-400/30 text-red-100" : tone === "yellow" ? "border-[#d4af37]/60 text-[#f0d889]" : "border-white/10 text-white";
   return (
-    <div className={`border-4 border-black px-2 py-1.5 ${toneClass}`}>
-      <h2 className="tabloid-headline text-[clamp(1.55rem,8.4vw,2.75rem)] leading-[0.82]">{children}</h2>
+    <div className={`rounded-2xl border bg-white/[0.035] px-3 py-2 ${toneClass}`}>
+      <h2 className="tabloid-headline text-[clamp(1.55rem,8.4vw,2.9rem)] leading-[0.92]">{children}</h2>
     </div>
   );
 }
@@ -590,7 +638,7 @@ function BrutalCard({
   const toneClass = tone === "red" ? "brutal-card-red" : tone === "yellow" ? "brutal-card-yellow" : tone === "black" ? "brutal-card-black" : "";
 
   return (
-    <motion.div whileTap={{ x: 2, y: 2 }} transition={{ type: "spring", stiffness: 500, damping: 30 }} className={`brutal-card ${toneClass} ${className}`}>
+    <motion.div whileTap={{ scale: 0.985 }} transition={{ type: "spring", stiffness: 520, damping: 24 }} className={`brutal-card ${toneClass} ${className}`}>
       {children}
     </motion.div>
   );
@@ -624,11 +672,11 @@ function StarInput({
             onMouseEnter={() => !readonly && setHover(star)}
             onMouseLeave={() => !readonly && setHover(0)}
             onClick={() => {
-              haptic(star >= 4 ? [12, 24, 12] : 12);
+              haptic(10);
               onChange?.(star);
             }}
-            className={`flex aspect-square items-center justify-center border-4 border-black transition active:translate-x-0.5 active:translate-y-0.5 disabled:cursor-default ${
-              active ? "bg-[#b5f42b] text-black" : "bg-[#f2efe3] text-zinc-500"
+            className={`flex aspect-square items-center justify-center rounded-2xl border transition disabled:cursor-default ${
+              active ? "border-[#d4af37]/80 bg-[#d4af37]/20 text-[#f0d889]" : "border-white/10 bg-white/[0.04] text-zinc-600"
             }`}
             aria-label={`${star} étoiles`}
           >
@@ -661,7 +709,7 @@ function MediaFrame({
     return (
       <div className={`${height} relative flex w-full items-center justify-center bg-black`}>
         {nomination.thumbnail_url ? <img src={nomination.thumbnail_url} alt="" className="absolute inset-0 h-full w-full object-cover opacity-55" /> : null}
-        <div className="relative z-10 mx-3 border-4 border-black bg-[#b5f42b] px-2 py-1 text-center text-[11px] font-black uppercase leading-none text-black">
+        <div className="relative z-10 mx-3 rounded-full border border-[#d4af37]/60 bg-black/70 px-3 py-2 text-center text-[11px] font-bold uppercase tracking-[0.12em] leading-none text-[#f0d889]">
           Rec à renvoyer depuis le Studio
         </div>
       </div>
@@ -675,25 +723,27 @@ function MediaFrame({
         poster={nomination.thumbnail_url ?? undefined}
         controls={controls || engaged}
         loop
+        muted
         playsInline
         preload="metadata"
+        {...({ "webkit-playsinline": "true" } as Record<string, string>)}
         onClick={() => {
           haptic(15);
           setEngaged(true);
         }}
         onTouchStart={() => setEngaged(true)}
         onError={() => setMediaFailed(true)}
-        className={`${height} block w-full bg-black object-cover`}
+        className={`${height} prestige-media block w-full bg-black object-cover`}
       />
     );
   }
 
-  return <img src={nomination.media_url || nomination.thumbnail_url || FALLBACK_IMAGE_URL} alt="" onError={() => setMediaFailed(true)} className={`${height} block w-full bg-black object-cover`} />;
+  return <img src={nomination.media_url || nomination.thumbnail_url || FALLBACK_IMAGE_URL} alt="" onError={() => setMediaFailed(true)} className={`${height} prestige-media block w-full bg-black object-cover`} />;
 }
 
 function OwnershipBadge({ owned, className = "" }: { owned: boolean; className?: string }) {
   return (
-    <span className={`inline-flex items-center gap-1 border-4 border-black px-2 py-1 text-[10px] font-black uppercase leading-none ${owned ? "bg-[#b5f42b] text-black" : "bg-[#e11d48] text-white"} ${className}`}>
+    <span className={`inline-flex items-center gap-1 rounded-full border px-2.5 py-1 text-[10px] font-bold uppercase tracking-[0.1em] leading-none ${owned ? "border-[#d4af37]/70 bg-[#d4af37]/15 text-[#f0d889]" : "border-white/10 bg-white/10 text-white"} ${className}`}>
       {owned ? (
         <>
           PAR VOUS <Pencil className="h-3 w-3" strokeWidth={3} />
@@ -728,31 +778,90 @@ function NominationTile({
 
   return (
     <BrutalCard tone={index % 3 === 0 ? "yellow" : "paper"} className="overflow-hidden">
-      <div className="media-cut relative h-[clamp(5.8rem,29vw,7.75rem)] border-b-4 border-black">
+      <div className="media-cut relative aspect-[9/16] border-b border-[#d4af37]/20">
         <MediaFrame nomination={nomination} height="h-full" controls={false} />
-        <OwnershipBadge owned={owned} className="absolute left-1 top-1 -rotate-2" />
-        <Sticker tone={nomination.status === "rejected" ? "red" : "yellow"} className="absolute bottom-1 right-1 rotate-2">
+        <OwnershipBadge owned={owned} className="absolute left-2 top-2" />
+        <Sticker tone={nomination.status === "rejected" ? "red" : "yellow"} className="absolute bottom-2 right-2">
           {statusLabel(nomination.status)}
         </Sticker>
       </div>
-      <div className="min-w-0 p-1.5">
-        <p className="text-[clamp(1.3rem,7.4vw,1.9rem)] font-black uppercase leading-[0.82]">{nomination.tiktoker_name}</p>
-        <p className="mt-1 line-clamp-2 text-[0.95rem] font-black uppercase leading-[0.9]">&quot;{nomination.comment || "Dossier à juger"}&quot;</p>
-        <p className="mt-1.5 flex min-w-0 items-center gap-1 truncate text-[10px] font-black uppercase leading-none">
-          <Icon className="h-3 w-3 shrink-0 text-[#e11d48]" /> {category.label} / {nomination.ratings.length} notes / {rating ? rating.toFixed(1) : "-"} sur 5
+      <div className="min-w-0 p-3">
+        <p className="tabloid-headline text-[clamp(1.35rem,6.5vw,2rem)] leading-[0.95] text-white">{nomination.tiktoker_name}</p>
+        <p className="mt-1 line-clamp-2 text-xs font-medium leading-snug text-zinc-300">&quot;{nomination.comment || "Dossier à juger"}&quot;</p>
+        <p className="mt-2 flex min-w-0 items-center gap-1 truncate text-[10px] font-bold uppercase tracking-[0.1em] leading-none text-[#d4af37]">
+          <Icon className="h-3 w-3 shrink-0" /> {category.label} / {nomination.ratings.length} notes / {rating ? rating.toFixed(1) : "-"} sur 5
         </p>
         {owned && (
           <div className="mt-1.5 grid grid-cols-2 gap-1">
-            <motion.button whileTap={TAP_REBOUND} transition={TAP_TRANSITION} onClick={onEdit} className="owner-action bg-[#0ea5e9] text-white" type="button">
+            <motion.button whileTap={TAP_REBOUND} transition={TAP_TRANSITION} onClick={onEdit} className="owner-action bg-white/10 text-white" type="button">
               Modifier
             </motion.button>
-            <motion.button whileTap={TAP_REBOUND} transition={TAP_TRANSITION} onClick={onRemove} disabled={busy} className="owner-action bg-zinc-700 text-white disabled:opacity-60" type="button">
+            <motion.button whileTap={TAP_REBOUND} transition={TAP_TRANSITION} onClick={onRemove} disabled={busy} className="owner-action bg-red-950/50 text-red-100 disabled:opacity-60" type="button">
               Retirer
             </motion.button>
           </div>
         )}
       </div>
     </BrutalCard>
+  );
+}
+
+function PalmaresList({ rows }: { rows: PalmaresRow[] }) {
+  if (rows.length === 0) {
+    return (
+      <BrutalCard className="p-5 text-center">
+        <Trophy className="mx-auto mb-3 h-9 w-9 text-[#d4af37]" />
+        <p className="tabloid-headline text-3xl leading-none">Aucun classement.</p>
+      </BrutalCard>
+    );
+  }
+
+  return (
+    <div className="space-y-3">
+      {rows.map((row, index) => (
+        <motion.article
+          key={row.tiktokerName}
+          initial={{ opacity: 0, y: 18 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: index * 0.055, type: "spring", stiffness: 220, damping: 24 }}
+          className="brutal-card p-3"
+        >
+          <div className="grid grid-cols-[2rem_3.3rem_1fr_auto] items-center gap-3">
+            <p className="tabloid-headline text-2xl text-[#d4af37]">{index + 1}</p>
+            <div className="relative h-14 w-14 overflow-hidden rounded-full border border-[#d4af37]/50 bg-[#d4af37]/10">
+              {row.avatarUrl ? <img src={row.avatarUrl} alt="" className="h-full w-full object-cover" /> : null}
+              {!row.avatarUrl && <span className="flex h-full w-full items-center justify-center text-sm font-black text-[#f0d889]">{initialsFor(row.tiktokerName)}</span>}
+            </div>
+            <div className="min-w-0">
+              <p className="truncate text-base font-extrabold text-white">@{row.tiktokerName}</p>
+              <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-zinc-500">
+                {row.acceptedDossiers}/{row.totalDossiers} dossiers validés
+              </p>
+            </div>
+            <span className="gold-pill">{row.points} pts</span>
+          </div>
+
+          <div className="mt-3 grid grid-cols-[1fr_auto] items-center gap-3">
+            <div className="stat-bar">
+              <motion.div className="stat-bar-fill" initial={{ width: 0 }} animate={{ width: `${row.successRate}%` }} transition={{ delay: index * 0.06 + 0.12, duration: 0.55 }} />
+            </div>
+            <p className="text-sm font-extrabold text-[#f0d889]">{row.successRate}%</p>
+          </div>
+
+          <div className="mt-3 grid grid-cols-4 gap-1.5">
+            {FEATURED_CATEGORY_IDS.map((categoryId) => {
+              const category = getCategoryMeta(categoryId);
+              return (
+                <div key={categoryId} className="rounded-xl border border-white/10 bg-white/[0.035] px-2 py-2 text-center">
+                  <p className="truncate text-[9px] font-bold uppercase tracking-[0.11em] text-zinc-500">{category.label}</p>
+                  <p className="mt-1 text-lg font-black text-white">{row.categoryCounts[categoryId] ?? 0}</p>
+                </div>
+              );
+            })}
+          </div>
+        </motion.article>
+      ))}
+    </div>
   );
 }
 
@@ -806,6 +915,7 @@ export default function Home() {
   const channelRef = useRef<RealtimeChannel | null>(null);
 
   const showToast = useCallback((tone: ToastTone, message: string) => {
+    if (tone === "error") haptic(100);
     if (toastTimeoutRef.current) window.clearTimeout(toastTimeoutRef.current);
     setToast({ tone, message });
     toastTimeoutRef.current = window.setTimeout(() => {
@@ -983,6 +1093,7 @@ export default function Home() {
   const monthlyNominations = useMemo(() => nominations.filter((nomination) => isCurrentMonth(nomination.created_at)), [nominations]);
   const ultimateWinner = useMemo(() => buildScoreBoard(nominations)[0] ?? null, [nominations]);
   const paparazziOr = useMemo(() => bestSubmission(nominations), [nominations]);
+  const palmaresRows = useMemo(() => buildPalmaresRows(nominations), [nominations]);
   const categoryWinners = useMemo(() => {
     return CATEGORIES.map((category) => {
       const winner = buildScoreBoard(nominations, category.id)[0];
@@ -1118,7 +1229,7 @@ export default function Home() {
       return;
     }
 
-    haptic([20, 30, 20]);
+    haptic([15, 30, 10]);
     setMutationBusyId(editingNomination.id);
 
     try {
@@ -1243,7 +1354,7 @@ export default function Home() {
       if (ratingError) throw ratingError;
 
       setMediaProgress(1);
-      haptic(initialRating >= 3 ? [20, 30, 20] : [25, 60]);
+      haptic([15, 30, 10]);
       setStudioNotice(thumbnailUpload.provider === "supabase" || mediaUpload.provider === "supabase" ? SUPABASE_STORAGE_NOTICE : null);
       showToast("success", "Dossier lancé dans le club.");
       resetStudioDraft();
@@ -1273,7 +1384,7 @@ export default function Home() {
     const draft = clampRating(ratingDraftById[id] ?? 4);
     const stars = choice === "propel" ? Math.max(3, draft) : Math.min(2, draft);
 
-    haptic(choice === "propel" ? [20, 30, 20] : [25, 60]);
+    haptic([15, 30, 10]);
     setVoteBusyId(id);
     setShakeId(id);
     window.setTimeout(() => setShakeId(null), 520);
@@ -1335,13 +1446,13 @@ export default function Home() {
   }
 
   return (
-    <div className="tabloid-app flex min-h-screen flex-col justify-between bg-[#1a1a1a] pb-[calc(env(safe-area-inset-bottom)+70px)]">
+    <div className="tabloid-app flex min-h-screen flex-col justify-between bg-[#050505] pb-[calc(env(safe-area-inset-bottom)+70px)]">
       <PaperBackdrop />
 
       <AnimatePresence>
         {toast && (
           <motion.div initial={{ opacity: 0, y: -18 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -14 }} className="fixed left-1/2 z-[100] w-[92%] max-w-sm -translate-x-1/2" style={{ top: "calc(env(safe-area-inset-top) + 10px)" }}>
-            <div className={`flex items-center gap-2 border-4 border-black px-4 py-3 text-sm font-black uppercase shadow-[5px_5px_0_#000] ${toast.tone === "success" ? "bg-[#b5f42b] text-black" : toast.tone === "error" ? "bg-[#e11d48] text-white" : "bg-black text-white"}`}>
+            <div className={`flex items-center gap-2 rounded-2xl border px-4 py-3 text-sm font-bold uppercase tracking-[0.08em] shadow-[0_18px_48px_rgba(0,0,0,0.45)] backdrop-blur-xl ${toast.tone === "success" ? "border-[#d4af37]/60 bg-[#d4af37]/20 text-[#f0d889]" : toast.tone === "error" ? "border-red-400/40 bg-red-950/80 text-red-100" : "border-white/10 bg-black/80 text-white"}`}>
               {toast.tone === "success" ? <Check className="h-4 w-4" /> : toast.tone === "error" ? <ShieldAlert className="h-4 w-4" /> : <Sparkles className="h-4 w-4" />}
               <span>{toast.message}</span>
             </div>
@@ -1350,8 +1461,8 @@ export default function Home() {
       </AnimatePresence>
 
       <main className="relative z-10 mx-auto min-h-0 w-full max-w-[30rem] flex-1 overflow-y-auto overscroll-contain px-2 pb-4" style={{ paddingTop: "calc(env(safe-area-inset-top) + 6px)" }}>
-        <header className="sticky top-0 z-30 mb-2 grid grid-cols-[1fr_auto] gap-1 bg-[#1a1a1a] py-1.5">
-          <div className="ticker border-4 border-black bg-[#b5f42b] text-black">
+        <header className="sticky top-0 z-30 mb-3 grid grid-cols-[1fr_auto] gap-2 bg-[#050505]/85 py-2 backdrop-blur-xl">
+          <div className="ticker">
             <span className="ticker-track">
               CÉRÉMONIE LE 1ER DU MOIS / DANS {ceremonyCountdown.days}J {ceremonyCountdown.hours}H {ceremonyCountdown.mins}M / TOURNOI DU MOIS / {monthlyNominations.length} DOSSIERS EN JEU / CÉRÉMONIE LE 1ER DU MOIS / DANS {ceremonyCountdown.days}J {ceremonyCountdown.hours}H {ceremonyCountdown.mins}M
             </span>
@@ -1361,18 +1472,18 @@ export default function Home() {
           </motion.button>
         </header>
 
-        <section className="mb-2 grid grid-cols-3 gap-1.5">
+        <section className="mb-3 grid grid-cols-3 gap-2">
           <BrutalCard tone="yellow" className="p-1.5">
-            <p className="text-[10px] font-black uppercase leading-none">À voter</p>
-            <p className="text-[clamp(2rem,11vw,3rem)] font-black leading-none">{pendingForMe.length}</p>
+            <p className="text-[10px] font-bold uppercase tracking-[0.14em] leading-none text-[#d4af37]">Academy</p>
+            <p className="tabloid-headline text-[clamp(2rem,11vw,3rem)] leading-none">{pendingForMe.length}</p>
           </BrutalCard>
           <BrutalCard tone="red" className="p-1.5">
-            <p className="text-[10px] font-black uppercase leading-none">Propulsés</p>
-            <p className="text-[clamp(2rem,11vw,3rem)] font-black leading-none">{accepted.length}</p>
+            <p className="text-[10px] font-bold uppercase tracking-[0.14em] leading-none text-[#d4af37]">Validés</p>
+            <p className="tabloid-headline text-[clamp(2rem,11vw,3rem)] leading-none">{accepted.length}</p>
           </BrutalCard>
           <BrutalCard tone="black" className="p-1.5">
-            <p className="text-[10px] font-black uppercase leading-none">Bannis</p>
-            <p className="text-[clamp(2rem,11vw,3rem)] font-black leading-none">{rejected.length}</p>
+            <p className="text-[10px] font-bold uppercase tracking-[0.14em] leading-none text-zinc-500">Bannis</p>
+            <p className="tabloid-headline text-[clamp(2rem,11vw,3rem)] leading-none">{rejected.length}</p>
           </BrutalCard>
         </section>
 
@@ -1380,15 +1491,16 @@ export default function Home() {
           {tab === "direct" && (
             <motion.section key="direct" {...pageTransition} {...revealContainer} drag={reduceMotion ? false : "x"} dragConstraints={{ left: 0, right: 0 }} onDragEnd={(_, info) => handleSectionDrag(info)} transition={{ duration: reduceMotion ? 0.01 : 0.26, type: "spring", stiffness: 230, damping: 25 }} className="space-y-2">
               <motion.div {...revealItem}>
-                <BrutalCard className="relative overflow-hidden p-2">
-                  <h1 className="tabloid-headline text-[clamp(2.9rem,15vw,5rem)] leading-[0.78]">
+                <BrutalCard className="relative overflow-hidden p-4">
+                  <p className="mb-2 text-[10px] font-bold uppercase tracking-[0.28em] text-[#d4af37]">Red Carpet</p>
+                  <h1 className="tabloid-headline text-[clamp(2.85rem,14vw,5rem)] leading-[0.92] text-[#f5f1e8]">
                     NOMINEES
-                    <span className="mx-2 inline-block -rotate-3 border-4 border-black bg-[#e11d48] px-2 py-0.5 text-[clamp(1.35rem,6.5vw,2.15rem)] font-black leading-none text-white">OR</span>
-                    <span className="block text-[#e11d48]">DENOMINEES</span>
+                    <span className="mx-2 inline-block rounded-full border border-[#d4af37]/70 bg-[#d4af37]/15 px-3 py-1 text-[clamp(1.15rem,5.5vw,1.9rem)] font-bold leading-none text-[#f0d889]">or</span>
+                    <span className="block text-[#d4af37]">DENOMINEES</span>
                   </h1>
                   <div className="paper-tear -mt-[4px]" />
-                  <div className="-mt-[4px] border-4 border-black bg-black px-2 py-1 text-white">
-                    <p className="tabloid-headline text-[clamp(1.35rem,7.6vw,2.35rem)] leading-[0.85]">LE CLUB DES RECS DU MOIS</p>
+                  <div className="rounded-2xl border border-[#d4af37]/30 bg-black/40 px-3 py-2 text-white">
+                    <p className="text-[11px] font-bold uppercase tracking-[0.2em] text-zinc-400">Le club des recs du mois</p>
                   </div>
                 </BrutalCard>
               </motion.div>
@@ -1426,29 +1538,29 @@ export default function Home() {
                   const draftRating = clampRating(ratingDraftById[nomination.id] ?? 4);
 
                   return (
-                    <motion.article key={nomination.id} animate={shakeId === nomination.id ? { x: [0, -12, 12, -9, 9, 0], rotate: [0, -1.2, 1.2, -0.8, 0.8, 0] } : { x: 0, rotate: 0 }} transition={{ duration: 0.42 }} className="brutal-card overflow-hidden">
-                      <div className="relative border-b-4 border-black bg-black">
-                        <MediaFrame nomination={nomination} height="h-[min(43svh,22rem)]" />
+                    <motion.article key={nomination.id} animate={shakeId === nomination.id ? { x: [0, -8, 8, -5, 5, 0], scale: [1, 0.99, 1.01, 1] } : { x: 0, scale: 1 }} transition={{ duration: 0.42 }} className="brutal-card overflow-hidden">
+                      <div className="relative border-b border-[#d4af37]/20 bg-black">
+                        <MediaFrame nomination={nomination} height="aspect-[9/16] max-h-[58svh]" />
                         <Sticker tone="yellow" className="absolute left-2 top-2 -rotate-2">
                           À voter
                         </Sticker>
                         <OwnershipBadge owned={ownsNomination(nomination)} className="absolute right-2 top-2 rotate-2" />
-                        <div className="absolute bottom-2 left-2 right-2 border-4 border-black bg-[#f2efe3] p-2">
-                          <p className="flex items-center gap-1 text-[10px] font-black uppercase text-[#e11d48]">
+                        <div className="absolute bottom-3 left-3 right-3 rounded-2xl border border-[#d4af37]/35 bg-black/75 p-3 backdrop-blur-md">
+                          <p className="flex items-center gap-1 text-[10px] font-bold uppercase tracking-[0.14em] text-[#d4af37]">
                             <Icon className="h-3.5 w-3.5" /> {category.label}
                           </p>
-                          <p className="text-[clamp(1.8rem,10vw,3rem)] font-black uppercase leading-[0.84]">{nomination.tiktoker_name}</p>
+                          <p className="tabloid-headline text-[clamp(1.8rem,9.5vw,3rem)] leading-[0.92] text-white">{nomination.tiktoker_name}</p>
                         </div>
                       </div>
                       <div className="space-y-2 p-2">
-                        <p className="border-4 border-black bg-white p-2 text-lg font-black uppercase leading-[0.9]">&quot;{nomination.comment}&quot;</p>
+                        <p className="rounded-2xl border border-white/10 bg-white/[0.04] p-3 text-sm font-medium leading-snug text-zinc-200">&quot;{nomination.comment}&quot;</p>
                         <StarInput value={draftRating} onChange={(value) => setRatingDraftById((prev) => ({ ...prev, [nomination.id]: value }))} size="lg" />
                         <textarea value={reviewDraftById[nomination.id] ?? ""} onChange={(event) => setReviewDraftById((prev) => ({ ...prev, [nomination.id]: event.target.value }))} placeholder="Ta réaction sur ce dossier ?" rows={2} maxLength={180} className="brutal-input w-full resize-none p-2 text-base font-black uppercase" />
                         <div className="grid grid-cols-2 gap-2">
-                          <motion.button whileTap={TAP_REBOUND} transition={TAP_TRANSITION} onClick={() => void applyRating(nomination.id, "propel")} disabled={voteBusyId === nomination.id} className="brutal-action bg-[#b5f42b] text-black disabled:opacity-50">
+                          <motion.button whileTap={TAP_REBOUND} transition={TAP_TRANSITION} onClick={() => void applyRating(nomination.id, "propel")} disabled={voteBusyId === nomination.id} className="brutal-action bg-[#d4af37] text-black disabled:opacity-50">
                             Propulser
                           </motion.button>
-                          <motion.button whileTap={TAP_REBOUND} transition={TAP_TRANSITION} onClick={() => void applyRating(nomination.id, "ban")} disabled={voteBusyId === nomination.id} className="brutal-action bg-[#e11d48] text-white disabled:opacity-50">
+                          <motion.button whileTap={TAP_REBOUND} transition={TAP_TRANSITION} onClick={() => void applyRating(nomination.id, "ban")} disabled={voteBusyId === nomination.id} className="brutal-action bg-red-950/70 text-red-100 disabled:opacity-50">
                             Bannir
                           </motion.button>
                         </div>
@@ -1468,12 +1580,12 @@ export default function Home() {
 
               <BrutalCard className="p-1.5">
                 {editingNomination ? (
-                  <div className="relative min-h-[min(38svh,18rem)] overflow-hidden border-4 border-black bg-black">
-                    <MediaFrame nomination={editingNomination} height="h-[min(38svh,18rem)]" />
+                  <div className="relative overflow-hidden rounded-2xl border border-[#d4af37]/25 bg-black">
+                    <MediaFrame nomination={editingNomination} height="aspect-[9/16] max-h-[58svh]" />
                     <OwnershipBadge owned className="absolute left-2 top-2 -rotate-2" />
                   </div>
                 ) : (
-                  <motion.button whileTap={TAP_REBOUND} transition={TAP_TRANSITION} onClick={() => fileInputRef.current?.click()} disabled={isPreparingMedia || uploadLoading} className="relative flex min-h-[min(38svh,18rem)] w-full items-center justify-center overflow-hidden border-4 border-black bg-black text-left transition active:translate-x-1 active:translate-y-1 disabled:opacity-70">
+                  <motion.button whileTap={TAP_REBOUND} transition={TAP_TRANSITION} onClick={() => fileInputRef.current?.click()} disabled={isPreparingMedia || uploadLoading} className="relative flex aspect-[9/16] max-h-[58svh] w-full items-center justify-center overflow-hidden rounded-2xl border border-[#d4af37]/25 bg-black text-left transition disabled:opacity-70">
                     {previewUrl ? (
                       mediaKind === "video" ? (
                         <video src={previewUrl} poster={thumbnailPreviewUrl ?? undefined} className="absolute inset-0 h-full w-full object-cover" controls loop playsInline muted preload="metadata" />
@@ -1482,9 +1594,9 @@ export default function Home() {
                       )
                     ) : (
                       <span className="flex flex-col items-center px-6 text-center text-white">
-                        {isPreparingMedia ? <Loader2 className="mb-3 h-9 w-9 animate-spin text-[#b5f42b]" /> : <UploadCloud className="mb-3 h-9 w-9 text-[#b5f42b]" />}
-                        <span className="text-3xl font-black uppercase leading-none">{isPreparingMedia ? "Chargement du studio..." : "Déposer le rec"}</span>
-                        <span className="mt-2 text-sm font-black uppercase text-[#b5f42b]">Vidéo ou capture libre</span>
+                        {isPreparingMedia ? <Loader2 className="mb-3 h-9 w-9 animate-spin text-[#d4af37]" /> : <UploadCloud className="mb-3 h-9 w-9 text-[#d4af37]" />}
+                        <span className="tabloid-headline text-3xl leading-none">{isPreparingMedia ? "Chargement du studio..." : "Déposer le rec"}</span>
+                        <span className="mt-2 text-sm font-bold uppercase tracking-[0.14em] text-[#d4af37]">Vidéo ou capture libre</span>
                       </span>
                     )}
                     <input ref={fileInputRef} type="file" accept="video/*,image/*" onChange={(event) => void prepareMedia(event.target.files?.[0] ?? null)} className="hidden" />
@@ -1501,8 +1613,8 @@ export default function Home() {
               {(isPreparingMedia || uploadLoading) && (
                 <BrutalCard tone="yellow" className="p-2">
                   <p className="tabloid-headline text-[clamp(1.6rem,8vw,2.45rem)] leading-[0.85]">{uploadLoading ? "CHARGEMENT DU DOSSIER..." : "PRÉPARATION DU REC..."}</p>
-                  <div className="mt-2 h-5 border-4 border-black bg-[#f2efe3]">
-                    <motion.div className="h-full bg-[#e11d48]" animate={{ width: `${Math.round(mediaProgress * 100)}%` }} />
+                  <div className="stat-bar mt-3">
+                    <motion.div className="stat-bar-fill" animate={{ width: `${Math.round(mediaProgress * 100)}%` }} />
                   </div>
                 </BrutalCard>
               )}
@@ -1522,16 +1634,16 @@ export default function Home() {
               {!isEditingStudio && (
                 <BrutalCard tone="yellow" className="p-2">
                   <StarInput value={initialRating} onChange={setInitialRating} size="lg" />
-                  <p className="mt-2 border-t-4 border-black pt-2 text-center text-sm font-black uppercase">Note initiale : {initialRating} / 5</p>
+                  <p className="mt-3 border-t border-[#d4af37]/20 pt-3 text-center text-sm font-bold uppercase tracking-[0.14em] text-[#d4af37]">Note initiale : {initialRating} / 5</p>
                 </BrutalCard>
               )}
 
               {isEditingStudio ? (
                 <div className="grid grid-cols-[1fr_auto] gap-2">
-                  <motion.button whileTap={TAP_REBOUND} transition={TAP_TRANSITION} onClick={() => void saveEditedNomination()} disabled={mutationBusyId === editingNominationId || !uploadReady} className="brutal-submit flex w-full items-center justify-center gap-2 bg-[#b5f42b] text-black disabled:opacity-50">
+                  <motion.button whileTap={TAP_REBOUND} transition={TAP_TRANSITION} onClick={() => void saveEditedNomination()} disabled={mutationBusyId === editingNominationId || !uploadReady} className="brutal-submit flex w-full items-center justify-center gap-2 disabled:opacity-50">
                     {mutationBusyId === editingNominationId ? <Loader2 className="h-6 w-6 animate-spin" /> : "Sauvegarder"}
                   </motion.button>
-                  <motion.button whileTap={TAP_REBOUND} transition={TAP_TRANSITION} onClick={cancelEditNomination} className="border-4 border-black bg-[#f2efe3] px-4 text-lg font-black uppercase text-black shadow-[5px_5px_0_#000]" type="button">
+                  <motion.button whileTap={TAP_REBOUND} transition={TAP_TRANSITION} onClick={cancelEditNomination} className="rounded-2xl border border-white/10 bg-white/[0.06] px-4 text-sm font-bold uppercase tracking-[0.12em] text-white" type="button">
                     Annuler
                   </motion.button>
                 </div>
@@ -1543,93 +1655,54 @@ export default function Home() {
             </motion.section>
           )}
 
-          {tab === "trophees" && (
-            <motion.section key="trophees" {...pageTransition} drag={reduceMotion ? false : "x"} dragConstraints={{ left: 0, right: 0 }} onDragEnd={(_, info) => handleSectionDrag(info)} transition={{ duration: reduceMotion ? 0.01 : 0.26, type: "spring", stiffness: 230, damping: 25 }} className="space-y-2">
-              <BrutalCard tone="black" className="p-2 text-white">
-                <h2 className="tabloid-headline text-[clamp(2.35rem,12vw,4.2rem)] leading-[0.8]">{TROPHY_TITLE}</h2>
+          {tab === "palmares" && (
+            <motion.section key="palmares" {...pageTransition} drag={reduceMotion ? false : "x"} dragConstraints={{ left: 0, right: 0 }} onDragEnd={(_, info) => handleSectionDrag(info)} transition={{ duration: reduceMotion ? 0.01 : 0.26, type: "spring", stiffness: 230, damping: 25 }} className="space-y-3">
+              <BrutalCard tone="black" className="p-4 text-white">
+                <p className="mb-2 text-[10px] font-bold uppercase tracking-[0.28em] text-[#d4af37]">Leaderboard</p>
+                <h2 className="tabloid-headline text-[clamp(2.55rem,12vw,4.4rem)] leading-[0.92]">{PALMARES_TITLE}</h2>
+              </BrutalCard>
+              <PalmaresList rows={palmaresRows} />
+            </motion.section>
+          )}
+
+          {tab === "winners" && (
+            <motion.section key="winners" {...pageTransition} drag={reduceMotion ? false : "x"} dragConstraints={{ left: 0, right: 0 }} onDragEnd={(_, info) => handleSectionDrag(info)} transition={{ duration: reduceMotion ? 0.01 : 0.26, type: "spring", stiffness: 230, damping: 25 }} className="space-y-3">
+              <BrutalCard tone="black" className="p-4 text-white">
+                <p className="mb-2 text-[10px] font-bold uppercase tracking-[0.28em] text-[#d4af37]">Hall of Fame</p>
+                <h2 className="tabloid-headline text-[clamp(2.55rem,12vw,4.4rem)] leading-[0.92]">{WINNERS_TITLE}</h2>
               </BrutalCard>
 
               {ultimateWinner && (
-                <BrutalCard tone="yellow" className="p-2">
-                  <Sticker tone="red" className="-rotate-2">
-                    TikToker du mois
-                  </Sticker>
-                  <p className="mt-2 text-[clamp(2.2rem,12vw,4rem)] font-black uppercase leading-[0.8]">{ultimateWinner.tiktokerName}</p>
-                  <p className="mt-2 inline-flex border-4 border-black bg-black px-2 py-1 text-xs font-black uppercase text-white">{ultimateWinner.points} points</p>
+                <BrutalCard tone="yellow" className="p-4">
+                  <Sticker tone="yellow">TikToker du mois</Sticker>
+                  <p className="tabloid-headline mt-3 text-[clamp(2.2rem,12vw,4rem)] leading-[0.92] text-white">{ultimateWinner.tiktokerName}</p>
+                  <span className="gold-pill mt-3">{ultimateWinner.points} points</span>
                 </BrutalCard>
               )}
 
               {paparazziOr && (
-                <BrutalCard tone="red" className="p-2">
-                  <Sticker tone="yellow" className="-rotate-2">
-                    Paparazzi d&apos;Or
-                  </Sticker>
-                  <p className="mt-2 text-[clamp(1.7rem,9vw,2.8rem)] font-black uppercase leading-[0.84]">{paparazziOr.tiktoker_name}</p>
-                  <p className="mt-1 inline-flex border-4 border-black bg-black px-2 py-1 text-xs font-black uppercase text-white">{totalPoints(paparazziOr.ratings)} points sur un dossier</p>
+                <BrutalCard className="p-4">
+                  <Sticker tone="paper">Paparazzi d&apos;Or</Sticker>
+                  <p className="tabloid-headline mt-3 text-[clamp(1.7rem,9vw,2.8rem)] leading-[0.95] text-white">{paparazziOr.tiktoker_name}</p>
+                  <span className="gold-pill mt-3">{totalPoints(paparazziOr.ratings)} points sur un dossier</span>
                 </BrutalCard>
               )}
 
               {categoryWinners.length === 0 ? (
-                <BrutalCard tone="yellow" className="p-4 text-center">
-                  <Trophy className="mx-auto mb-3 h-10 w-10" />
-                  <p className="text-3xl font-black uppercase leading-none">Aucun trophée.</p>
+                <BrutalCard className="p-5 text-center">
+                  <Trophy className="mx-auto mb-3 h-10 w-10 text-[#d4af37]" />
+                  <p className="tabloid-headline text-3xl leading-none">Aucun winner.</p>
                 </BrutalCard>
               ) : (
                 categoryWinners.map(({ category, winner }, index) => {
                   const Icon = category.icon;
                   return (
-                    <BrutalCard key={category.id} tone={index % 2 === 0 ? "paper" : "yellow"} className="p-2">
-                      <p className="flex items-center gap-1 text-[10px] font-black uppercase text-[#e11d48]">
+                    <BrutalCard key={category.id} tone={index % 2 === 0 ? "paper" : "yellow"} className="p-4">
+                      <p className="flex items-center gap-1 text-[10px] font-bold uppercase tracking-[0.16em] text-[#d4af37]">
                         <Icon className="h-3.5 w-3.5" /> {category.label}
                       </p>
-                      <p className="mt-1 text-[clamp(1.75rem,9vw,2.8rem)] font-black uppercase leading-[0.84]">{winner.tiktokerName}</p>
-                      <p className="mt-1 inline-flex border-4 border-black bg-[#e11d48] px-2 py-1 text-xs font-black uppercase text-white">
-                        {winner.points} points / {winner.votes} notes
-                      </p>
-                    </BrutalCard>
-                  );
-                })
-              )}
-            </motion.section>
-          )}
-
-          {tab === "bannis" && (
-            <motion.section key="bannis" {...pageTransition} drag={reduceMotion ? false : "x"} dragConstraints={{ left: 0, right: 0 }} onDragEnd={(_, info) => handleSectionDrag(info)} transition={{ duration: reduceMotion ? 0.01 : 0.26, type: "spring", stiffness: 230, damping: 25 }} className="space-y-2">
-              <BrutalCard tone="red" className="p-2">
-                <h2 className="tabloid-headline text-[clamp(2.35rem,12vw,4.2rem)] leading-[0.8] text-white">{BANNIS_TITLE}</h2>
-              </BrutalCard>
-
-              {rejected.length === 0 ? (
-                <BrutalCard className="p-4 text-center">
-                  <ShieldAlert className="mx-auto mb-3 h-9 w-9" />
-                  <p className="text-3xl font-black uppercase leading-none">Aucun banni.</p>
-                </BrutalCard>
-              ) : (
-                rejected.map((nomination) => {
-                  const rating = averageRating(nomination.ratings);
-                  return (
-                    <BrutalCard key={nomination.id} className="overflow-hidden">
-                      <div className="grid grid-cols-[5.5rem_1fr]">
-                        <div className="media-cut h-24 border-r-4 border-black">
-                          <MediaFrame nomination={nomination} height="h-24" controls={false} />
-                        </div>
-                        <div className="min-w-0 p-2">
-                          <OwnershipBadge owned={ownsNomination(nomination)} className="mb-1 -rotate-1" />
-                          <span className={`inline-flex border-4 px-2 py-1 text-[10px] font-black uppercase ${statusClass("rejected")}`}>Banni</span>
-                          <p className="mt-2 truncate text-lg font-black uppercase leading-none">{nomination.tiktoker_name}</p>
-                          <p className="mt-1 text-xs font-black uppercase">{rating ? rating.toFixed(1) : "-"} / 5 / {nomination.ratings.length} notes</p>
-                          {ownsNomination(nomination) && (
-                            <div className="mt-2 grid max-w-56 grid-cols-2 gap-1">
-                              <motion.button whileTap={TAP_REBOUND} transition={TAP_TRANSITION} onClick={() => startEditNomination(nomination)} className="owner-action bg-[#0ea5e9] text-white" type="button">
-                                Modifier
-                              </motion.button>
-                              <motion.button whileTap={TAP_REBOUND} transition={TAP_TRANSITION} onClick={() => void removeNomination(nomination)} disabled={mutationBusyId === nomination.id} className="owner-action bg-zinc-700 text-white disabled:opacity-60" type="button">
-                                Retirer
-                              </motion.button>
-                            </div>
-                          )}
-                        </div>
-                      </div>
+                      <p className="tabloid-headline mt-2 text-[clamp(1.75rem,9vw,2.8rem)] leading-[0.95] text-white">{winner.tiktokerName}</p>
+                      <span className="gold-pill mt-3">{winner.points} points / {winner.votes} notes</span>
                     </BrutalCard>
                   );
                 })
@@ -1653,11 +1726,11 @@ export default function Home() {
             const badge = item.id === "vote" ? pendingForMe.length : 0;
 
             return (
-              <motion.button key={item.id} whileTap={TAP_REBOUND} transition={TAP_TRANSITION} onClick={() => switchTab(item.id)} className={`relative flex flex-col items-center justify-center gap-1 border-4 border-black px-1 py-2 transition active:translate-x-0.5 active:translate-y-0.5 ${active ? "bg-[#e11d48] text-white" : "bg-[#f2efe3] text-black"}`}>
+              <motion.button key={item.id} whileTap={TAP_REBOUND} transition={TAP_TRANSITION} onClick={() => switchTab(item.id)} className={`relative flex flex-col items-center justify-center gap-1 rounded-2xl border px-1 py-2 transition ${active ? "border-[#d4af37]/70 bg-[#d4af37]/18 text-[#f0d889]" : "border-white/10 bg-white/[0.045] text-zinc-400"}`}>
                 <Icon className="relative z-10 h-5 w-5" strokeWidth={1.5} />
                 <span className="relative z-10 text-[9px] font-black uppercase">{item.label}</span>
                 {badge > 0 && (
-                  <span className="absolute right-0 top-0 z-20 inline-flex h-5 min-w-[20px] items-center justify-center border-b-4 border-l-4 border-black bg-[#b5f42b] px-1 text-[9px] font-black text-black">
+                  <span className="absolute right-0 top-0 z-20 inline-flex h-5 min-w-[20px] items-center justify-center rounded-full border border-[#d4af37]/80 bg-[#d4af37] px-1 text-[9px] font-black text-black">
                     {badge > 9 ? "9+" : badge}
                   </span>
                 )}

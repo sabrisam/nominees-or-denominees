@@ -164,17 +164,7 @@ insert into public.categories (id, label, mood, sort_order) values
   ('le_zin_du_mois', 'Le Zin du mois', 'positive', 1),
   ('fierte_des_notres', 'La Fierté des Nôtres', 'positive', 2),
   ('xptdr', 'Xptdr', 'fun', 3),
-  ('roue_libre', 'Roue Libre', 'fun', 4),
-  ('trop_genant', 'Trop gênant', 'critical', 5),
-  ('masterclass', 'Masterclass', 'positive', 6),
-  ('derape_sec', 'Dérape sec', 'critical', 7),
-  ('dossier_lourd', 'Dossier lourd', 'surprise', 8),
-  ('mythomane', 'Mythomane', 'critical', 9),
-  ('frappe_chirurgicale', 'Frappe chirurgicale', 'positive', 10),
-  ('silence_assourdissant', 'Silence assourdissant', 'critical', 11),
-  ('performance_surprise', 'Performance surprise', 'surprise', 12),
-  ('honte_absolue', 'Honte Absolue', 'critical', 13),
-  ('surprise_totale', 'Surprise Totale', 'surprise', 14)
+  ('honte_absolue', 'Honte Absolue', 'critical', 4)
 on conflict (id) do update set
   label = excluded.label,
   mood = excluded.mood,
@@ -187,17 +177,7 @@ where id not in (
   'le_zin_du_mois',
   'fierte_des_notres',
   'xptdr',
-  'roue_libre',
-  'trop_genant',
-  'masterclass',
-  'derape_sec',
-  'dossier_lourd',
-  'mythomane',
-  'frappe_chirurgicale',
-  'silence_assourdissant',
-  'performance_surprise',
-  'honte_absolue',
-  'surprise_totale'
+  'honte_absolue'
 );
 
 create or replace function public.recalculate_nomination_status(target_nomination_id uuid)

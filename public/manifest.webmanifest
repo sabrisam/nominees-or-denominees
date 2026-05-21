@@ -1,12 +1,12 @@
 {
   "name": "Nominees or Denominees",
   "short_name": "NOD",
-  "description": "Le club des recs et trophées du mois.",
+  "description": "La saison des prix TikTok du club.",
   "start_url": "/",
   "scope": "/",
   "display": "standalone",
-  "background_color": "#1a1a1a",
-  "theme_color": "#e11d48",
+  "background_color": "#050505",
+  "theme_color": "#D4AF37",
   "orientation": "portrait",
   "icons": [
     {
