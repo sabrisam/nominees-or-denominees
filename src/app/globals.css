@@ -35,6 +35,7 @@ body {
   margin: 0;
   background: var(--midnight);
   color: var(--cream);
+  font-size: 14px;
   font-family: "SF Pro Text", "Avenir Next", "Helvetica Neue", system-ui, sans-serif;
   text-rendering: geometricPrecision;
   -webkit-font-smoothing: antialiased;
@@ -59,6 +60,14 @@ textarea {
 
 button {
   user-select: none;
+}
+
+button:focus-visible,
+input:focus-visible,
+textarea:focus-visible,
+select:focus-visible {
+  outline: 2px solid rgba(212, 175, 55, 0.88);
+  outline-offset: 2px;
 }
 
 video {
@@ -136,7 +145,7 @@ video {
 
   .paper-tear {
     height: 1px;
-    margin-block: 0.55rem;
+    margin-block: 0.42rem;
     background: linear-gradient(90deg, transparent, rgba(212, 175, 55, 0.88), transparent);
   }
 
@@ -148,9 +157,9 @@ video {
     border-radius: 10px;
     background: rgba(212, 175, 55, 0.16);
     color: var(--gold-soft);
-    padding: 0.24rem 0.5rem;
+    padding: 0.18rem 0.42rem;
     text-align: center;
-    font-size: 0.58rem;
+    font-size: 0.52rem;
     font-weight: 900;
     line-height: 1;
     text-transform: uppercase;
@@ -165,8 +174,8 @@ video {
       var(--panel);
     box-shadow:
       inset 0 1px 0 rgba(255, 255, 255, 0.08),
-      inset 0 0 28px rgba(212, 175, 55, 0.045),
-      0 14px 36px rgba(0, 0, 0, 0.42);
+      inset 0 0 22px rgba(212, 175, 55, 0.04),
+      0 10px 28px rgba(0, 0, 0, 0.38);
     overflow: hidden;
   }
 
@@ -225,8 +234,8 @@ video {
     display: inline-flex;
     align-items: center;
     justify-content: center;
-    min-width: 2.5rem;
-    min-height: 2.25rem;
+    min-width: 2.25rem;
+    min-height: 2.05rem;
     border: 1px solid var(--line-strong);
     border-radius: 10px;
     background: rgba(255, 255, 255, 0.06);
@@ -245,21 +254,21 @@ video {
   }
 
   .brutal-action {
-    padding-block: 0.72rem;
-    font-size: 0.78rem;
+    padding-block: 0.62rem;
+    font-size: 0.72rem;
   }
 
   .owner-action {
-    min-height: 1.65rem;
+    min-height: 1.5rem;
     padding-inline: 0.42rem;
-    font-size: 0.58rem;
+    font-size: 0.54rem;
   }
 
   .brutal-submit {
-    min-height: 3.25rem;
+    min-height: 2.85rem;
     background: linear-gradient(135deg, #d4af37, #f0d889 52%, #9c7425);
     color: #090807;
-    font-size: 0.82rem;
+    font-size: 0.76rem;
     letter-spacing: 0.06em;
   }
 
@@ -268,7 +277,7 @@ video {
     border-radius: 16px;
     background: linear-gradient(135deg, #d4af37, #f0d889);
     color: #050505;
-    box-shadow: 0 18px 42px rgba(212, 175, 55, 0.24);
+    box-shadow: 0 14px 34px rgba(212, 175, 55, 0.22);
   }
 
   .media-cut {
@@ -311,8 +320,8 @@ video {
     display: block;
     width: 100%;
     overflow: hidden;
-    padding: 0.34rem 0.55rem;
-    font-size: 0.58rem;
+    padding: 0.3rem 0.5rem;
+    font-size: 0.52rem;
     font-weight: 900;
     text-transform: uppercase;
     text-indent: 100%;
@@ -333,14 +342,14 @@ video {
     border-radius: 999px;
     background: rgba(212, 175, 55, 0.14);
     color: var(--gold-soft);
-    padding: 0.22rem 0.52rem;
-    font-size: 0.6rem;
+    padding: 0.18rem 0.44rem;
+    font-size: 0.55rem;
     font-weight: 900;
     text-transform: uppercase;
   }
 
   .stat-bar {
-    height: 0.28rem;
+    height: 0.22rem;
     overflow: hidden;
     border-radius: 999px;
     background: rgba(245, 241, 232, 0.1);
@@ -350,6 +359,15 @@ video {
     height: 100%;
     border-radius: inherit;
     background: linear-gradient(90deg, #9c7425, #d4af37, #f0d889);
+  }
+
+  .score-preset-rail {
+    -ms-overflow-style: none;
+    scrollbar-width: none;
+  }
+
+  .score-preset-rail::-webkit-scrollbar {
+    display: none;
   }
 }
 
@@ -368,5 +386,20 @@ video {
   }
   to {
     background-position: -120% 0, 0 0, 0 0;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    scroll-behavior: auto !important;
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+
+  .ticker-track {
+    text-indent: 0;
   }
 }

@@ -37,6 +37,7 @@ type CategoryMood = "positive" | "critical" | "fun" | "surprise";
 type MediaKind = "video" | "image";
 type RatingDimensionKey = "rire" | "surprise" | "gene" | "fierte" | "interet";
 type DimensionScores = Record<RatingDimensionKey, number>;
+type DirectFilter = "all" | "mine" | "pending" | "accepted" | "rejected";
 
 type ToastState = { tone: ToastTone; message: string } | null;
 
@@ -157,8 +158,17 @@ const STORAGE_UNAVAILABLE_NOTICE = "Stockage indisponible : vérifie Supabase St
 const LEGACY_FLOWER_VIDEO_URL = "https://interactive-examples.mdn.mozilla.net/media/cc0-videos/flower.mp4";
 const FALLBACK_IMAGE_URL =
   "data:image/svg+xml;charset=utf-8,%3Csvg%20xmlns='http://www.w3.org/2000/svg'%20width='1080'%20height='1440'%20viewBox='0%200%201080%201440'%3E%3Crect%20width='1080'%20height='1440'%20fill='%23000000'/%3E%3Crect%20x='64'%20y='64'%20width='952'%20height='1312'%20fill='%23f2efe3'%20stroke='%23000000'%20stroke-width='24'/%3E%3Crect%20x='112'%20y='112'%20width='856'%20height='240'%20fill='%23e11d48'/%3E%3Ctext%20x='540'%20y='248'%20text-anchor='middle'%20font-family='Impact,%20sans-serif'%20font-size='118'%20fill='%23ffffff'%3ENOD%3C/text%3E%3Ctext%20x='540'%20y='690'%20text-anchor='middle'%20font-family='Impact,%20sans-serif'%20font-size='104'%20fill='%23000000'%3EDOSSIER%3C/text%3E%3Ctext%20x='540'%20y='810'%20text-anchor='middle'%20font-family='Impact,%20sans-serif'%20font-size='104'%20fill='%23000000'%3EEN%20DIRECT%3C/text%3E%3Crect%20x='248'%20y='936'%20width='584'%20height='132'%20fill='%23b5f42b'%20stroke='%23000000'%20stroke-width='18'/%3E%3Ctext%20x='540'%20y='1028'%20text-anchor='middle'%20font-family='Impact,%20sans-serif'%20font-size='64'%20fill='%23000000'%3EA%20VOTER%3C/text%3E%3C/svg%3E";
-const TAP_REBOUND = { scale: 0.94, rotate: -0.7 };
-const TAP_TRANSITION = { type: "spring", stiffness: 760, damping: 20, mass: 0.6 } as const;
+const TAP_REBOUND = { scale: 0.965, rotate: -0.35 };
+const TAP_TRANSITION = { type: "spring", stiffness: 900, damping: 32, mass: 0.42 } as const;
+const HAPTICS = {
+  tap: 10,
+  option: 14,
+  nav: 16,
+  media: 18,
+  success: [15, 30, 10],
+  remove: [25, 60],
+  error: 100
+} as const;
 
 const CATEGORIES: CategoryMeta[] = [
   { id: "le_zin_du_mois", label: "Le Zin du mois", mood: "positive", icon: Crown },
@@ -189,6 +199,13 @@ const RATING_DIMENSIONS: Array<{ key: RatingDimensionKey; label: string; shortLa
   { key: "interet", label: "Intérêt", shortLabel: "INT", emoji: "🤔", color: "#a78bfa" }
 ];
 const DEFAULT_DIMENSION_SCORES: DimensionScores = { rire: 3, surprise: 3, gene: 1, fierte: 2, interet: 3 };
+const SCORE_PRESETS: Array<{ id: string; label: string; hint: string; scores: DimensionScores }> = [
+  { id: "xptdr", label: "XPTDR", hint: "rire fort", scores: { rire: 5, surprise: 3, gene: 1, fierte: 1, interet: 3 } },
+  { id: "malaise", label: "Malaise", hint: "gêne max", scores: { rire: 1, surprise: 2, gene: 5, fierte: 0, interet: 2 } },
+  { id: "masterclass", label: "Masterclass", hint: "niveau haut", scores: { rire: 2, surprise: 4, gene: 0, fierte: 5, interet: 4 } },
+  { id: "choc", label: "Choc", hint: "surprise", scores: { rire: 2, surprise: 5, gene: 2, fierte: 2, interet: 5 } },
+  { id: "roue_libre", label: "Roue libre", hint: "chaos", scores: { rire: 4, surprise: 4, gene: 3, fierte: 1, interet: 3 } }
+];
 const TAB_ITEMS: Array<{ id: Tab; label: string; icon: LucideIcon }> = [
   { id: "direct", label: "Direct", icon: Sparkles },
   { id: "vote", label: "À voter", icon: Zap },
@@ -198,6 +215,13 @@ const TAB_ITEMS: Array<{ id: Tab; label: string; icon: LucideIcon }> = [
 ];
 
 const TAB_ORDER: Tab[] = TAB_ITEMS.map((item) => item.id);
+const DIRECT_FILTERS: Array<{ id: DirectFilter; label: string }> = [
+  { id: "all", label: "Tout" },
+  { id: "pending", label: "À voter" },
+  { id: "accepted", label: "Propulsés" },
+  { id: "rejected", label: "Bannis" },
+  { id: "mine", label: "Moi" }
+];
 
 function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === "object" && value !== null && !Array.isArray(value);
@@ -253,13 +277,23 @@ function addToStarDistribution(distribution: StarDistribution, value: number) {
   distribution[rounded - 1] += 1;
 }
 
-function haptic(pattern: number | number[]) {
+function haptic(pattern: number | readonly number[]) {
   if (typeof navigator === "undefined" || !("vibrate" in navigator)) return;
   try {
-    navigator.vibrate(pattern);
+    navigator.vibrate(pattern as VibratePattern);
   } catch {
     // iOS Safari ignore souvent cette API; les ressorts visuels gardent le retour tactile.
   }
+}
+
+function sameScores(a: DimensionScores, b: DimensionScores) {
+  return RATING_DIMENSIONS.every((dimension) => clampDimension(a[dimension.key]) === clampDimension(b[dimension.key]));
+}
+
+function categorySummary(ids: string[]) {
+  const labels = normalizeCategoryIds(ids, CATEGORIES[0].id).map((id) => getCategoryMeta(id).label);
+  if (labels.length <= 2) return labels.join(" + ");
+  return `${labels.slice(0, 2).join(" + ")} +${labels.length - 2}`;
 }
 
 function makeSessionId() {
@@ -788,7 +822,7 @@ function SectionTitle({ children, tone = "black" }: { children: ReactNode; tone?
   const toneClass = tone === "red" ? "border-red-400/30 text-red-100" : tone === "yellow" ? "border-[#d4af37]/60 text-[#f0d889]" : "border-white/10 text-white";
   return (
     <div className={`rounded-[10px] border bg-white/[0.035] px-2.5 py-1.5 ${toneClass}`}>
-      <h2 className="tabloid-headline text-[clamp(1.35rem,7.1vw,2.35rem)] leading-[0.84]">{children}</h2>
+      <h2 className="tabloid-headline text-[clamp(1.1rem,5.7vw,1.95rem)] leading-[0.84]">{children}</h2>
     </div>
   );
 }
@@ -833,6 +867,43 @@ function BrutalCard({
   );
 }
 
+function ScorePresetRail({
+  value,
+  onSelect,
+  compact = false,
+  label = "Profils rapides"
+}: {
+  value: DimensionScores;
+  onSelect: (next: DimensionScores) => void;
+  compact?: boolean;
+  label?: string;
+}) {
+  return (
+    <div className="score-preset-rail flex gap-1 overflow-x-auto pb-0.5" role="group" aria-label={label}>
+      {SCORE_PRESETS.map((preset) => {
+        const active = sameScores(value, preset.scores);
+        return (
+          <motion.button
+            key={preset.id}
+            type="button"
+            whileTap={TAP_REBOUND}
+            transition={TAP_TRANSITION}
+            aria-pressed={active}
+            onClick={() => {
+              haptic(HAPTICS.option);
+              onSelect(cloneScores(preset.scores));
+            }}
+            className={`shrink-0 rounded-[9px] border px-2 py-1 text-left transition ${active ? "border-[#d4af37]/80 bg-[#d4af37]/18 text-[#f0d889]" : "border-white/10 bg-white/[0.035] text-zinc-400"}`}
+          >
+            <span className={`${compact ? "text-[8px]" : "text-[9px]"} block font-black uppercase leading-none tracking-tighter`}>{preset.label}</span>
+            <span className="mt-0.5 block text-[7px] font-bold uppercase leading-none tracking-tighter opacity-70">{preset.hint}</span>
+          </motion.button>
+        );
+      })}
+    </div>
+  );
+}
+
 function DimensionScoreGrid({
   value,
   onChange,
@@ -843,22 +914,22 @@ function DimensionScoreGrid({
   compact?: boolean;
 }) {
   const setDimension = (key: RatingDimensionKey, score: number) => {
-    haptic(10);
+    haptic(HAPTICS.tap);
     onChange({ ...value, [key]: clampDimension(score) });
   };
 
   return (
-    <div className={compact ? "space-y-1" : "space-y-1.5"}>
+    <div className={compact ? "space-y-0.5" : "space-y-1"} role="group" aria-label="Méta-jugement émotionnel">
       {RATING_DIMENSIONS.map((dimension) => {
         const activeScore = clampDimension(value[dimension.key]);
 
         return (
-          <div key={dimension.key} className="grid grid-cols-[4.6rem_1fr] items-center gap-1.5">
-            <p className="truncate text-[10px] font-black uppercase leading-none tracking-tighter text-zinc-300">
+          <div key={dimension.key} className="grid grid-cols-[4.15rem_1fr] items-center gap-1">
+            <p className="truncate text-[9px] font-black uppercase leading-none tracking-tighter text-zinc-300">
               <span className="mr-1">{dimension.emoji}</span>
               {dimension.label}
             </p>
-            <div className="grid grid-cols-6 gap-1">
+            <div className="grid grid-cols-6 gap-0.5">
               {[0, 1, 2, 3, 4, 5].map((score) => (
                 <motion.button
                   key={`${dimension.key}-${score}`}
@@ -866,7 +937,8 @@ function DimensionScoreGrid({
                   whileTap={TAP_REBOUND}
                   transition={TAP_TRANSITION}
                   onClick={() => setDimension(dimension.key, score)}
-                  className={`h-6 rounded-[8px] border text-[10px] font-black leading-none ${activeScore === score ? "border-[#d4af37]/80 bg-[#d4af37]/20 text-[#f0d889]" : "border-white/10 bg-white/[0.035] text-zinc-500"}`}
+                  aria-pressed={activeScore === score}
+                  className={`h-5 rounded-[7px] border text-[9px] font-black leading-none transition ${activeScore === score ? "border-[#d4af37]/80 bg-[#d4af37]/20 text-[#f0d889]" : "border-white/10 bg-white/[0.035] text-zinc-500"}`}
                   aria-label={`${dimension.label} ${score} sur 5`}
                 >
                   {score}
@@ -925,7 +997,7 @@ function MediaFrame({
           onLoadedMetadata={() => setResolving(false)}
           onCanPlay={() => setResolving(false)}
           onClick={() => {
-            haptic(15);
+            haptic(HAPTICS.media);
             setEngaged(true);
           }}
           onTouchStart={() => setEngaged(true)}
@@ -991,6 +1063,7 @@ function NominationTile({
   const category = getCategoryMeta(nomination.category_id);
   const Icon = category.icon;
   const rating = averageRating(nomination.ratings);
+  const categories = categorySummary(nomination.category_ids);
 
   return (
     <BrutalCard tone={index % 3 === 0 ? "yellow" : "paper"} className="overflow-hidden">
@@ -1002,17 +1075,17 @@ function NominationTile({
         </Sticker>
       </div>
       <div className="min-w-0 p-2">
-        <p className="tabloid-headline text-[clamp(1.05rem,5.5vw,1.45rem)] leading-[0.86] text-white">{nomination.tiktoker_name}</p>
-        <p className="mt-1 line-clamp-2 text-[10px] font-medium leading-tight text-zinc-300">&quot;{nomination.comment || "Dossier à juger"}&quot;</p>
-        <p className="mt-1.5 flex min-w-0 items-center gap-1 truncate text-[8px] font-black uppercase tracking-[0.08em] leading-none text-[#d4af37]">
-          <Icon className="h-2.5 w-2.5 shrink-0" /> {category.label} / {nomination.ratings.length} notes / {rating ? rating.toFixed(1) : "-"} sur 5
+        <p className="tabloid-headline text-[clamp(0.96rem,4.8vw,1.32rem)] leading-[0.86] text-white">{nomination.tiktoker_name}</p>
+        <p className="mt-0.5 line-clamp-2 text-[9px] font-medium leading-tight text-zinc-300">&quot;{nomination.comment || "Dossier à juger"}&quot;</p>
+        <p className="mt-1 flex min-w-0 items-center gap-1 truncate text-[7px] font-black uppercase tracking-[0.05em] leading-none text-[#d4af37]">
+          <Icon className="h-2.5 w-2.5 shrink-0" /> {categories} / {nomination.ratings.length} notes / {rating ? rating.toFixed(1) : "-"} sur 5
         </p>
         {owned && (
-          <div className="mt-1.5 grid grid-cols-2 gap-1">
-            <motion.button whileTap={TAP_REBOUND} transition={TAP_TRANSITION} onClick={onEdit} className="owner-action bg-white/10 text-white" type="button">
+          <div className="mt-1 grid grid-cols-2 gap-1">
+            <motion.button whileTap={TAP_REBOUND} transition={TAP_TRANSITION} onClick={onEdit} className="owner-action bg-white/10 text-white" type="button" aria-label={`Modifier le dossier ${nomination.tiktoker_name}`}>
               Modifier
             </motion.button>
-            <motion.button whileTap={TAP_REBOUND} transition={TAP_TRANSITION} onClick={onRemove} disabled={busy} className="owner-action bg-red-950/50 text-red-100 disabled:opacity-60" type="button">
+            <motion.button whileTap={TAP_REBOUND} transition={TAP_TRANSITION} onClick={onRemove} disabled={busy} className="owner-action bg-red-950/50 text-red-100 disabled:opacity-60" type="button" aria-label={`Retirer le dossier ${nomination.tiktoker_name}`}>
               Retirer
             </motion.button>
           </div>
@@ -1152,6 +1225,7 @@ export default function Home() {
   const [roomCode, setRoomCode] = useState(DEFAULT_ROOM_CODE);
 
   const [tab, setTab] = useState<Tab>("direct");
+  const [directFilter, setDirectFilter] = useState<DirectFilter>("all");
   const [nominations, setNominations] = useState<Nomination[]>([]);
   const [syncing, setSyncing] = useState(false);
 
@@ -1184,7 +1258,7 @@ export default function Home() {
   const channelRef = useRef<RealtimeChannel | null>(null);
 
   const showToast = useCallback((tone: ToastTone, message: string) => {
-    if (tone === "error") haptic(100);
+    if (tone === "error") haptic(HAPTICS.error);
     if (toastTimeoutRef.current) window.clearTimeout(toastTimeoutRef.current);
     setToast({ tone, message });
     toastTimeoutRef.current = window.setTimeout(() => {
@@ -1194,7 +1268,7 @@ export default function Home() {
   }, []);
 
   const switchTab = useCallback((nextTab: Tab) => {
-    haptic(15);
+    haptic(HAPTICS.nav);
     setTab(nextTab);
   }, []);
 
@@ -1371,7 +1445,25 @@ export default function Home() {
 
   const accepted = useMemo(() => nominations.filter((nomination) => nomination.status === "accepted"), [nominations]);
   const rejected = useMemo(() => nominations.filter((nomination) => nomination.status === "rejected"), [nominations]);
-  const feedItems = useMemo(() => nominations.slice(0, 8), [nominations]);
+  const feedItems = useMemo(() => {
+    return nominations
+      .filter((nomination) => {
+        if (directFilter === "mine") return Boolean(participant && nomination.submitted_by === participant.id);
+        if (directFilter === "all") return true;
+        return nomination.status === directFilter;
+      })
+      .slice(0, 10);
+  }, [directFilter, nominations, participant]);
+  const directFilterCounts = useMemo<Record<DirectFilter, number>>(
+    () => ({
+      all: nominations.length,
+      pending: nominations.filter((nomination) => nomination.status === "pending").length,
+      accepted: accepted.length,
+      rejected: rejected.length,
+      mine: participant ? nominations.filter((nomination) => nomination.submitted_by === participant.id).length : 0
+    }),
+    [accepted.length, nominations, participant, rejected.length]
+  );
   const monthlyNominations = useMemo(() => nominations.filter((nomination) => isCurrentMonth(nomination.created_at)), [nominations]);
   const ultimateWinner = useMemo(() => buildScoreBoard(nominations)[0] ?? null, [nominations]);
   const paparazziOr = useMemo(() => bestSubmission(nominations), [nominations]);
@@ -1433,7 +1525,7 @@ export default function Home() {
 
   const toggleCategory = useCallback(
     (categoryId: string) => {
-      haptic(10);
+      haptic(HAPTICS.option);
       setSelectedCategoryIds((current) => {
         const exists = current.includes(categoryId);
         const next = exists ? current.filter((id) => id !== categoryId) : [...current, categoryId];
@@ -1452,7 +1544,7 @@ export default function Home() {
         return;
       }
 
-      haptic(15);
+      haptic(HAPTICS.nav);
       clearPreparedMedia();
       setEditingNominationId(nomination.id);
       setTiktokerName(nomination.tiktoker_name);
@@ -1466,7 +1558,7 @@ export default function Home() {
   );
 
   const cancelEditNomination = useCallback(() => {
-    haptic(15);
+    haptic(HAPTICS.tap);
     setEditingNominationId(null);
     setStudioNotice(null);
     resetStudioDraft();
@@ -1493,6 +1585,7 @@ export default function Home() {
         setUrl(setPreviewUrlState, null, compressed);
         setUrl(setThumbnailPreviewUrlState, null, compressed);
         setMediaProgress(1);
+        haptic(HAPTICS.success);
         showToast("success", "Capture prête.");
         return;
       }
@@ -1504,6 +1597,7 @@ export default function Home() {
       setUrl(setPreviewUrlState, null, nextFile);
       setUrl(setThumbnailPreviewUrlState, null, thumbnail);
       setMediaProgress(1);
+      haptic(HAPTICS.success);
       showToast("success", "Rec prêt.");
     } catch (err) {
       clearPreparedMedia();
@@ -1523,7 +1617,7 @@ export default function Home() {
       return;
     }
 
-    haptic([15, 30, 10]);
+    haptic(HAPTICS.success);
     setMutationBusyId(editingNomination.id);
 
     try {
@@ -1569,7 +1663,7 @@ export default function Home() {
     const confirmed = window.confirm("Retirer ce dossier du club ?");
     if (!confirmed) return;
 
-    haptic([25, 60]);
+    haptic(HAPTICS.remove);
     setMutationBusyId(nomination.id);
 
     try {
@@ -1613,7 +1707,7 @@ export default function Home() {
       return;
     }
 
-    haptic(15);
+    haptic(HAPTICS.media);
     setUploadLoading(true);
     setMediaProgress(0.15);
     setStudioNotice(null);
@@ -1685,7 +1779,7 @@ export default function Home() {
       if (ratingError) throw ratingError;
 
       setMediaProgress(1);
-      haptic([15, 30, 10]);
+      haptic(HAPTICS.success);
       setStudioNotice(thumbnailUpload.provider === "supabase" || mediaUpload.provider === "supabase" ? SUPABASE_STORAGE_NOTICE : null);
       showToast("success", "Dossier lancé dans le club.");
       resetStudioDraft();
@@ -1716,7 +1810,7 @@ export default function Home() {
     const averageScore = scoreAverage(draftScores);
     const choice: VerdictChoice = averageScore >= 3 ? "propel" : "ban";
 
-    haptic([15, 30, 10]);
+    haptic(choice === "propel" ? HAPTICS.success : HAPTICS.remove);
     setVoteBusyId(id);
     setShakeId(id);
     window.setTimeout(() => setShakeId(null), 520);
@@ -1798,7 +1892,7 @@ export default function Home() {
       <AnimatePresence>
         {toast && (
           <motion.div initial={{ opacity: 0, y: -18 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -14 }} className="fixed left-1/2 z-[100] w-[92%] max-w-sm -translate-x-1/2" style={{ top: "calc(env(safe-area-inset-top) + 10px)" }}>
-            <div className={`flex items-center gap-2 rounded-[10px] border px-3 py-2 text-xs font-black uppercase tracking-[0.06em] shadow-[0_14px_36px_rgba(0,0,0,0.45)] backdrop-blur-xl ${toast.tone === "success" ? "border-[#d4af37]/60 bg-[#d4af37]/20 text-[#f0d889]" : toast.tone === "error" ? "border-red-400/40 bg-red-950/80 text-red-100" : "border-white/10 bg-black/80 text-white"}`}>
+            <div role="status" aria-live="polite" className={`flex items-center gap-2 rounded-[10px] border px-3 py-2 text-[11px] font-black uppercase tracking-[0.04em] shadow-[0_14px_36px_rgba(0,0,0,0.45)] backdrop-blur-xl ${toast.tone === "success" ? "border-[#d4af37]/60 bg-[#d4af37]/20 text-[#f0d889]" : toast.tone === "error" ? "border-red-400/40 bg-red-950/80 text-red-100" : "border-white/10 bg-black/80 text-white"}`}>
               {toast.tone === "success" ? <Check className="h-4 w-4" /> : toast.tone === "error" ? <ShieldAlert className="h-4 w-4" /> : <Sparkles className="h-4 w-4" />}
               <span>{toast.message}</span>
             </div>
@@ -1813,7 +1907,17 @@ export default function Home() {
               CÉRÉMONIE LE 1ER DU MOIS / DANS {ceremonyCountdown.days}J {ceremonyCountdown.hours}H {ceremonyCountdown.mins}M / TOURNOI DU MOIS / {monthlyNominations.length} DOSSIERS EN JEU / CÉRÉMONIE LE 1ER DU MOIS / DANS {ceremonyCountdown.days}J {ceremonyCountdown.hours}H {ceremonyCountdown.mins}M
             </span>
           </div>
-          <motion.button whileTap={TAP_REBOUND} transition={TAP_TRANSITION} onClick={() => void fetchNominations()} disabled={syncing || !supabase} className="brutal-icon-button disabled:opacity-50" aria-label="Rafraîchir le direct">
+          <motion.button
+            whileTap={TAP_REBOUND}
+            transition={TAP_TRANSITION}
+            onClick={() => {
+              haptic(HAPTICS.tap);
+              void fetchNominations();
+            }}
+            disabled={syncing || !supabase}
+            className="brutal-icon-button disabled:opacity-50"
+            aria-label="Rafraîchir le direct"
+          >
             <RefreshCw className={`h-4 w-4 ${syncing ? "animate-spin" : ""}`} />
           </motion.button>
         </header>
@@ -1821,15 +1925,15 @@ export default function Home() {
         <section className="mb-2 grid grid-cols-3 gap-1.5">
           <BrutalCard tone="yellow" className="p-1.5">
             <p className="text-[8px] font-black uppercase tracking-[0.1em] leading-none text-[#d4af37]">À voter</p>
-            <p className="tabloid-headline text-[clamp(1.6rem,8.5vw,2.45rem)] leading-none">{pendingForMe.length}</p>
+            <p className="tabloid-headline text-[clamp(1.35rem,7.2vw,2.1rem)] leading-none">{pendingForMe.length}</p>
           </BrutalCard>
           <BrutalCard tone="red" className="p-1.5">
             <p className="text-[8px] font-black uppercase tracking-[0.1em] leading-none text-[#d4af37]">Propulsés</p>
-            <p className="tabloid-headline text-[clamp(1.6rem,8.5vw,2.45rem)] leading-none">{accepted.length}</p>
+            <p className="tabloid-headline text-[clamp(1.35rem,7.2vw,2.1rem)] leading-none">{accepted.length}</p>
           </BrutalCard>
           <BrutalCard tone="black" className="p-1.5">
             <p className="text-[8px] font-black uppercase tracking-[0.1em] leading-none text-zinc-500">Bannis</p>
-            <p className="tabloid-headline text-[clamp(1.6rem,8.5vw,2.45rem)] leading-none">{rejected.length}</p>
+            <p className="tabloid-headline text-[clamp(1.35rem,7.2vw,2.1rem)] leading-none">{rejected.length}</p>
           </BrutalCard>
         </section>
 
@@ -1837,21 +1941,43 @@ export default function Home() {
           {tab === "direct" && (
             <motion.section key="direct" {...pageTransition} {...revealContainer} drag={reduceMotion ? false : "x"} dragConstraints={{ left: 0, right: 0 }} onDragEnd={(_, info) => handleSectionDrag(info)} transition={{ duration: reduceMotion ? 0.01 : 0.26, type: "spring", stiffness: 230, damping: 25 }} className="space-y-1.5">
               <motion.div {...revealItem}>
-                <BrutalCard className="relative overflow-hidden p-3">
-                  <p className="mb-1.5 text-[8px] font-black uppercase tracking-[0.2em] text-[#d4af37]">Club live</p>
-                  <h1 className="tabloid-headline text-[clamp(2.15rem,10.8vw,3.55rem)] leading-[0.84] text-[#f5f1e8]">
+                <BrutalCard className="relative overflow-hidden p-2.5">
+                  <p className="mb-1 text-[7px] font-black uppercase tracking-[0.18em] text-[#d4af37]">Club live</p>
+                  <h1 className="tabloid-headline text-[clamp(1.78rem,8.9vw,3rem)] leading-[0.84] text-[#f5f1e8]">
                     NOMINEES
-                    <span className="mx-1.5 inline-block rounded-[8px] border border-[#d4af37]/70 bg-[#d4af37]/15 px-2 py-0.5 text-[clamp(0.85rem,4.2vw,1.35rem)] font-black uppercase leading-none text-[#f0d889]">or</span>
+                    <span className="mx-1.5 inline-block rounded-[8px] border border-[#d4af37]/70 bg-[#d4af37]/15 px-1.5 py-0.5 text-[clamp(0.72rem,3.55vw,1.1rem)] font-black uppercase leading-none text-[#f0d889]">or</span>
                     <span className="block text-[#d4af37]">DENOMINEES</span>
                   </h1>
                   <div className="paper-tear -mt-[4px]" />
-                  <div className="rounded-[10px] border border-[#d4af37]/30 bg-black/40 px-2.5 py-1.5 text-white">
-                    <p className="text-[9px] font-black uppercase tracking-[0.16em] text-zinc-400">Le club des recs du mois</p>
+                  <div className="rounded-[10px] border border-[#d4af37]/30 bg-black/40 px-2 py-1 text-white">
+                    <p className="text-[8px] font-black uppercase tracking-[0.14em] text-zinc-400">Le club des recs du mois</p>
                   </div>
                 </BrutalCard>
               </motion.div>
 
               <motion.div {...revealItem} className="space-y-1.5">
+                <div className="grid grid-cols-5 gap-1" aria-label="Filtres du direct" role="group">
+                  {DIRECT_FILTERS.map((filter) => {
+                    const active = directFilter === filter.id;
+                    return (
+                      <motion.button
+                        key={filter.id}
+                        type="button"
+                        whileTap={TAP_REBOUND}
+                        transition={TAP_TRANSITION}
+                        aria-pressed={active}
+                        onClick={() => {
+                          haptic(HAPTICS.option);
+                          setDirectFilter(filter.id);
+                        }}
+                        className={`rounded-[9px] border px-1 py-1 text-center transition ${active ? "border-[#d4af37]/70 bg-[#d4af37]/18 text-[#f0d889]" : "border-white/10 bg-white/[0.035] text-zinc-500"}`}
+                      >
+                        <span className="block truncate text-[7px] font-black uppercase leading-none tracking-tighter">{filter.label}</span>
+                        <span className="mt-0.5 block text-[10px] font-black leading-none tracking-tighter">{directFilterCounts[filter.id]}</span>
+                      </motion.button>
+                    );
+                  })}
+                </div>
                 <SectionTitle>{DIRECT_TITLE}</SectionTitle>
                 {feedItems.length === 0 ? (
                   <BrutalCard className="p-3 text-center">
@@ -1895,13 +2021,14 @@ export default function Home() {
                           <p className="flex items-center gap-1 text-[8px] font-black uppercase tracking-[0.12em] text-[#d4af37]">
                             <Icon className="h-3 w-3" /> {category.label}
                           </p>
-                          <p className="tabloid-headline text-[clamp(1.45rem,7.5vw,2.35rem)] leading-[0.84] text-white">{nomination.tiktoker_name}</p>
+                          <p className="tabloid-headline text-[clamp(1.22rem,6.2vw,2rem)] leading-[0.84] text-white">{nomination.tiktoker_name}</p>
                         </div>
                       </div>
                       <div className="space-y-1.5 p-2">
                         <p className="rounded-[10px] border border-white/10 bg-white/[0.04] p-2 text-xs font-medium leading-tight text-zinc-200">&quot;{nomination.comment}&quot;</p>
+                        <ScorePresetRail value={draftScores} compact onSelect={(value) => setScoreDraftById((prev) => ({ ...prev, [nomination.id]: value }))} label="Profils rapides pour ce vote" />
                         <DimensionScoreGrid value={draftScores} onChange={(value) => setScoreDraftById((prev) => ({ ...prev, [nomination.id]: value }))} compact />
-                        <textarea value={reviewDraftById[nomination.id] ?? ""} onChange={(event) => setReviewDraftById((prev) => ({ ...prev, [nomination.id]: event.target.value }))} placeholder="Ta réaction sur ce dossier ?" rows={2} maxLength={180} className="brutal-input w-full resize-none p-2 text-sm font-black uppercase" />
+                        <textarea aria-label="Ta réaction sur ce dossier" value={reviewDraftById[nomination.id] ?? ""} onFocus={() => haptic(HAPTICS.tap)} onChange={(event) => setReviewDraftById((prev) => ({ ...prev, [nomination.id]: event.target.value }))} placeholder="Ta réaction sur ce dossier ?" rows={2} maxLength={180} className="brutal-input w-full resize-none p-2 text-xs font-black uppercase" />
                         <motion.button whileTap={TAP_REBOUND} transition={TAP_TRANSITION} onClick={() => void applyRating(nomination.id)} disabled={voteBusyId === nomination.id} className="brutal-action w-full bg-[#d4af37] text-black disabled:opacity-50">
                           Valider le jugement · {scoreTotal(draftScores)} pts
                         </motion.button>
@@ -1916,7 +2043,7 @@ export default function Home() {
           {tab === "studio" && (
             <motion.section key="studio" {...pageTransition} drag={reduceMotion ? false : "x"} dragConstraints={{ left: 0, right: 0 }} onDragEnd={(_, info) => handleSectionDrag(info)} transition={{ duration: reduceMotion ? 0.01 : 0.26, type: "spring", stiffness: 230, damping: 25 }} className="space-y-1.5">
               <BrutalCard tone="black" className="p-2">
-                <h2 className="tabloid-headline text-[clamp(1.55rem,8.2vw,2.65rem)] leading-[0.82] text-white">{isEditingStudio ? "MODIFIER LE DOSSIER" : STUDIO_TITLE}</h2>
+                <h2 className="tabloid-headline text-[clamp(1.28rem,6.8vw,2.2rem)] leading-[0.82] text-white">{isEditingStudio ? "MODIFIER LE DOSSIER" : STUDIO_TITLE}</h2>
               </BrutalCard>
 
               <BrutalCard className="p-1.5">
@@ -1926,41 +2053,54 @@ export default function Home() {
                     <OwnershipBadge owned className="absolute left-2 top-2 -rotate-2" />
                   </div>
                 ) : (
-                  <motion.button whileTap={TAP_REBOUND} transition={TAP_TRANSITION} onClick={() => fileInputRef.current?.click()} disabled={isPreparingMedia || uploadLoading} className="relative flex aspect-[9/16] max-h-[52svh] w-full items-center justify-center overflow-hidden rounded-[10px] border border-[#d4af37]/25 bg-black text-left transition disabled:opacity-70">
+                  <motion.button
+                    whileTap={TAP_REBOUND}
+                    transition={TAP_TRANSITION}
+                    onClick={() => {
+                      haptic(HAPTICS.media);
+                      fileInputRef.current?.click();
+                    }}
+                    disabled={isPreparingMedia || uploadLoading}
+                    className="relative flex aspect-[9/16] max-h-[52svh] w-full items-center justify-center overflow-hidden rounded-[10px] border border-[#d4af37]/25 bg-black text-left transition disabled:opacity-70"
+                    aria-label="Choisir une vidéo ou une capture"
+                  >
                     {previewUrl ? (
                       mediaKind === "video" ? (
-                        <video src={previewUrl} poster={thumbnailPreviewUrl ?? undefined} className="absolute inset-0 h-full w-full object-cover" controls loop playsInline muted preload="metadata" />
+                        <video src={previewUrl} poster={thumbnailPreviewUrl ?? undefined} className="absolute inset-0 h-full w-full object-cover" controls loop playsInline muted preload="metadata" {...({ "webkit-playsinline": "true" } as Record<string, string>)} />
                       ) : (
                         <img src={previewUrl} alt="" className="absolute inset-0 h-full w-full object-cover" />
                       )
                     ) : (
                       <span className="flex flex-col items-center px-6 text-center text-white">
                         {isPreparingMedia ? <Loader2 className="mb-3 h-9 w-9 animate-spin text-[#d4af37]" /> : <UploadCloud className="mb-3 h-9 w-9 text-[#d4af37]" />}
-                        <span className="tabloid-headline text-2xl leading-none">{isPreparingMedia ? "Chargement du studio..." : "Déposer le rec"}</span>
+                        <span className="tabloid-headline text-xl leading-none">{isPreparingMedia ? "Chargement du studio..." : "Déposer le rec"}</span>
                         <span className="mt-1.5 text-[10px] font-black uppercase tracking-[0.12em] text-[#d4af37]">Vidéo ou capture libre</span>
                       </span>
                     )}
-                    <input ref={fileInputRef} type="file" accept="video/*,image/*" onChange={(event) => void prepareMedia(event.target.files?.[0] ?? null)} className="hidden" />
+                    <input ref={fileInputRef} type="file" accept="video/*,image/*" onChange={(event) => void prepareMedia(event.target.files?.[0] ?? null)} className="hidden" aria-label="Fichier média du dossier" />
                   </motion.button>
                 )}
               </BrutalCard>
 
               {studioNotice && (
                 <BrutalCard tone="yellow" className="p-2">
-                  <p className="tabloid-headline text-[clamp(1.05rem,5.8vw,1.65rem)] leading-[0.82]">{studioNotice}</p>
+                  <p className="tabloid-headline text-[clamp(0.95rem,5vw,1.4rem)] leading-[0.82]">{studioNotice}</p>
                 </BrutalCard>
               )}
 
               {(isPreparingMedia || uploadLoading) && (
                 <BrutalCard tone="yellow" className="p-2">
-                  <p className="tabloid-headline text-[clamp(1.25rem,6.5vw,2rem)] leading-[0.82]">{uploadLoading ? "CHARGEMENT DU DOSSIER..." : "PRÉPARATION DU REC..."}</p>
+                  <p className="tabloid-headline text-[clamp(1.05rem,5.6vw,1.65rem)] leading-[0.82]">{uploadLoading ? "CHARGEMENT DU DOSSIER..." : "PRÉPARATION DU REC..."}</p>
                   <div className="stat-bar mt-2">
                     <motion.div className="stat-bar-fill" animate={{ width: `${Math.round(mediaProgress * 100)}%` }} />
                   </div>
                 </BrutalCard>
               )}
 
-              <input value={tiktokerName} onChange={(event) => setTiktokerName(event.target.value)} placeholder="TikToker visé" maxLength={48} className="brutal-input w-full px-2.5 py-2.5 text-sm font-black uppercase" />
+              <label className="sr-only" htmlFor="tiktoker-name">
+                TikToker visé
+              </label>
+              <input id="tiktoker-name" aria-label="TikToker visé" value={tiktokerName} onFocus={() => haptic(HAPTICS.tap)} onChange={(event) => setTiktokerName(event.target.value)} placeholder="TikToker visé" maxLength={48} className="brutal-input w-full px-2.5 py-2 text-xs font-black uppercase" />
 
               <div className="grid grid-cols-3 gap-1">
                 {CATEGORIES.map((category) => {
@@ -1973,6 +2113,7 @@ export default function Home() {
                       whileTap={TAP_REBOUND}
                       transition={TAP_TRANSITION}
                       onClick={() => toggleCategory(category.id)}
+                      aria-pressed={active}
                       className={`min-h-10 rounded-[10px] border px-1.5 py-1 text-left ${active ? "border-[#d4af37]/75 bg-[#d4af37]/18 text-[#f0d889]" : "border-white/10 bg-white/[0.035] text-zinc-500"}`}
                     >
                       <Icon className="mb-1 h-3 w-3" />
@@ -1982,10 +2123,14 @@ export default function Home() {
                 })}
               </div>
 
-              <textarea value={comment} onChange={(event) => setComment(event.target.value)} placeholder="Pourquoi ce dossier mérite le club ?" rows={3} maxLength={240} className="brutal-input w-full resize-none p-2.5 text-sm font-black uppercase" />
+              <label className="sr-only" htmlFor="dossier-comment">
+                Contexte du dossier
+              </label>
+              <textarea id="dossier-comment" aria-label="Contexte du dossier" value={comment} onFocus={() => haptic(HAPTICS.tap)} onChange={(event) => setComment(event.target.value)} placeholder="Pourquoi ce dossier mérite le club ?" rows={3} maxLength={240} className="brutal-input w-full resize-none p-2.5 text-xs font-black uppercase" />
 
               {!isEditingStudio && (
                 <BrutalCard tone="yellow" className="p-2">
+                  <ScorePresetRail value={initialScores} onSelect={setInitialScores} label="Profils rapides du score initial" />
                   <DimensionScoreGrid value={initialScores} onChange={setInitialScores} />
                   <p className="mt-2 border-t border-[#d4af37]/20 pt-2 text-center text-[10px] font-black uppercase tracking-[0.12em] text-[#d4af37]">Score initial : {scoreTotal(initialScores)} / 25</p>
                 </BrutalCard>
@@ -2012,7 +2157,7 @@ export default function Home() {
             <motion.section key="palmares" {...pageTransition} drag={reduceMotion ? false : "x"} dragConstraints={{ left: 0, right: 0 }} onDragEnd={(_, info) => handleSectionDrag(info)} transition={{ duration: reduceMotion ? 0.01 : 0.26, type: "spring", stiffness: 230, damping: 25 }} className="space-y-2">
               <BrutalCard tone="black" className="p-3 text-white">
                 <p className="mb-1 text-[8px] font-black uppercase tracking-[0.2em] text-[#d4af37]">Classement</p>
-                <h2 className="tabloid-headline text-[clamp(2rem,9.8vw,3.35rem)] leading-[0.84]">{PALMARES_TITLE}</h2>
+                <h2 className="tabloid-headline text-[clamp(1.55rem,7.8vw,2.7rem)] leading-[0.84]">{PALMARES_TITLE}</h2>
               </BrutalCard>
               <PalmaresList rows={palmaresRows} />
             </motion.section>
@@ -2022,13 +2167,13 @@ export default function Home() {
             <motion.section key="winners" {...pageTransition} drag={reduceMotion ? false : "x"} dragConstraints={{ left: 0, right: 0 }} onDragEnd={(_, info) => handleSectionDrag(info)} transition={{ duration: reduceMotion ? 0.01 : 0.26, type: "spring", stiffness: 230, damping: 25 }} className="space-y-2">
               <BrutalCard tone="black" className="p-3 text-white">
                 <p className="mb-1 text-[8px] font-black uppercase tracking-[0.2em] text-[#d4af37]">Cérémonie</p>
-                <h2 className="tabloid-headline text-[clamp(2rem,9.8vw,3.35rem)] leading-[0.84]">{WINNERS_TITLE}</h2>
+                <h2 className="tabloid-headline text-[clamp(1.55rem,7.8vw,2.7rem)] leading-[0.84]">{WINNERS_TITLE}</h2>
               </BrutalCard>
 
               {ultimateWinner && (
                 <BrutalCard tone="yellow" className="p-3">
                   <Sticker tone="yellow">TikToker du mois</Sticker>
-                  <p className="tabloid-headline mt-2 text-[clamp(1.7rem,8.8vw,2.8rem)] leading-[0.84] text-white">{ultimateWinner.tiktokerName}</p>
+                  <p className="tabloid-headline mt-1.5 text-[clamp(1.35rem,6.8vw,2.25rem)] leading-[0.84] text-white">{ultimateWinner.tiktokerName}</p>
                   <span className="gold-pill mt-2">{ultimateWinner.points} points</span>
                 </BrutalCard>
               )}
@@ -2036,14 +2181,14 @@ export default function Home() {
               {paparazziOr && (
                 <BrutalCard className="p-3">
                   <Sticker tone="paper">Paparazzi d&apos;Or</Sticker>
-                  <p className="tabloid-headline mt-2 text-[clamp(1.45rem,7.4vw,2.25rem)] leading-[0.84] text-white">{paparazziOr.tiktoker_name}</p>
+                  <p className="tabloid-headline mt-1.5 text-[clamp(1.18rem,6.1vw,1.95rem)] leading-[0.84] text-white">{paparazziOr.tiktoker_name}</p>
                   <span className="gold-pill mt-2">{totalPoints(paparazziOr.ratings)} points sur un dossier</span>
                 </BrutalCard>
               )}
 
               <BrutalCard tone="black" className="p-2.5">
                 <p className="text-[8px] font-black uppercase tracking-[0.2em] text-[#d4af37]">Course aux trophées</p>
-                <h3 className="tabloid-headline mt-0.5 text-[clamp(1.45rem,7.5vw,2.4rem)] leading-[0.84] text-white">Toutes les catégories</h3>
+                <h3 className="tabloid-headline mt-0.5 text-[clamp(1.16rem,6vw,1.95rem)] leading-[0.84] text-white">Toutes les catégories</h3>
               </BrutalCard>
 
               <CategoryRaceBoard races={categoryRaces} />
@@ -2058,7 +2203,7 @@ export default function Home() {
         </motion.button>
       )}
 
-      <nav className="bottom-tabloid fixed bottom-0 left-0 right-0 z-40 px-2 pt-1.5" style={{ paddingBottom: "calc(env(safe-area-inset-bottom) + 8px)" }}>
+      <nav aria-label="Navigation principale" className="bottom-tabloid fixed bottom-0 left-0 right-0 z-40 px-2 pt-1.5" style={{ paddingBottom: "calc(env(safe-area-inset-bottom) + 8px)" }}>
         <div className="mx-auto grid w-full max-w-[30rem] grid-cols-5 gap-1">
           {TAB_ITEMS.map((item) => {
             const Icon = item.icon;
@@ -2066,9 +2211,9 @@ export default function Home() {
             const badge = item.id === "vote" ? pendingForMe.length : 0;
 
             return (
-              <motion.button key={item.id} whileTap={TAP_REBOUND} transition={TAP_TRANSITION} onClick={() => switchTab(item.id)} className={`relative flex flex-col items-center justify-center gap-0.5 rounded-[10px] border px-1 py-1.5 transition ${active ? "border-[#d4af37]/70 bg-[#d4af37]/18 text-[#f0d889]" : "border-white/10 bg-white/[0.045] text-zinc-400"}`}>
+              <motion.button key={item.id} type="button" whileTap={TAP_REBOUND} transition={TAP_TRANSITION} onClick={() => switchTab(item.id)} aria-current={active ? "page" : undefined} className={`relative flex flex-col items-center justify-center gap-0.5 rounded-[10px] border px-1 py-1.5 transition ${active ? "border-[#d4af37]/70 bg-[#d4af37]/18 text-[#f0d889]" : "border-white/10 bg-white/[0.045] text-zinc-400"}`}>
                 <Icon className="relative z-10 h-4 w-4" strokeWidth={1.5} />
-                <span className="relative z-10 text-[8px] font-black uppercase">{item.label}</span>
+                <span className="relative z-10 text-[7.5px] font-black uppercase tracking-tighter">{item.label}</span>
                 {badge > 0 && (
                   <span className="absolute right-0 top-0 z-20 inline-flex h-4 min-w-[16px] items-center justify-center rounded-full border border-[#d4af37]/80 bg-[#d4af37] px-1 text-[8px] font-black text-black">
                     {badge > 9 ? "9+" : badge}
