@@ -147,18 +147,8 @@ create trigger nominations_set_updated_at
 before update on public.nominations
 for each row execute function public.set_updated_at();
 
-with archived_categories as (
-  select
-    id,
-    1000 + row_number() over (order by sort_order, id) as archived_sort_order
-  from public.categories
-)
-update public.categories as category
-set
-  sort_order = archived_categories.archived_sort_order,
-  active = false
-from archived_categories
-where category.id = archived_categories.id;
+alter table public.categories drop constraint if exists categories_sort_order_key;
+drop index if exists public.categories_sort_order_key;
 
 insert into public.categories (id, label, mood, sort_order) values
   ('le_zin_du_mois', 'Le Zin du mois', 'positive', 1),
@@ -171,14 +161,22 @@ on conflict (id) do update set
   sort_order = excluded.sort_order,
   active = true;
 
-update public.categories
-set active = false
-where id not in (
-  'le_zin_du_mois',
-  'fierte_des_notres',
-  'xptdr',
-  'honte_absolue'
-);
+with archived_categories as (
+  select
+    id,
+    1000 + row_number() over (order by sort_order, id) as archived_sort_order
+  from public.categories
+  where id not in ('le_zin_du_mois', 'fierte_des_notres', 'xptdr', 'honte_absolue')
+)
+update public.categories as category
+set
+  sort_order = archived_categories.archived_sort_order,
+  active = false
+from archived_categories
+where category.id = archived_categories.id;
+
+alter table public.categories
+  add constraint categories_sort_order_key unique (sort_order);
 
 create or replace function public.recalculate_nomination_status(target_nomination_id uuid)
 returns public.nomination_status
