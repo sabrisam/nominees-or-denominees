@@ -13,6 +13,8 @@ import {
   Check,
   Clock3,
   Crown,
+  Lock,
+  Pencil,
   Flame,
   Image as ImageIcon,
   Loader2,
@@ -22,6 +24,7 @@ import {
   ShieldAlert,
   Sparkles,
   Star,
+  Trash2,
   Trophy,
   UploadCloud,
   Zap
@@ -80,7 +83,8 @@ type SpacesUploadResult = {
   uploadUrl: string;
 };
 
-const SESSION_ID_KEY = "nod_session_id";
+const LEGACY_SESSION_ID_KEY = "nod_session_id";
+const USER_DEVICE_ID_KEY = "nod_user_device_id";
 const PSEUDO_KEY = "nod_pseudo";
 const ROOM_CODE_KEY = "nod_room_code";
 const DEFAULT_ROOM_CODE = "NOD-CLUB";
@@ -250,9 +254,9 @@ function statusLabel(status: NominationStatus) {
 }
 
 function statusClass(status: NominationStatus) {
-  if (status === "accepted") return "border-black bg-[#d9f99d] text-black";
+  if (status === "accepted") return "border-black bg-[#b5f42b] text-black";
   if (status === "rejected") return "border-black bg-[#e11d48] text-white";
-  return "border-black bg-[#d9f99d] text-black";
+  return "border-black bg-[#b5f42b] text-black";
 }
 
 function parseNomination(row: Record<string, unknown>): Nomination {
@@ -425,7 +429,7 @@ function verdictLabel(choice: VerdictChoice) {
 }
 
 function voteBurst(choice: VerdictChoice) {
-  const colors = choice === "propel" ? ["#d9f99d", "#e11d48", "#000000", "#e6e6e2"] : ["#e11d48", "#000000", "#d9f99d"];
+  const colors = choice === "propel" ? ["#b5f42b", "#e11d48", "#000000", "#f2efe3"] : ["#e11d48", "#000000", "#b5f42b"];
 
   void confetti({
     particleCount: choice === "propel" ? 120 : 72,
@@ -455,11 +459,11 @@ function Sticker({
 }) {
   const toneClass =
     tone === "yellow"
-      ? "border-black bg-[#d9f99d] text-black"
+      ? "border-black bg-[#b5f42b] text-black"
       : tone === "black"
         ? "border-black bg-black text-white"
         : tone === "paper"
-          ? "border-black bg-[#e6e6e2] text-black"
+          ? "border-black bg-[#f2efe3] text-black"
           : "border-black bg-[#e11d48] text-white";
 
   return <span className={`inline-flex border-4 px-2 py-1 text-[10px] font-black uppercase leading-none ${toneClass} ${className}`}>{children}</span>;
@@ -470,7 +474,7 @@ function JaggedSticker({ children, className = "" }: { children: ReactNode; clas
 }
 
 function SectionTitle({ children, tone = "black" }: { children: ReactNode; tone?: "black" | "red" | "yellow" }) {
-  const toneClass = tone === "red" ? "bg-[#e11d48] text-white" : tone === "yellow" ? "bg-[#d9f99d] text-black" : "bg-black text-white";
+  const toneClass = tone === "red" ? "bg-[#e11d48] text-white" : tone === "yellow" ? "bg-[#b5f42b] text-black" : "bg-black text-white";
   return (
     <div className={`border-4 border-black px-2 py-1.5 ${toneClass}`}>
       <h2 className="tabloid-headline text-[clamp(1.55rem,8.4vw,2.75rem)] leading-[0.82]">{children}</h2>
@@ -525,7 +529,7 @@ function StarInput({
             onMouseLeave={() => !readonly && setHover(0)}
             onClick={() => onChange?.(star)}
             className={`flex aspect-square items-center justify-center border-4 border-black transition active:translate-x-0.5 active:translate-y-0.5 disabled:cursor-default ${
-              active ? "bg-[#d9f99d] text-black" : "bg-[#e6e6e2] text-zinc-500"
+              active ? "bg-[#b5f42b] text-black" : "bg-[#f2efe3] text-zinc-500"
             }`}
             aria-label={`${star} étoiles`}
           >
@@ -547,16 +551,18 @@ function MediaFrame({
   controls?: boolean;
 }) {
   const [mediaFailed, setMediaFailed] = useState(false);
+  const [engaged, setEngaged] = useState(false);
 
   useEffect(() => {
     setMediaFailed(false);
+    setEngaged(false);
   }, [nomination.image_url, nomination.video_url]);
 
   if (mediaFailed) {
     return (
       <div className={`${height} relative flex w-full items-center justify-center bg-black`}>
         {nomination.image_url ? <img src={nomination.image_url} alt="" className="absolute inset-0 h-full w-full object-cover opacity-55" /> : null}
-        <div className="relative z-10 mx-3 border-4 border-black bg-[#d9f99d] px-2 py-1 text-center text-[11px] font-black uppercase leading-none text-black">
+        <div className="relative z-10 mx-3 border-4 border-black bg-[#b5f42b] px-2 py-1 text-center text-[11px] font-black uppercase leading-none text-black">
           Connexion au serveur de stockage en cours...
         </div>
       </div>
@@ -568,9 +574,15 @@ function MediaFrame({
       <video
         src={nomination.video_url}
         poster={nomination.image_url}
-        controls={controls}
+        controls={controls || engaged}
+        loop
         playsInline
         preload="metadata"
+        onClick={() => {
+          haptic(15);
+          setEngaged(true);
+        }}
+        onTouchStart={() => setEngaged(true)}
         onError={() => setMediaFailed(true)}
         className={`${height} block w-full bg-black object-cover`}
       />
@@ -580,7 +592,37 @@ function MediaFrame({
   return <img src={nomination.image_url} alt="" onError={() => setMediaFailed(true)} className={`${height} block w-full bg-black object-cover`} />;
 }
 
-function NominationTile({ nomination, index = 0 }: { nomination: Nomination; index?: number }) {
+function OwnershipBadge({ owned, className = "" }: { owned: boolean; className?: string }) {
+  return (
+    <span className={`inline-flex items-center gap-1 border-4 border-black px-2 py-1 text-[10px] font-black uppercase leading-none ${owned ? "bg-[#b5f42b] text-black" : "bg-[#e11d48] text-white"} ${className}`}>
+      {owned ? (
+        <>
+          PAR VOUS <Pencil className="h-3 w-3" strokeWidth={3} />
+        </>
+      ) : (
+        <>
+          PAR AUTRE <Lock className="h-3 w-3" strokeWidth={3} />
+        </>
+      )}
+    </span>
+  );
+}
+
+function NominationTile({
+  nomination,
+  index = 0,
+  owned = false,
+  onEdit,
+  onRemove,
+  busy = false
+}: {
+  nomination: Nomination;
+  index?: number;
+  owned?: boolean;
+  onEdit?: () => void;
+  onRemove?: () => void;
+  busy?: boolean;
+}) {
   const category = getCategoryMeta(nomination.category_id);
   const Icon = category.icon;
   const rating = averageRating(nomination);
@@ -590,6 +632,7 @@ function NominationTile({ nomination, index = 0 }: { nomination: Nomination; ind
     <BrutalCard tone={index % 3 === 0 ? "yellow" : "paper"} className="overflow-hidden">
       <div className="media-cut relative h-[clamp(5.4rem,27vw,7.25rem)] border-b-4 border-black">
         <MediaFrame nomination={nomination} height="h-full" controls={false} />
+        <OwnershipBadge owned={owned} className="absolute left-1 top-1 -rotate-2" />
         {showLaughSticker && <JaggedSticker className="absolute -bottom-3 left-1.5 -rotate-12">FOUS RIRES DU MOIS</JaggedSticker>}
       </div>
       <div className="min-w-0 p-1.5">
@@ -598,6 +641,16 @@ function NominationTile({ nomination, index = 0 }: { nomination: Nomination; ind
         <p className="mt-1.5 flex min-w-0 items-center gap-1 truncate text-[10px] font-black uppercase leading-none">
           <Icon className="h-3 w-3 shrink-0 text-[#e11d48]" /> {category.label} / {voteCount(nomination.votes)} votes / {rating ? rating.toFixed(1) : "-"} sur 5
         </p>
+        {owned && (
+          <div className="mt-1.5 grid grid-cols-2 gap-1">
+            <motion.button whileTap={TAP_REBOUND} transition={TAP_TRANSITION} onClick={onEdit} className="owner-action bg-[#0ea5e9] text-white" type="button">
+              Modifier
+            </motion.button>
+            <motion.button whileTap={TAP_REBOUND} transition={TAP_TRANSITION} onClick={onRemove} disabled={busy} className="owner-action bg-zinc-700 text-white disabled:opacity-60" type="button">
+              Retirer
+            </motion.button>
+          </div>
+        )}
       </div>
     </BrutalCard>
   );
@@ -643,6 +696,8 @@ export default function Home() {
   const [comment, setComment] = useState("");
   const [initialRating, setInitialRating] = useState(4);
   const [uploadLoading, setUploadLoading] = useState(false);
+  const [editingNominationId, setEditingNominationId] = useState<string | null>(null);
+  const [mutationBusyId, setMutationBusyId] = useState<string | null>(null);
 
   const [ratingDraftById, setRatingDraftById] = useState<Record<string, number>>({});
   const [voteBusyId, setVoteBusyId] = useState<string | null>(null);
@@ -676,11 +731,12 @@ export default function Home() {
 
   useEffect(() => {
     try {
-      const storedId = localStorage.getItem(SESSION_ID_KEY);
+      const storedId = localStorage.getItem(USER_DEVICE_ID_KEY) || localStorage.getItem(LEGACY_SESSION_ID_KEY);
       const nextId = storedId || makeSessionId();
       const storedPseudo = sanitizePseudo(localStorage.getItem(PSEUDO_KEY) || "");
       const nextPseudo = storedPseudo || `Joueur ${nextId.slice(0, 4).toUpperCase()}`;
-      localStorage.setItem(SESSION_ID_KEY, nextId);
+      localStorage.setItem(USER_DEVICE_ID_KEY, nextId);
+      localStorage.setItem(LEGACY_SESSION_ID_KEY, nextId);
       localStorage.setItem(PSEUDO_KEY, nextPseudo);
       localStorage.setItem(ROOM_CODE_KEY, DEFAULT_ROOM_CODE);
       setRoomCode(DEFAULT_ROOM_CODE);
@@ -853,7 +909,10 @@ export default function Home() {
     }
     return Array.from(byCategory.values()).slice(0, 4);
   }, [allNominations]);
-  const uploadReady = Boolean(preparedFile && thumbnailFile && comment.trim().length >= 3 && !isPreparingMedia);
+  const editingNomination = useMemo(() => allNominations.find((nomination) => nomination.id === editingNominationId) ?? null, [allNominations, editingNominationId]);
+  const isEditingStudio = Boolean(editingNomination);
+  const uploadReady = isEditingStudio ? comment.trim().length >= 3 : Boolean(preparedFile && thumbnailFile && comment.trim().length >= 3 && !isPreparingMedia);
+  const ownsNomination = useCallback((nomination: Nomination) => Boolean(participant && nomination.submitted_by === participant.id), [participant]);
 
   const revealContainer = reduceMotion
     ? {}
@@ -889,6 +948,125 @@ export default function Home() {
     },
     [switchTab, tab]
   );
+
+  const resetStudioDraft = useCallback(() => {
+    clearPreparedMedia();
+    setComment("");
+    setInitialRating(4);
+    setCatId(CATEGORIES[0].id);
+  }, [clearPreparedMedia]);
+
+  const startEditNomination = useCallback(
+    (nomination: Nomination) => {
+      if (!ownsNomination(nomination)) {
+        showToast("info", "Dossier verrouillé : seul l'auteur peut le modifier.");
+        return;
+      }
+
+      haptic(15);
+      clearPreparedMedia();
+      setEditingNominationId(nomination.id);
+      setComment(nomination.comment);
+      setCatId(nomination.category_id);
+      setStudioNotice("MODE MODIF : vous seul pouvez toucher ce dossier.");
+      switchTab("studio");
+    },
+    [clearPreparedMedia, ownsNomination, showToast, switchTab]
+  );
+
+  const cancelEditNomination = useCallback(() => {
+    haptic(15);
+    setEditingNominationId(null);
+    setStudioNotice(null);
+    resetStudioDraft();
+  }, [resetStudioDraft]);
+
+  const saveEditedNomination = async () => {
+    if (!participant || !supabase || !editingNomination || !ownsNomination(editingNomination) || mutationBusyId) return;
+
+    const cleanedComment = comment.trim();
+    if (cleanedComment.length < 3) {
+      showToast("error", "Ajoute une note valide.");
+      return;
+    }
+
+    haptic([20, 30, 20]);
+    setMutationBusyId(editingNomination.id);
+
+    try {
+      if (editingNomination.id.startsWith("local-")) {
+        setLocalNominations((prev) => prev.map((item) => (item.id === editingNomination.id ? { ...item, comment: cleanedComment, category_id: catId } : item)));
+      } else {
+        const { error: rpcError } = await supabase.rpc("update_own_nomination", {
+          target_nomination_id: editingNomination.id,
+          editor_id: participant.id,
+          next_comment: cleanedComment,
+          next_category_id: catId
+        });
+
+        if (rpcError) {
+          const { error: fallbackError } = await supabase
+            .from("nominations")
+            .update({ comment: cleanedComment, category_id: catId })
+            .eq("id", editingNomination.id)
+            .eq("submitted_by", participant.id);
+          if (fallbackError) throw fallbackError;
+        }
+      }
+
+      showToast("success", "Dossier modifié.");
+      setEditingNominationId(null);
+      setStudioNotice(null);
+      resetStudioDraft();
+      switchTab("feed");
+      await channelRef.current?.send({ type: "broadcast", event: "dossier", payload: { id: editingNomination.id } });
+      void fetchNominations(true);
+    } catch (err) {
+      const message = err instanceof Error ? err.message : "Modification refusée.";
+      showToast("error", message);
+    } finally {
+      setMutationBusyId(null);
+    }
+  };
+
+  const removeNomination = async (nomination: Nomination) => {
+    if (!participant || !supabase || !ownsNomination(nomination) || mutationBusyId) return;
+    const confirmed = window.confirm("Retirer ce dossier du flux ?");
+    if (!confirmed) return;
+
+    haptic([25, 60]);
+    setMutationBusyId(nomination.id);
+
+    try {
+      if (nomination.id.startsWith("local-")) {
+        setLocalNominations((prev) => prev.filter((item) => item.id !== nomination.id));
+      } else {
+        const { error: rpcError } = await supabase.rpc("delete_own_nomination", {
+          target_nomination_id: nomination.id,
+          editor_id: participant.id
+        });
+
+        if (rpcError) {
+          const { error: fallbackError } = await supabase.from("nominations").delete().eq("id", nomination.id).eq("submitted_by", participant.id);
+          if (fallbackError) throw fallbackError;
+        }
+      }
+
+      if (editingNominationId === nomination.id) {
+        setEditingNominationId(null);
+        resetStudioDraft();
+      }
+
+      showToast("info", "Dossier retiré.");
+      await channelRef.current?.send({ type: "broadcast", event: "dossier", payload: { id: nomination.id } });
+      void fetchNominations(true);
+    } catch (err) {
+      const message = err instanceof Error ? err.message : "Retrait refusé.";
+      showToast("error", message);
+    } finally {
+      setMutationBusyId(null);
+    }
+  };
 
   const prepareMedia = async (nextFile: File | null) => {
     if (!nextFile) return;
@@ -937,6 +1115,11 @@ export default function Home() {
   };
 
   const uploadNomination = async () => {
+    if (editingNomination) {
+      await saveEditedNomination();
+      return;
+    }
+
     if (!participant || !supabase) {
       showToast("error", "Le studio n'est pas encore branché.");
       return;
@@ -984,10 +1167,7 @@ export default function Home() {
       setMediaProgress(1);
       setStudioNotice(SIMULATION_NOTICE);
       haptic(initialRating >= 3 ? [20, 30, 20] : [25, 60]);
-      clearPreparedMedia();
-      setComment("");
-      setInitialRating(4);
-      setCatId(CATEGORIES[0].id);
+      resetStudioDraft();
     };
 
     try {
@@ -1022,10 +1202,7 @@ export default function Home() {
       haptic(initialRating >= 3 ? [20, 30, 20] : [25, 60]);
       setStudioNotice(null);
       showToast("success", "Dossier envoyé dans le flux.");
-      clearPreparedMedia();
-      setComment("");
-      setInitialRating(4);
-      setCatId(CATEGORIES[0].id);
+      resetStudioDraft();
       switchTab("vote");
       await channelRef.current?.send({ type: "broadcast", event: "dossier", payload: { roomId: activeRoomId } });
       void fetchNominations(true, activeRoomId);
@@ -1132,7 +1309,7 @@ export default function Home() {
   }
 
   return (
-    <div className="tabloid-app flex min-h-screen flex-col justify-between bg-[#e6e6e2] pb-[calc(env(safe-area-inset-bottom)+70px)]">
+    <div className="tabloid-app flex min-h-screen flex-col justify-between bg-[#1a1a1a] pb-[calc(env(safe-area-inset-bottom)+70px)]">
       <PaperBackdrop />
 
       <AnimatePresence>
@@ -1146,7 +1323,7 @@ export default function Home() {
           >
             <div
               className={`flex items-center gap-2 border-4 border-black px-4 py-3 text-sm font-black uppercase shadow-[5px_5px_0_#000] ${
-                toast.tone === "success" ? "bg-[#d9f99d] text-black" : toast.tone === "error" ? "bg-[#e11d48] text-white" : "bg-black text-white"
+                toast.tone === "success" ? "bg-[#b5f42b] text-black" : toast.tone === "error" ? "bg-[#e11d48] text-white" : "bg-black text-white"
               }`}
             >
               {toast.tone === "success" ? <Check className="h-4 w-4" /> : toast.tone === "error" ? <ShieldAlert className="h-4 w-4" /> : <Sparkles className="h-4 w-4" />}
@@ -1160,7 +1337,7 @@ export default function Home() {
         className="relative z-10 mx-auto min-h-0 w-full max-w-[30rem] flex-1 overflow-y-auto overscroll-contain px-2 pb-4"
         style={{ paddingTop: "calc(env(safe-area-inset-top) + 6px)" }}
       >
-        <header className="sticky top-0 z-30 mb-2 bg-[#e6e6e2] py-1.5">
+        <header className="sticky top-0 z-30 mb-2 bg-[#1a1a1a] py-1.5 text-white">
           <div className="border-b-4 border-black pb-1.5">
             <div className="flex items-center justify-between">
               <div className="min-w-0 text-left">
@@ -1229,13 +1406,24 @@ export default function Home() {
                     <Sticker tone="yellow" className="absolute left-3 top-3 rotate-2">
                       À la une
                     </Sticker>
+                    {heroWinner && <OwnershipBadge owned={ownsNomination(heroWinner)} className="absolute right-3 top-3 -rotate-2" />}
                   </div>
                   <div className="grid grid-cols-[1fr_auto] gap-2 p-2">
                     <div>
                       <p className="text-[10px] font-black uppercase leading-none text-[#e11d48]">{HIGH_SCORE_TITLE}</p>
                       <p className="line-clamp-2 text-[clamp(1.25rem,7vw,2rem)] font-black uppercase leading-[0.86]">{heroWinner ? heroWinner.comment : "Aucun dossier publié"}</p>
+                      {heroWinner && ownsNomination(heroWinner) && (
+                        <div className="mt-2 grid max-w-56 grid-cols-2 gap-1">
+                          <motion.button whileTap={TAP_REBOUND} transition={TAP_TRANSITION} onClick={() => startEditNomination(heroWinner)} className="owner-action bg-[#0ea5e9] text-white" type="button">
+                            Modifier
+                          </motion.button>
+                          <motion.button whileTap={TAP_REBOUND} transition={TAP_TRANSITION} onClick={() => void removeNomination(heroWinner)} disabled={mutationBusyId === heroWinner.id} className="owner-action bg-zinc-700 text-white disabled:opacity-60" type="button">
+                            Retirer
+                          </motion.button>
+                        </div>
+                      )}
                     </div>
-                    <motion.button whileTap={TAP_REBOUND} transition={TAP_TRANSITION} onClick={() => switchTab("studio")} className="brutal-icon-button bg-[#d9f99d]" aria-label="Uploader un dossier">
+                    <motion.button whileTap={TAP_REBOUND} transition={TAP_TRANSITION} onClick={() => switchTab("studio")} className="brutal-icon-button bg-[#b5f42b]" aria-label="Uploader un dossier">
                       <UploadCloud className="h-5 w-5" />
                     </motion.button>
                   </div>
@@ -1253,7 +1441,15 @@ export default function Home() {
                 ) : (
                   <div className="grid grid-cols-2 gap-2">
                     {(headlineItems.length ? headlineItems : feedItems).map((nomination, index) => (
-                      <NominationTile key={nomination.id} nomination={nomination} index={index} />
+                      <NominationTile
+                        key={nomination.id}
+                        nomination={nomination}
+                        index={index}
+                        owned={ownsNomination(nomination)}
+                        onEdit={() => startEditNomination(nomination)}
+                        onRemove={() => void removeNomination(nomination)}
+                        busy={mutationBusyId === nomination.id}
+                      />
                     ))}
                   </div>
                 )}
@@ -1268,7 +1464,15 @@ export default function Home() {
                 ) : (
                   <div className="grid grid-cols-2 gap-2">
                     {accepted.slice(0, 4).map((nomination, index) => (
-                      <NominationTile key={nomination.id} nomination={nomination} index={index} />
+                      <NominationTile
+                        key={nomination.id}
+                        nomination={nomination}
+                        index={index}
+                        owned={ownsNomination(nomination)}
+                        onEdit={() => startEditNomination(nomination)}
+                        onRemove={() => void removeNomination(nomination)}
+                        busy={mutationBusyId === nomination.id}
+                      />
                     ))}
                   </div>
                 )}
@@ -1283,7 +1487,15 @@ export default function Home() {
                 ) : (
                   <div className="grid grid-cols-2 gap-2">
                     {rejected.slice(0, 4).map((nomination, index) => (
-                      <NominationTile key={nomination.id} nomination={nomination} index={index} />
+                      <NominationTile
+                        key={nomination.id}
+                        nomination={nomination}
+                        index={index}
+                        owned={ownsNomination(nomination)}
+                        onEdit={() => startEditNomination(nomination)}
+                        onRemove={() => void removeNomination(nomination)}
+                        busy={mutationBusyId === nomination.id}
+                      />
                     ))}
                   </div>
                 )}
@@ -1303,7 +1515,7 @@ export default function Home() {
             >
               <BrutalCard tone="black" className="p-2">
                 <h2 className="tabloid-headline text-[clamp(2.2rem,11.5vw,3.65rem)] leading-[0.84] text-white">Duel express collaboratif</h2>
-                <p className="-mt-[2px] border-4 border-black bg-[#d9f99d] px-2 py-1 text-[clamp(1rem,5vw,1.35rem)] font-black uppercase leading-none text-black">Une note, un vote, un verdict collectif.</p>
+                <p className="-mt-[2px] border-4 border-black bg-[#b5f42b] px-2 py-1 text-[clamp(1rem,5vw,1.35rem)] font-black uppercase leading-none text-black">Une note, un vote, un verdict collectif.</p>
               </BrutalCard>
 
               {loadingList ? (
@@ -1338,7 +1550,8 @@ export default function Home() {
                         <Sticker tone="red" className="absolute left-2 top-2 -rotate-2">
                           Nouveau dossier à juger
                         </Sticker>
-                        <div className="absolute bottom-2 left-2 right-2 border-4 border-black bg-[#e6e6e2] p-2">
+                        <OwnershipBadge owned={ownsNomination(nomination)} className="absolute right-2 top-2 rotate-2" />
+                        <div className="absolute bottom-2 left-2 right-2 border-4 border-black bg-[#f2efe3] p-2">
                           <p className="flex items-center gap-1 text-[10px] font-black uppercase text-[#e11d48]">
                             <Icon className="h-3.5 w-3.5" /> {category.label}
                           </p>
@@ -1348,7 +1561,7 @@ export default function Home() {
                       <div className="space-y-2 p-2">
                         <StarInput value={draftRating} onChange={(value) => setRatingDraftById((prev) => ({ ...prev, [nomination.id]: value }))} size="lg" />
                         <div className="grid grid-cols-2 gap-2">
-                          <motion.button whileTap={TAP_REBOUND} transition={TAP_TRANSITION} onClick={() => void applyVote(nomination.id, "propel")} disabled={voteBusyId === nomination.id} className="brutal-action bg-[#d9f99d] text-black disabled:opacity-50">
+                          <motion.button whileTap={TAP_REBOUND} transition={TAP_TRANSITION} onClick={() => void applyVote(nomination.id, "propel")} disabled={voteBusyId === nomination.id} className="brutal-action bg-[#b5f42b] text-black disabled:opacity-50">
                             Propulser
                           </motion.button>
                           <motion.button whileTap={TAP_REBOUND} transition={TAP_TRANSITION} onClick={() => void applyVote(nomination.id, "ban")} disabled={voteBusyId === nomination.id} className="brutal-action bg-[#e11d48] text-white disabled:opacity-50">
@@ -1374,33 +1587,42 @@ export default function Home() {
               className="space-y-2"
             >
               <BrutalCard tone="black" className="p-2">
-                <h2 className="tabloid-headline text-[clamp(2rem,10.5vw,3.45rem)] leading-[0.84] text-white">STUDIO DE CAPTURE : TON DOSSIER</h2>
-                <p className="-mt-[2px] border-4 border-black bg-[#e11d48] px-2 py-1 text-[clamp(1rem,5vw,1.3rem)] font-black uppercase leading-none text-white">Vidéo originale, photo ou capture prise sur le vif.</p>
+                <h2 className="tabloid-headline text-[clamp(2rem,10.5vw,3.45rem)] leading-[0.84] text-white">{isEditingStudio ? "MODIFIER LE DOSSIER" : "STUDIO DE CAPTURE : TON DOSSIER"}</h2>
+                <p className="-mt-[2px] border-4 border-black bg-[#e11d48] px-2 py-1 text-[clamp(1rem,5vw,1.3rem)] font-black uppercase leading-none text-white">
+                  {isEditingStudio ? "Contexte, catégorie, verrou propriétaire." : "Vidéo originale, photo ou capture prise sur le vif."}
+                </p>
               </BrutalCard>
 
               <BrutalCard className="p-1.5">
-                <motion.button
-                  whileTap={TAP_REBOUND}
-                  transition={TAP_TRANSITION}
-                  onClick={() => fileInputRef.current?.click()}
-                  disabled={isPreparingMedia || uploadLoading}
-                  className="relative flex min-h-[min(38svh,18rem)] w-full items-center justify-center overflow-hidden border-4 border-black bg-black text-left transition active:translate-x-1 active:translate-y-1 disabled:opacity-70"
-                >
-                  {previewUrl ? (
-                    mediaKind === "video" ? (
-                      <video src={previewUrl} poster={thumbnailPreviewUrl ?? undefined} className="absolute inset-0 h-full w-full object-cover" controls playsInline muted preload="metadata" />
+                {editingNomination ? (
+                  <div className="relative min-h-[min(38svh,18rem)] overflow-hidden border-4 border-black bg-black">
+                    <MediaFrame nomination={editingNomination} height="h-[min(38svh,18rem)]" />
+                    <OwnershipBadge owned className="absolute left-2 top-2 -rotate-2" />
+                  </div>
+                ) : (
+                  <motion.button
+                    whileTap={TAP_REBOUND}
+                    transition={TAP_TRANSITION}
+                    onClick={() => fileInputRef.current?.click()}
+                    disabled={isPreparingMedia || uploadLoading}
+                    className="relative flex min-h-[min(38svh,18rem)] w-full items-center justify-center overflow-hidden border-4 border-black bg-black text-left transition active:translate-x-1 active:translate-y-1 disabled:opacity-70"
+                  >
+                    {previewUrl ? (
+                      mediaKind === "video" ? (
+                        <video src={previewUrl} poster={thumbnailPreviewUrl ?? undefined} className="absolute inset-0 h-full w-full object-cover" controls loop playsInline muted preload="metadata" />
+                      ) : (
+                        <img src={previewUrl} alt="" className="absolute inset-0 h-full w-full object-cover" />
+                      )
                     ) : (
-                      <img src={previewUrl} alt="" className="absolute inset-0 h-full w-full object-cover" />
-                    )
-                  ) : (
-                    <span className="flex flex-col items-center px-6 text-center text-white">
-                      {isPreparingMedia ? <Loader2 className="mb-3 h-9 w-9 animate-spin text-[#d9f99d]" /> : <UploadCloud className="mb-3 h-9 w-9 text-[#d9f99d]" />}
-                      <span className="text-3xl font-black uppercase leading-none">{isPreparingMedia ? "Chargement du studio..." : "Aperçu vidéo original"}</span>
-                      <span className="mt-2 text-sm font-black uppercase text-[#d9f99d]">Vidéo, photo, capture d&apos;écran</span>
-                    </span>
-                  )}
-                  <input ref={fileInputRef} type="file" accept="video/*,image/*" onChange={(event) => void prepareMedia(event.target.files?.[0] ?? null)} className="hidden" />
-                </motion.button>
+                      <span className="flex flex-col items-center px-6 text-center text-white">
+                        {isPreparingMedia ? <Loader2 className="mb-3 h-9 w-9 animate-spin text-[#b5f42b]" /> : <UploadCloud className="mb-3 h-9 w-9 text-[#b5f42b]" />}
+                        <span className="text-3xl font-black uppercase leading-none">{isPreparingMedia ? "Chargement du studio..." : "Aperçu vidéo original"}</span>
+                        <span className="mt-2 text-sm font-black uppercase text-[#b5f42b]">Vidéo, photo, capture d&apos;écran</span>
+                      </span>
+                    )}
+                    <input ref={fileInputRef} type="file" accept="video/*,image/*" onChange={(event) => void prepareMedia(event.target.files?.[0] ?? null)} className="hidden" />
+                  </motion.button>
+                )}
               </BrutalCard>
 
               {studioNotice && (
@@ -1412,7 +1634,7 @@ export default function Home() {
               {(isPreparingMedia || uploadLoading) && (
                 <BrutalCard tone="yellow" className="p-2">
                   <p className="tabloid-headline text-[clamp(1.6rem,8vw,2.45rem)] leading-[0.85]">{uploadLoading ? "CHARGEMENT DU DOSSIER..." : "PRÉPARATION DU DOSSIER..."}</p>
-                  <div className="mt-2 h-5 border-4 border-black bg-[#e6e6e2]">
+                  <div className="mt-2 h-5 border-4 border-black bg-[#f2efe3]">
                     <motion.div className="h-full bg-[#e11d48]" animate={{ width: `${Math.round(mediaProgress * 100)}%` }} />
                   </div>
                 </BrutalCard>
@@ -1435,14 +1657,27 @@ export default function Home() {
                 className="brutal-input w-full resize-none p-3 text-lg font-black uppercase"
               />
 
-              <BrutalCard tone="yellow" className="p-2">
-                <StarInput value={initialRating} onChange={setInitialRating} size="lg" />
-                <p className="mt-2 border-t-4 border-black pt-2 text-center text-sm font-black uppercase">Vote initial : {verdictLabel(initialRating >= 3 ? "propel" : "ban")}</p>
-              </BrutalCard>
+              {!isEditingStudio && (
+                <BrutalCard tone="yellow" className="p-2">
+                  <StarInput value={initialRating} onChange={setInitialRating} size="lg" />
+                  <p className="mt-2 border-t-4 border-black pt-2 text-center text-sm font-black uppercase">Vote initial : {verdictLabel(initialRating >= 3 ? "propel" : "ban")}</p>
+                </BrutalCard>
+              )}
 
-              <motion.button whileTap={TAP_REBOUND} transition={TAP_TRANSITION} onClick={() => void uploadNomination()} disabled={uploadLoading || !uploadReady} className="brutal-submit flex w-full items-center justify-center gap-2 disabled:opacity-50">
-                {uploadLoading ? <Loader2 className="h-6 w-6 animate-spin" /> : "Uploader le dossier"}
-              </motion.button>
+              {isEditingStudio ? (
+                <div className="grid grid-cols-[1fr_auto] gap-2">
+                  <motion.button whileTap={TAP_REBOUND} transition={TAP_TRANSITION} onClick={() => void saveEditedNomination()} disabled={mutationBusyId === editingNominationId || !uploadReady} className="brutal-submit flex w-full items-center justify-center gap-2 bg-[#b5f42b] text-black disabled:opacity-50">
+                    {mutationBusyId === editingNominationId ? <Loader2 className="h-6 w-6 animate-spin" /> : "Sauvegarder modif"}
+                  </motion.button>
+                  <motion.button whileTap={TAP_REBOUND} transition={TAP_TRANSITION} onClick={cancelEditNomination} className="border-4 border-black bg-[#f2efe3] px-4 text-lg font-black uppercase text-black shadow-[5px_5px_0_#000]" type="button">
+                    Annuler
+                  </motion.button>
+                </div>
+              ) : (
+                <motion.button whileTap={TAP_REBOUND} transition={TAP_TRANSITION} onClick={() => void uploadNomination()} disabled={uploadLoading || !uploadReady} className="brutal-submit flex w-full items-center justify-center gap-2 disabled:opacity-50">
+                  {uploadLoading ? <Loader2 className="h-6 w-6 animate-spin" /> : "Uploader le dossier"}
+                </motion.button>
+              )}
             </motion.section>
           )}
 
@@ -1457,9 +1692,9 @@ export default function Home() {
               className="space-y-2"
             >
               <BrutalCard tone="black" className="p-2 text-white">
-                <Medal className="mb-2 h-9 w-9 text-[#d9f99d]" />
+                <Medal className="mb-2 h-9 w-9 text-[#b5f42b]" />
                 <h2 className="tabloid-headline text-[clamp(2.8rem,14vw,4.7rem)] leading-[0.8]">Trophées du mois</h2>
-                <p className="mt-2 text-[clamp(1rem,5vw,1.35rem)] font-black uppercase leading-none text-[#d9f99d]">Le premier jour du mois révèle le palmarès.</p>
+                <p className="mt-2 text-[clamp(1rem,5vw,1.35rem)] font-black uppercase leading-none text-[#b5f42b]">Le premier jour du mois révèle le palmarès.</p>
               </BrutalCard>
 
               {categoryWinners.length === 0 ? (
@@ -1478,11 +1713,22 @@ export default function Home() {
                           <MediaFrame nomination={winner} height="h-28" controls={false} />
                         </div>
                         <div className="min-w-0 p-2">
+                          <OwnershipBadge owned={ownsNomination(winner)} className="mb-1 -rotate-1" />
                           <p className="flex items-center gap-1 text-[10px] font-black uppercase text-[#e11d48]">
                             <Icon className="h-3.5 w-3.5" /> {category.label}
                           </p>
                           <p className="mt-2 truncate text-2xl font-black uppercase leading-none">&quot;{winner.comment}&quot;</p>
                           <p className="mt-2 inline-flex border-4 border-black bg-[#e11d48] px-2 py-1 text-xs font-black uppercase text-white">{averageRating(winner)?.toFixed(1)} / 5</p>
+                          {ownsNomination(winner) && (
+                            <div className="mt-2 grid max-w-56 grid-cols-2 gap-1">
+                              <motion.button whileTap={TAP_REBOUND} transition={TAP_TRANSITION} onClick={() => startEditNomination(winner)} className="owner-action bg-[#0ea5e9] text-white" type="button">
+                                Modifier
+                              </motion.button>
+                              <motion.button whileTap={TAP_REBOUND} transition={TAP_TRANSITION} onClick={() => void removeNomination(winner)} disabled={mutationBusyId === winner.id} className="owner-action bg-zinc-700 text-white disabled:opacity-60" type="button">
+                                Retirer
+                              </motion.button>
+                            </div>
+                          )}
                         </div>
                       </div>
                     </BrutalCard>
@@ -1522,9 +1768,20 @@ export default function Home() {
                           <MediaFrame nomination={nomination} height="h-24" controls={false} />
                         </div>
                         <div className="min-w-0 p-2">
+                          <OwnershipBadge owned={ownsNomination(nomination)} className="mb-1 -rotate-1" />
                           <span className={`inline-flex border-4 px-2 py-1 text-[10px] font-black uppercase ${statusClass(nomination.status)}`}>{statusLabel(nomination.status)}</span>
                           <p className="mt-2 truncate text-lg font-black uppercase leading-none">&quot;{nomination.comment}&quot;</p>
                           <p className="mt-1 text-xs font-black uppercase">{rating ? rating.toFixed(1) : "-"} / 5 / {voteCount(nomination.votes)} votes</p>
+                          {ownsNomination(nomination) && (
+                            <div className="mt-2 grid max-w-56 grid-cols-2 gap-1">
+                              <motion.button whileTap={TAP_REBOUND} transition={TAP_TRANSITION} onClick={() => startEditNomination(nomination)} className="owner-action bg-[#0ea5e9] text-white" type="button">
+                                Modifier
+                              </motion.button>
+                              <motion.button whileTap={TAP_REBOUND} transition={TAP_TRANSITION} onClick={() => void removeNomination(nomination)} disabled={mutationBusyId === nomination.id} className="owner-action bg-zinc-700 text-white disabled:opacity-60" type="button">
+                                Retirer
+                              </motion.button>
+                            </div>
+                          )}
                         </div>
                       </div>
                     </BrutalCard>
@@ -1559,11 +1816,11 @@ export default function Home() {
             const badge = item.id === "vote" ? pendingForMe.length : 0;
 
             return (
-              <motion.button key={item.id} whileTap={TAP_REBOUND} transition={TAP_TRANSITION} onClick={() => switchTab(item.id)} className={`relative flex flex-col items-center justify-center gap-1 border-4 border-black px-1 py-2 transition active:translate-x-0.5 active:translate-y-0.5 ${active ? "bg-[#e11d48] text-white" : "bg-[#e6e6e2] text-black"}`}>
+              <motion.button key={item.id} whileTap={TAP_REBOUND} transition={TAP_TRANSITION} onClick={() => switchTab(item.id)} className={`relative flex flex-col items-center justify-center gap-1 border-4 border-black px-1 py-2 transition active:translate-x-0.5 active:translate-y-0.5 ${active ? "bg-[#e11d48] text-white" : "bg-[#f2efe3] text-black"}`}>
                 <Icon className="relative z-10 h-5 w-5" strokeWidth={1.5} />
                 <span className="relative z-10 text-[9px] font-black uppercase">{item.label}</span>
                 {badge > 0 && (
-                  <span className="absolute right-0 top-0 z-20 inline-flex h-5 min-w-[20px] items-center justify-center border-b-4 border-l-4 border-black bg-[#d9f99d] px-1 text-[9px] font-black text-black">
+                  <span className="absolute right-0 top-0 z-20 inline-flex h-5 min-w-[20px] items-center justify-center border-b-4 border-l-4 border-black bg-[#b5f42b] px-1 text-[9px] font-black text-black">
                     {badge > 9 ? "9+" : badge}
                   </span>
                 )}

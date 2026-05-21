@@ -46,6 +46,7 @@ drop table if exists public.trial_rounds;
 create index if not exists rooms_code_idx on public.rooms(code);
 create index if not exists nominations_room_created_idx on public.nominations(room_id, created_at desc);
 create index if not exists nominations_room_status_idx on public.nominations(room_id, status);
+create index if not exists nominations_owner_idx on public.nominations(submitted_by);
 create index if not exists nominations_video_path_idx on public.nominations(video_storage_path)
   where video_storage_path is not null;
 
@@ -185,6 +186,81 @@ $$;
 
 grant execute on function public.submit_nomination_vote(uuid, text, jsonb) to anon;
 
+create or replace function public.update_own_nomination(
+  target_nomination_id uuid,
+  editor_id text,
+  next_comment text,
+  next_category_id text
+)
+returns public.nominations
+language plpgsql
+security definer
+set search_path = public
+as $$
+declare
+  updated_nomination public.nominations;
+begin
+  if editor_id is null or char_length(editor_id) < 8 or char_length(editor_id) > 96 then
+    raise exception 'Identifiant propriétaire invalide';
+  end if;
+
+  next_comment := btrim(coalesce(next_comment, ''));
+  if char_length(next_comment) < 3 or char_length(next_comment) > 240 then
+    raise exception 'Note invalide';
+  end if;
+
+  if not exists (select 1 from public.categories where id = next_category_id and active = true) then
+    raise exception 'Catégorie invalide';
+  end if;
+
+  update public.nominations
+  set
+    comment = next_comment,
+    category_id = next_category_id
+  where id = target_nomination_id
+    and submitted_by = editor_id
+  returning * into updated_nomination;
+
+  if updated_nomination.id is null then
+    raise exception 'Modification verrouillée';
+  end if;
+
+  return updated_nomination;
+end;
+$$;
+
+create or replace function public.delete_own_nomination(
+  target_nomination_id uuid,
+  editor_id text
+)
+returns boolean
+language plpgsql
+security definer
+set search_path = public
+as $$
+declare
+  deleted_id uuid;
+begin
+  if editor_id is null or char_length(editor_id) < 8 or char_length(editor_id) > 96 then
+    raise exception 'Identifiant propriétaire invalide';
+  end if;
+
+  delete from public.nominations
+  where id = target_nomination_id
+    and submitted_by = editor_id
+  returning id into deleted_id;
+
+  if deleted_id is null then
+    raise exception 'Retrait verrouillé';
+  end if;
+
+  return true;
+end;
+$$;
+
+grant execute on function public.update_own_nomination(uuid, text, text, text) to anon;
+grant execute on function public.delete_own_nomination(uuid, text) to anon;
+
 alter table public.rooms enable row level security;
 alter table public.categories enable row level security;
 alter table public.nominations enable row level security;
@@ -206,5 +282,9 @@ create policy "NOD nominations read" on public.nominations
 for select to anon using (true);
 
 drop policy if exists "NOD nominations write" on public.nominations;
-create policy "NOD nominations write" on public.nominations
-for all to anon using (true) with check (true);
+drop policy if exists "NOD nominations insert" on public.nominations;
+create policy "NOD nominations insert" on public.nominations
+for insert to anon with check (true);
+
+drop policy if exists "NOD nominations update" on public.nominations;
+drop policy if exists "NOD nominations delete" on public.nominations;
