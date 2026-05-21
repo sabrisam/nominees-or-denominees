@@ -54,7 +54,7 @@ create table if not exists public.ratings (
   voter_id text not null check (char_length(voter_id) between 8 and 96),
   rating_stars integer check (rating_stars between 0 and 5),
   rating_score numeric(4,2) not null default 0 check (rating_score between 0 and 5),
-  rating_points integer not null default 0 check (rating_points between 0 and 25),
+  rating_points integer not null default 0 check (rating_points between 0 and 100),
   rire_score integer not null default 0 check (rire_score between 0 and 5),
   surprise_score integer not null default 0 check (surprise_score between 0 and 5),
   gene_score integer not null default 0 check (gene_score between 0 and 5),
@@ -119,7 +119,7 @@ alter table public.ratings add column if not exists created_at timestamptz not n
 alter table public.ratings drop constraint if exists ratings_rating_score_check;
 alter table public.ratings add constraint ratings_rating_score_check check (rating_score between 0 and 5);
 alter table public.ratings drop constraint if exists ratings_rating_points_check;
-alter table public.ratings add constraint ratings_rating_points_check check (rating_points between 0 and 25);
+alter table public.ratings add constraint ratings_rating_points_check check (rating_points between 0 and 100);
 alter table public.ratings drop constraint if exists ratings_rire_score_check;
 alter table public.ratings add constraint ratings_rire_score_check check (rire_score between 0 and 5);
 alter table public.ratings drop constraint if exists ratings_surprise_score_check;
@@ -159,11 +159,57 @@ set
   fierte_score = case when fierte_score = 0 and coalesce(rating_stars, 0) > 0 then rating_stars else fierte_score end,
   interet_score = case when interet_score = 0 and coalesce(rating_stars, 0) > 0 then rating_stars else interet_score end;
 
-update public.ratings
+create or replace function public.compute_rating_points_for_category(
+  target_category_id text,
+  rire integer,
+  surprise integer,
+  gene integer,
+  fierte integer,
+  interet integer
+)
+returns integer
+language plpgsql
+immutable
+as $$
+declare
+  r numeric := least(5, greatest(0, coalesce(rire, 0)));
+  s numeric := least(5, greatest(0, coalesce(surprise, 0)));
+  g numeric := least(5, greatest(0, coalesce(gene, 0)));
+  f numeric := least(5, greatest(0, coalesce(fierte, 0)));
+  i numeric := least(5, greatest(0, coalesce(interet, 0)));
+  weighted numeric;
+begin
+  weighted := case coalesce(target_category_id, 'le_zin_du_mois')
+    when 'le_zin_du_mois' then (r * 0.18) + (s * 0.18) + ((5 - g) * 0.12) + (f * 0.32) + (i * 0.20)
+    when 'fierte_des_notres' then (r * 0.10) + (s * 0.14) + ((5 - g) * 0.22) + (f * 0.34) + (i * 0.20)
+    when 'xptdr' then (r * 0.46) + (s * 0.20) + ((5 - g) * 0.18) + (f * 0.04) + (i * 0.12)
+    when 'roue_libre' then (r * 0.30) + (s * 0.34) + (g * 0.14) + (f * 0.04) + (i * 0.18)
+    when 'honte_de_la_oumma' then ((5 - r) * 0.08) + (s * 0.12) + (g * 0.48) + ((5 - f) * 0.20) + (i * 0.12)
+    when 'bon_voyageur' then (r * 0.12) + (s * 0.28) + ((5 - g) * 0.10) + (f * 0.14) + (i * 0.36)
+    when 'gros_chef_bandit' then (r * 0.24) + (s * 0.18) + ((5 - g) * 0.16) + (f * 0.24) + (i * 0.18)
+    when 'surprise_totale' then (r * 0.14) + (s * 0.46) + ((5 - g) * 0.08) + (f * 0.10) + (i * 0.22)
+    when 'analyse_pure' then (r * 0.04) + (s * 0.12) + ((5 - g) * 0.18) + (f * 0.22) + (i * 0.44)
+    else (r + s + g + f + i) / 5
+  end;
+
+  return least(100, greatest(0, round(weighted * 20)::integer));
+end;
+$$;
+
+with computed as (
+  select
+    r.id,
+    public.compute_rating_points_for_category(n.category_id, r.rire_score, r.surprise_score, r.gene_score, r.fierte_score, r.interet_score) as points
+  from public.ratings r
+  join public.nominations n on n.id = r.nomination_id
+)
+update public.ratings as rating
 set
-  rating_points = rire_score + surprise_score + gene_score + fierte_score + interet_score,
-  rating_score = round(((rire_score + surprise_score + gene_score + fierte_score + interet_score)::numeric / 5), 2),
-  rating_stars = round(((rire_score + surprise_score + gene_score + fierte_score + interet_score)::numeric / 5))::integer;
+  rating_points = computed.points,
+  rating_score = round((computed.points::numeric / 20), 2),
+  rating_stars = round((computed.points::numeric / 20))::integer
+from computed
+where rating.id = computed.id;
 
 create index if not exists rooms_code_idx on public.rooms(code);
 create index if not exists categories_active_sort_idx on public.categories(active, sort_order);
@@ -265,21 +311,17 @@ set search_path = public
 as $$
 declare
   vote_count integer;
-  average_score numeric;
   next_status public.nomination_status;
 begin
-  select count(*), avg(coalesce(rating_score, rating_stars, 0))::numeric
-  into vote_count, average_score
+  select count(*)
+  into vote_count
   from public.ratings
-  where nomination_id = target_nomination_id
-    and coalesce(rating_score, rating_stars, 0) between 0 and 5;
+  where nomination_id = target_nomination_id;
 
   if coalesce(vote_count, 0) < 2 then
     next_status := 'pending';
-  elsif coalesce(average_score, 0) >= 3 then
-    next_status := 'accepted';
   else
-    next_status := 'rejected';
+    next_status := 'accepted';
   end if;
 
   update public.nominations
@@ -289,6 +331,19 @@ begin
   return next_status;
 end;
 $$;
+
+with vote_counts as (
+  select
+    n.id,
+    count(r.id) as vote_count
+  from public.nominations n
+  left join public.ratings r on r.nomination_id = n.id
+  group by n.id
+)
+update public.nominations as nomination
+set status = case when vote_counts.vote_count >= 2 then 'accepted'::public.nomination_status else 'pending'::public.nomination_status end
+from vote_counts
+where nomination.id = vote_counts.id;
 
 create or replace function public.submit_nomination_vote(
   target_nomination_id uuid,
@@ -339,7 +394,7 @@ begin
     voter_id,
     stars,
     stars,
-    stars * 5,
+    stars * 20,
     stars,
     stars,
     stars,
@@ -387,6 +442,7 @@ set search_path = public
 as $$
 declare
   updated_nomination public.nominations;
+  primary_category_id text;
   computed_points integer;
   computed_score numeric(4,2);
   computed_stars integer;
@@ -395,7 +451,12 @@ begin
     raise exception 'Identifiant de votant invalide';
   end if;
 
-  if not exists (select 1 from public.nominations where id = target_nomination_id) then
+  select category_id
+  into primary_category_id
+  from public.nominations
+  where id = target_nomination_id;
+
+  if primary_category_id is null then
     raise exception 'Dossier introuvable';
   end if;
 
@@ -408,8 +469,8 @@ begin
     raise exception 'Réaction invalide';
   end if;
 
-  computed_points := rire + surprise + gene + fierte + interet;
-  computed_score := round((computed_points::numeric / 5), 2);
+  computed_points := public.compute_rating_points_for_category(primary_category_id, rire, surprise, gene, fierte, interet);
+  computed_score := round((computed_points::numeric / 20), 2);
   computed_stars := round(computed_score)::integer;
 
   insert into public.ratings (
@@ -704,6 +765,7 @@ $$;
 
 grant execute on function public.submit_nomination_vote(uuid, text, integer, text) to anon;
 grant execute on function public.submit_nomination_vote(uuid, text, integer, integer, integer, integer, integer, text) to anon;
+grant execute on function public.compute_rating_points_for_category(text, integer, integer, integer, integer, integer) to anon;
 grant execute on function public.update_own_nomination(uuid, text, text, text, text) to anon;
 grant execute on function public.update_own_nomination(uuid, text, text, text, text, text[]) to anon;
 grant execute on function public.delete_own_nomination(uuid, text) to anon;

@@ -31,13 +31,12 @@ import type { RealtimeChannel, SupabaseClient } from "@supabase/supabase-js";
 
 type Tab = "direct" | "vote" | "studio" | "palmares" | "winners";
 type NominationStatus = "pending" | "accepted" | "rejected";
-type VerdictChoice = "propel" | "ban";
 type ToastTone = "success" | "error" | "info";
 type CategoryMood = "positive" | "critical" | "fun" | "surprise";
 type MediaKind = "video" | "image";
 type RatingDimensionKey = "rire" | "surprise" | "gene" | "fierte" | "interet";
 type DimensionScores = Record<RatingDimensionKey, number>;
-type DirectFilter = "all" | "mine" | "pending" | "accepted" | "rejected";
+type DirectFilter = "all" | "mine" | "pending" | "qualified" | "elite";
 
 type ToastState = { tone: ToastTone; message: string } | null;
 
@@ -199,6 +198,17 @@ const RATING_DIMENSIONS: Array<{ key: RatingDimensionKey; label: string; shortLa
   { key: "interet", label: "Intérêt", shortLabel: "INT", emoji: "🤔", color: "#a78bfa" }
 ];
 const DEFAULT_DIMENSION_SCORES: DimensionScores = { rire: 3, surprise: 3, gene: 1, fierte: 2, interet: 3 };
+const CATEGORY_SCORING: Record<string, { weights: DimensionScores; lowIsStrong?: Partial<Record<RatingDimensionKey, boolean>> }> = {
+  le_zin_du_mois: { weights: { rire: 0.18, surprise: 0.18, gene: 0.12, fierte: 0.32, interet: 0.2 }, lowIsStrong: { gene: true } },
+  fierte_des_notres: { weights: { rire: 0.1, surprise: 0.14, gene: 0.22, fierte: 0.34, interet: 0.2 }, lowIsStrong: { gene: true } },
+  xptdr: { weights: { rire: 0.46, surprise: 0.2, gene: 0.18, fierte: 0.04, interet: 0.12 }, lowIsStrong: { gene: true } },
+  roue_libre: { weights: { rire: 0.3, surprise: 0.34, gene: 0.14, fierte: 0.04, interet: 0.18 } },
+  honte_de_la_oumma: { weights: { rire: 0.08, surprise: 0.12, gene: 0.48, fierte: 0.2, interet: 0.12 }, lowIsStrong: { rire: true, fierte: true } },
+  bon_voyageur: { weights: { rire: 0.12, surprise: 0.28, gene: 0.1, fierte: 0.14, interet: 0.36 }, lowIsStrong: { gene: true } },
+  gros_chef_bandit: { weights: { rire: 0.24, surprise: 0.18, gene: 0.16, fierte: 0.24, interet: 0.18 }, lowIsStrong: { gene: true } },
+  surprise_totale: { weights: { rire: 0.14, surprise: 0.46, gene: 0.08, fierte: 0.1, interet: 0.22 }, lowIsStrong: { gene: true } },
+  analyse_pure: { weights: { rire: 0.04, surprise: 0.12, gene: 0.18, fierte: 0.22, interet: 0.44 }, lowIsStrong: { gene: true } }
+};
 const SCORE_PRESETS: Array<{ id: string; label: string; hint: string; scores: DimensionScores }> = [
   { id: "xptdr", label: "XPTDR", hint: "rire fort", scores: { rire: 5, surprise: 3, gene: 1, fierte: 1, interet: 3 } },
   { id: "malaise", label: "Malaise", hint: "gêne max", scores: { rire: 1, surprise: 2, gene: 5, fierte: 0, interet: 2 } },
@@ -218,8 +228,8 @@ const TAB_ORDER: Tab[] = TAB_ITEMS.map((item) => item.id);
 const DIRECT_FILTERS: Array<{ id: DirectFilter; label: string }> = [
   { id: "all", label: "Tout" },
   { id: "pending", label: "À voter" },
-  { id: "accepted", label: "Propulsés" },
-  { id: "rejected", label: "Bannis" },
+  { id: "qualified", label: "En lice" },
+  { id: "elite", label: "Top 80+" },
   { id: "mine", label: "Moi" }
 ];
 
@@ -253,13 +263,38 @@ function cloneScores(scores: DimensionScores = DEFAULT_DIMENSION_SCORES): Dimens
   };
 }
 
-function scoreAverage(scores: DimensionScores) {
-  const total = RATING_DIMENSIONS.reduce((sum, dimension) => sum + clampDimension(scores[dimension.key]), 0);
-  return Math.round((total / RATING_DIMENSIONS.length) * 100) / 100;
+function normalizedCategoryId(categoryId: string) {
+  const resolved = CATEGORY_ID_ALIASES[categoryId] ?? categoryId;
+  return CATEGORY_BY_ID[resolved] ? resolved : CATEGORIES[0].id;
 }
 
-function scoreTotal(scores: DimensionScores) {
-  return RATING_DIMENSIONS.reduce((sum, dimension) => sum + clampDimension(scores[dimension.key]), 0);
+function scoreForCategory(scores: DimensionScores, categoryId: string) {
+  const profile = CATEGORY_SCORING[normalizedCategoryId(categoryId)] ?? CATEGORY_SCORING[CATEGORIES[0].id];
+  const weighted = RATING_DIMENSIONS.reduce((sum, dimension) => {
+    const rawValue = clampDimension(scores[dimension.key]);
+    const adjustedValue = profile.lowIsStrong?.[dimension.key] ? 5 - rawValue : rawValue;
+    return sum + adjustedValue * profile.weights[dimension.key];
+  }, 0);
+
+  return Math.min(100, Math.max(0, Math.round(weighted * 20)));
+}
+
+function scoreTotal(scores: DimensionScores, categoryIds: string[] = [CATEGORIES[0].id]) {
+  const ids = normalizeCategoryIds(categoryIds, CATEGORIES[0].id);
+  const total = ids.reduce((sum, categoryId) => sum + scoreForCategory(scores, categoryId), 0);
+  return Math.round(total / ids.length);
+}
+
+function scoreAverage(scores: DimensionScores, categoryIds?: string[]) {
+  return Math.round((scoreTotal(scores, categoryIds) / 20) * 100) / 100;
+}
+
+function ratingImpactPoints(rating: Rating, categoryIds?: string[]) {
+  return scoreTotal(rating.scores, categoryIds);
+}
+
+function ratingImpactScore(rating: Rating, categoryIds?: string[]) {
+  return Math.round((ratingImpactPoints(rating, categoryIds) / 20) * 100) / 100;
 }
 
 function addScores(target: DimensionScores, source: DimensionScores) {
@@ -344,12 +379,12 @@ function primaryCategoryId(ids: string[]) {
 
 function statusFromRatings(ratings: Rating[]) {
   if (ratings.length < MIN_PUBLIC_RATINGS) return "pending" as const;
-  return averageRating(ratings) >= 3 ? ("accepted" as const) : ("rejected" as const);
+  return "accepted" as const;
 }
 
 function statusLabel(status: NominationStatus) {
-  if (status === "accepted") return "PROPULSÉ";
-  if (status === "rejected") return "BANNI";
+  if (status === "accepted") return "EN LICE";
+  if (status === "rejected") return "CLASSÉ";
   return "À VOTER";
 }
 
@@ -359,13 +394,18 @@ function statusClass(status: NominationStatus) {
   return "border-[#d4af37]/50 bg-white/5 text-[#f0d889]";
 }
 
-function averageRating(ratings: Rating[]) {
+function averageRating(ratings: Rating[], categoryIds?: string[]) {
   if (ratings.length === 0) return 0;
-  return ratings.reduce((sum, rating) => sum + rating.rating_score, 0) / ratings.length;
+  return ratings.reduce((sum, rating) => sum + ratingImpactScore(rating, categoryIds), 0) / ratings.length;
 }
 
-function totalPoints(ratings: Rating[]) {
-  return ratings.reduce((sum, rating) => sum + rating.rating_points, 0);
+function totalPoints(ratings: Rating[], categoryIds?: string[]) {
+  return ratings.reduce((sum, rating) => sum + ratingImpactPoints(rating, categoryIds), 0);
+}
+
+function averageImpact(nomination: Nomination, categoryIds = nomination.category_ids) {
+  if (nomination.ratings.length === 0) return 0;
+  return Math.round(totalPoints(nomination.ratings, categoryIds) / nomination.ratings.length);
 }
 
 function countdownToNextCeremony() {
@@ -402,7 +442,7 @@ function parseRating(row: Record<string, unknown>): Rating {
     voter_id: toText(row.voter_id),
     rating_stars: clampRating(toNumber(row.rating_stars, Math.round(computedScore))),
     rating_score: Math.min(5, Math.max(0, toNumber(row.rating_score, computedScore))),
-    rating_points: Math.min(25, Math.max(0, toNumber(row.rating_points, computedPoints))),
+    rating_points: Math.min(100, Math.max(0, toNumber(row.rating_points, computedPoints))),
     scores,
     comment: toText(row.comment),
     created_at: toText(row.created_at, new Date().toISOString())
@@ -641,18 +681,15 @@ async function uploadFileOrFallback(supabase: SupabaseClient, file: File, folder
   }
 }
 
-function verdictLabel(choice: VerdictChoice) {
-  return choice === "propel" ? "PROPULSER" : "BANNIR";
-}
-
-function voteBurst(choice: VerdictChoice) {
-  const colors = choice === "propel" ? ["#b5f42b", "#e11d48", "#000000", "#f2efe3"] : ["#e11d48", "#000000", "#b5f42b"];
+function voteBurst(points: number) {
+  const elite = points >= 80;
+  const colors = elite ? ["#d4af37", "#f0d889", "#ffffff", "#050505"] : ["#d4af37", "#8a6f24", "#f5f1e8"];
 
   void confetti({
-    particleCount: choice === "propel" ? 120 : 72,
-    spread: choice === "propel" ? 92 : 58,
-    startVelocity: choice === "propel" ? 48 : 34,
-    scalar: choice === "propel" ? 1.05 : 0.9,
+    particleCount: elite ? 118 : 72,
+    spread: elite ? 90 : 62,
+    startVelocity: elite ? 46 : 34,
+    scalar: elite ? 1 : 0.82,
     ticks: 150,
     colors,
     origin: { y: 0.72 },
@@ -666,10 +703,10 @@ function setUrl(urlSetter: (value: string | null) => void, currentUrl: string | 
 }
 
 function buildScoreBoard(nominations: Nomination[], categoryId?: string) {
-  const monthlyAccepted = nominations.filter((nomination) => nomination.status === "accepted" && isCurrentMonth(nomination.created_at) && (!categoryId || nomination.category_ids.includes(categoryId)));
+  const monthlyQualified = nominations.filter((nomination) => nomination.status !== "pending" && isCurrentMonth(nomination.created_at) && (!categoryId || nomination.category_ids.includes(categoryId)));
   const byTarget = new Map<string, ScoreBoard>();
 
-  for (const nomination of monthlyAccepted) {
+  for (const nomination of monthlyQualified) {
     const category = getCategoryMeta(categoryId ?? nomination.category_id);
     const existing = byTarget.get(nomination.tiktoker_name) ?? {
       tiktokerName: nomination.tiktoker_name,
@@ -682,10 +719,10 @@ function buildScoreBoard(nominations: Nomination[], categoryId?: string) {
 
     existing.nominations += 1;
     for (const rating of nomination.ratings) {
-      existing.points += rating.rating_points;
+      existing.points += ratingImpactPoints(rating, categoryId ? [categoryId] : nomination.category_ids);
       existing.votes += 1;
     }
-    existing.average = existing.votes > 0 ? existing.points / existing.votes / RATING_DIMENSIONS.length : 0;
+    existing.average = existing.votes > 0 ? existing.points / existing.votes / 20 : 0;
     byTarget.set(nomination.tiktoker_name, existing);
   }
 
@@ -694,8 +731,8 @@ function buildScoreBoard(nominations: Nomination[], categoryId?: string) {
 
 function bestSubmission(nominations: Nomination[]) {
   return nominations
-    .filter((nomination) => nomination.status === "accepted" && isCurrentMonth(nomination.created_at))
-    .sort((a, b) => totalPoints(b.ratings) - totalPoints(a.ratings) || averageRating(b.ratings) - averageRating(a.ratings))[0];
+    .filter((nomination) => nomination.status !== "pending" && isCurrentMonth(nomination.created_at))
+    .sort((a, b) => totalPoints(b.ratings, b.category_ids) - totalPoints(a.ratings, a.category_ids) || averageRating(b.ratings, b.category_ids) - averageRating(a.ratings, a.category_ids))[0];
 }
 
 function buildPalmaresRows(nominations: Nomination[]) {
@@ -718,7 +755,7 @@ function buildPalmaresRows(nominations: Nomination[]) {
     };
 
     current.totalDossiers += 1;
-    if (nomination.status === "accepted") current.acceptedDossiers += 1;
+    if (nomination.status !== "pending") current.acceptedDossiers += 1;
     for (const categoryId of nomination.category_ids) {
       if (FEATURED_CATEGORY_IDS.includes(categoryId as (typeof FEATURED_CATEGORY_IDS)[number])) {
         current.categoryCounts[categoryId] = (current.categoryCounts[categoryId] ?? 0) + 1;
@@ -726,13 +763,13 @@ function buildPalmaresRows(nominations: Nomination[]) {
     }
 
     for (const rating of nomination.ratings) {
-      current.points += rating.rating_points;
+      current.points += ratingImpactPoints(rating, nomination.category_ids);
       current.votes += 1;
-      addToStarDistribution(current.starDistribution, rating.rating_score);
+      addToStarDistribution(current.starDistribution, ratingImpactScore(rating, nomination.category_ids));
       addScores(current.dimensionTotals, rating.scores);
     }
 
-    current.average = current.votes > 0 ? current.points / current.votes / RATING_DIMENSIONS.length : 0;
+    current.average = current.votes > 0 ? current.points / current.votes / 20 : 0;
     current.successRate = current.totalDossiers > 0 ? Math.round((current.acceptedDossiers / current.totalDossiers) * 100) : 0;
     rows.set(nomination.tiktoker_name, current);
   }
@@ -764,18 +801,18 @@ function buildCategoryRaces(nominations: Nomination[]): CategoryRace[] {
       };
 
       current.totalDossiers += 1;
-      if (nomination.status === "accepted") current.acceptedDossiers += 1;
+      if (nomination.status !== "pending") current.acceptedDossiers += 1;
       if (nomination.status === "pending") current.pendingDossiers += 1;
       if (nomination.status === "rejected") current.rejectedDossiers += 1;
 
       for (const rating of nomination.ratings) {
-        current.points += rating.rating_points;
+        current.points += ratingImpactPoints(rating, [category.id]);
         current.votes += 1;
-        addToStarDistribution(current.starDistribution, rating.rating_score);
+        addToStarDistribution(current.starDistribution, ratingImpactScore(rating, [category.id]));
         addScores(current.dimensionTotals, rating.scores);
       }
 
-      current.average = current.votes > 0 ? current.points / current.votes / RATING_DIMENSIONS.length : 0;
+      current.average = current.votes > 0 ? current.points / current.votes / 20 : 0;
       current.successRate = current.totalDossiers > 0 ? Math.round((current.acceptedDossiers / current.totalDossiers) * 100) : 0;
       rows.set(nomination.tiktoker_name, current);
     }
@@ -1062,7 +1099,8 @@ function NominationTile({
 }) {
   const category = getCategoryMeta(nomination.category_id);
   const Icon = category.icon;
-  const rating = averageRating(nomination.ratings);
+  const rating = averageRating(nomination.ratings, nomination.category_ids);
+  const impact = averageImpact(nomination);
   const categories = categorySummary(nomination.category_ids);
 
   return (
@@ -1070,7 +1108,7 @@ function NominationTile({
       <div className="media-cut relative aspect-[4/3] border-b border-[#d4af37]/20">
         <MediaFrame nomination={nomination} height="h-full" controls={false} />
         <OwnershipBadge owned={owned} className="absolute left-2 top-2" />
-        <Sticker tone={nomination.status === "rejected" ? "red" : "yellow"} className="absolute bottom-2 right-2">
+        <Sticker tone={nomination.status === "pending" ? "yellow" : "paper"} className="absolute bottom-2 right-2">
           {statusLabel(nomination.status)}
         </Sticker>
       </div>
@@ -1078,7 +1116,7 @@ function NominationTile({
         <p className="tabloid-headline text-[clamp(0.96rem,4.8vw,1.32rem)] leading-[0.86] text-white">{nomination.tiktoker_name}</p>
         <p className="mt-0.5 line-clamp-2 text-[9px] font-medium leading-tight text-zinc-300">&quot;{nomination.comment || "Dossier à juger"}&quot;</p>
         <p className="mt-1 flex min-w-0 items-center gap-1 truncate text-[7px] font-black uppercase tracking-[0.05em] leading-none text-[#d4af37]">
-          <Icon className="h-2.5 w-2.5 shrink-0" /> {categories} / {nomination.ratings.length} notes / {rating ? rating.toFixed(1) : "-"} sur 5
+          <Icon className="h-2.5 w-2.5 shrink-0" /> {categories} / {nomination.ratings.length} notes / {impact || "-"} indice / {rating ? rating.toFixed(1) : "-"}★
         </p>
         {owned && (
           <div className="mt-1 grid grid-cols-2 gap-1">
@@ -1124,7 +1162,7 @@ function PalmaresList({ rows }: { rows: PalmaresRow[] }) {
             <div className="min-w-0">
               <p className="truncate text-xs font-black leading-none tracking-tighter text-white">@{row.tiktokerName}</p>
               <p className="mt-0.5 truncate text-[9px] font-semibold uppercase leading-none tracking-tighter text-zinc-500">
-                {row.acceptedDossiers}/{row.totalDossiers} validés · {row.votes} notes · {row.average ? row.average.toFixed(1) : "-"}★
+                {row.acceptedDossiers}/{row.totalDossiers} en lice · {row.votes} notes · {row.average ? row.average.toFixed(1) : "-"}★
               </p>
             </div>
             <span className="gold-pill shrink-0">{row.points} pts</span>
@@ -1182,7 +1220,7 @@ function CategoryRaceBoard({ races }: { races: CategoryRace[] }) {
                       <div className="min-w-0">
                         <p className="truncate text-xs font-black leading-none tracking-tighter text-white">@{row.tiktokerName}</p>
                         <p className="mt-0.5 truncate text-[9px] font-semibold uppercase leading-none tracking-tighter text-zinc-500">
-                          {row.acceptedDossiers}/{row.totalDossiers} validés · {row.votes} notes · {row.average ? row.average.toFixed(1) : "-"}★
+                          {row.acceptedDossiers}/{row.totalDossiers} en lice · {row.votes} notes · {row.average ? row.average.toFixed(1) : "-"}★
                         </p>
                       </div>
                       <span className="gold-pill shrink-0">{row.points} pts</span>
@@ -1443,14 +1481,17 @@ export default function Home() {
     return nominations.filter((nomination) => nomination.status === "pending" && !nomination.ratings.some((rating) => rating.voter_id === participant.id));
   }, [nominations, participant]);
 
-  const accepted = useMemo(() => nominations.filter((nomination) => nomination.status === "accepted"), [nominations]);
-  const rejected = useMemo(() => nominations.filter((nomination) => nomination.status === "rejected"), [nominations]);
+  const qualified = useMemo(() => nominations.filter((nomination) => nomination.status !== "pending"), [nominations]);
+  const eliteDossiers = useMemo(() => qualified.filter((nomination) => averageImpact(nomination) >= 80), [qualified]);
   const feedItems = useMemo(() => {
     return nominations
       .filter((nomination) => {
         if (directFilter === "mine") return Boolean(participant && nomination.submitted_by === participant.id);
         if (directFilter === "all") return true;
-        return nomination.status === directFilter;
+        if (directFilter === "pending") return nomination.status === "pending";
+        if (directFilter === "qualified") return nomination.status !== "pending";
+        if (directFilter === "elite") return nomination.status !== "pending" && averageImpact(nomination) >= 80;
+        return true;
       })
       .slice(0, 10);
   }, [directFilter, nominations, participant]);
@@ -1458,11 +1499,11 @@ export default function Home() {
     () => ({
       all: nominations.length,
       pending: nominations.filter((nomination) => nomination.status === "pending").length,
-      accepted: accepted.length,
-      rejected: rejected.length,
+      qualified: qualified.length,
+      elite: eliteDossiers.length,
       mine: participant ? nominations.filter((nomination) => nomination.submitted_by === participant.id).length : 0
     }),
-    [accepted.length, nominations, participant, rejected.length]
+    [eliteDossiers.length, nominations, participant, qualified.length]
   );
   const monthlyNominations = useMemo(() => nominations.filter((nomination) => isCurrentMonth(nomination.created_at)), [nominations]);
   const ultimateWinner = useMemo(() => buildScoreBoard(nominations)[0] ?? null, [nominations]);
@@ -1807,10 +1848,10 @@ export default function Home() {
     }
 
     const draftScores = cloneScores(scoreDraftById[id] ?? DEFAULT_DIMENSION_SCORES);
-    const averageScore = scoreAverage(draftScores);
-    const choice: VerdictChoice = averageScore >= 3 ? "propel" : "ban";
+    const impactPoints = scoreTotal(draftScores, nomination.category_ids);
+    const averageScore = scoreAverage(draftScores, nomination.category_ids);
 
-    haptic(choice === "propel" ? HAPTICS.success : HAPTICS.remove);
+    haptic(impactPoints >= 80 ? HAPTICS.success : HAPTICS.option);
     setVoteBusyId(id);
     setShakeId(id);
     window.setTimeout(() => setShakeId(null), 520);
@@ -1850,8 +1891,8 @@ export default function Home() {
         return copy;
       });
 
-      voteBurst(choice);
-      showToast("success", `${verdictLabel(choice)} enregistré.`);
+      voteBurst(impactPoints);
+      showToast("success", `Note enregistrée · ${impactPoints}/100.`);
       await channelRef.current?.send({ type: "broadcast", event: "rating", payload: { id } });
       void fetchNominations(true);
     } catch (err) {
@@ -1928,12 +1969,12 @@ export default function Home() {
             <p className="tabloid-headline text-[clamp(1.35rem,7.2vw,2.1rem)] leading-none">{pendingForMe.length}</p>
           </BrutalCard>
           <BrutalCard tone="red" className="p-1.5">
-            <p className="text-[8px] font-black uppercase tracking-[0.1em] leading-none text-[#d4af37]">Propulsés</p>
-            <p className="tabloid-headline text-[clamp(1.35rem,7.2vw,2.1rem)] leading-none">{accepted.length}</p>
+            <p className="text-[8px] font-black uppercase tracking-[0.1em] leading-none text-[#d4af37]">En lice</p>
+            <p className="tabloid-headline text-[clamp(1.35rem,7.2vw,2.1rem)] leading-none">{qualified.length}</p>
           </BrutalCard>
           <BrutalCard tone="black" className="p-1.5">
-            <p className="text-[8px] font-black uppercase tracking-[0.1em] leading-none text-zinc-500">Bannis</p>
-            <p className="tabloid-headline text-[clamp(1.35rem,7.2vw,2.1rem)] leading-none">{rejected.length}</p>
+            <p className="text-[8px] font-black uppercase tracking-[0.1em] leading-none text-zinc-500">Top 80+</p>
+            <p className="tabloid-headline text-[clamp(1.35rem,7.2vw,2.1rem)] leading-none">{eliteDossiers.length}</p>
           </BrutalCard>
         </section>
 
@@ -2030,7 +2071,7 @@ export default function Home() {
                         <DimensionScoreGrid value={draftScores} onChange={(value) => setScoreDraftById((prev) => ({ ...prev, [nomination.id]: value }))} compact />
                         <textarea aria-label="Ta réaction sur ce dossier" value={reviewDraftById[nomination.id] ?? ""} onFocus={() => haptic(HAPTICS.tap)} onChange={(event) => setReviewDraftById((prev) => ({ ...prev, [nomination.id]: event.target.value }))} placeholder="Ta réaction sur ce dossier ?" rows={2} maxLength={180} className="brutal-input w-full resize-none p-2 text-xs font-black uppercase" />
                         <motion.button whileTap={TAP_REBOUND} transition={TAP_TRANSITION} onClick={() => void applyRating(nomination.id)} disabled={voteBusyId === nomination.id} className="brutal-action w-full bg-[#d4af37] text-black disabled:opacity-50">
-                          Valider le jugement · {scoreTotal(draftScores)} pts
+                          Enregistrer la note · {scoreTotal(draftScores, nomination.category_ids)}/100
                         </motion.button>
                       </div>
                     </motion.article>
@@ -2132,7 +2173,7 @@ export default function Home() {
                 <BrutalCard tone="yellow" className="p-2">
                   <ScorePresetRail value={initialScores} onSelect={setInitialScores} label="Profils rapides du score initial" />
                   <DimensionScoreGrid value={initialScores} onChange={setInitialScores} />
-                  <p className="mt-2 border-t border-[#d4af37]/20 pt-2 text-center text-[10px] font-black uppercase tracking-[0.12em] text-[#d4af37]">Score initial : {scoreTotal(initialScores)} / 25</p>
+                  <p className="mt-2 border-t border-[#d4af37]/20 pt-2 text-center text-[10px] font-black uppercase tracking-[0.12em] text-[#d4af37]">Indice initial : {scoreTotal(initialScores, cleanCategoryIds)} / 100</p>
                 </BrutalCard>
               )}
 
