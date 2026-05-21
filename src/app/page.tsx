@@ -26,7 +26,7 @@ import {
   Zap
 } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
-import type { RealtimeChannel } from "@supabase/supabase-js";
+import type { RealtimeChannel, SupabaseClient } from "@supabase/supabase-js";
 
 type Tab = "direct" | "vote" | "studio" | "trophees" | "bannis";
 type NominationStatus = "pending" | "accepted" | "rejected";
@@ -84,7 +84,7 @@ type SpacesUploadResult = {
 type UploadReference = {
   key: string;
   publicUrl: string;
-  fallback: boolean;
+  provider: "spaces" | "supabase";
 };
 
 type ScoreBoard = {
@@ -107,17 +107,29 @@ const DIRECT_TITLE = "DIRECT";
 const VOTE_TITLE = "À VOTER";
 const STUDIO_TITLE = "STUDIO";
 const TROPHY_TITLE = "GRANDE CÉRÉMONIE";
-const BANNIS_TITLE = "LA HONTE DE LA OUMMA";
-const SIMULATION_NOTICE = "MODE SIMULATION : stockage en cours d'activation.";
-const FALLBACK_VIDEO_URL = "https://interactive-examples.mdn.mozilla.net/media/cc0-videos/flower.mp4";
+const BANNIS_TITLE = "LES DOSSIERS BANNIS";
+const SUPABASE_STORAGE_BUCKET = process.env.NEXT_PUBLIC_SUPABASE_STORAGE_BUCKET || "nod-media";
+const SUPABASE_STORAGE_NOTICE = "Stockage de secours Supabase activé.";
+const STORAGE_UNAVAILABLE_NOTICE = "Stockage indisponible : vérifie Supabase Storage ou Spaces.";
+const LEGACY_FLOWER_VIDEO_URL = "https://interactive-examples.mdn.mozilla.net/media/cc0-videos/flower.mp4";
 const FALLBACK_IMAGE_URL =
   "data:image/svg+xml;charset=utf-8,%3Csvg%20xmlns='http://www.w3.org/2000/svg'%20width='1080'%20height='1440'%20viewBox='0%200%201080%201440'%3E%3Crect%20width='1080'%20height='1440'%20fill='%23000000'/%3E%3Crect%20x='64'%20y='64'%20width='952'%20height='1312'%20fill='%23f2efe3'%20stroke='%23000000'%20stroke-width='24'/%3E%3Crect%20x='112'%20y='112'%20width='856'%20height='240'%20fill='%23e11d48'/%3E%3Ctext%20x='540'%20y='248'%20text-anchor='middle'%20font-family='Impact,%20sans-serif'%20font-size='118'%20fill='%23ffffff'%3ENOD%3C/text%3E%3Ctext%20x='540'%20y='690'%20text-anchor='middle'%20font-family='Impact,%20sans-serif'%20font-size='104'%20fill='%23000000'%3EDOSSIER%3C/text%3E%3Ctext%20x='540'%20y='810'%20text-anchor='middle'%20font-family='Impact,%20sans-serif'%20font-size='104'%20fill='%23000000'%3EEN%20DIRECT%3C/text%3E%3Crect%20x='248'%20y='936'%20width='584'%20height='132'%20fill='%23b5f42b'%20stroke='%23000000'%20stroke-width='18'/%3E%3Ctext%20x='540'%20y='1028'%20text-anchor='middle'%20font-family='Impact,%20sans-serif'%20font-size='64'%20fill='%23000000'%3EA%20VOTER%3C/text%3E%3C/svg%3E";
-const TAP_REBOUND = { scale: 0.96, rotate: -0.5 };
-const TAP_TRANSITION = { type: "spring", stiffness: 620, damping: 24 } as const;
+const TAP_REBOUND = { scale: 0.94, rotate: -0.7 };
+const TAP_TRANSITION = { type: "spring", stiffness: 760, damping: 20, mass: 0.6 } as const;
 
 const CATEGORIES: CategoryMeta[] = [
+  { id: "le_zin_du_mois", label: "Le Zin du mois", mood: "positive", icon: Crown },
   { id: "fierte_des_notres", label: "La Fierté des Nôtres", mood: "positive", icon: BadgeCheck },
+  { id: "xptdr", label: "Xptdr", mood: "fun", icon: Sparkles },
   { id: "roue_libre", label: "Roue Libre", mood: "fun", icon: Flame },
+  { id: "trop_genant", label: "Trop gênant", mood: "critical", icon: ShieldAlert },
+  { id: "masterclass", label: "Masterclass", mood: "positive", icon: Trophy },
+  { id: "derape_sec", label: "Dérape sec", mood: "critical", icon: Zap },
+  { id: "dossier_lourd", label: "Dossier lourd", mood: "surprise", icon: Camera },
+  { id: "mythomane", label: "Mythomane", mood: "critical", icon: ShieldAlert },
+  { id: "frappe_chirurgicale", label: "Frappe chirurgicale", mood: "positive", icon: BadgeCheck },
+  { id: "silence_assourdissant", label: "Silence assourdissant", mood: "critical", icon: Clock3 },
+  { id: "performance_surprise", label: "Performance surprise", mood: "surprise", icon: Sparkles },
   { id: "honte_absolue", label: "Honte Absolue", mood: "critical", icon: ShieldAlert },
   { id: "surprise_totale", label: "Surprise Totale", mood: "surprise", icon: Sparkles }
 ];
@@ -157,7 +169,11 @@ function clampRating(value: number) {
 
 function haptic(pattern: number | number[]) {
   if (typeof navigator === "undefined" || !("vibrate" in navigator)) return;
-  navigator.vibrate(pattern);
+  try {
+    navigator.vibrate(pattern);
+  } catch {
+    // iOS Safari ignore souvent cette API; les ressorts visuels gardent le retour tactile.
+  }
 }
 
 function makeSessionId() {
@@ -379,6 +395,32 @@ async function extractVideoThumbnail(file: File) {
   }
 }
 
+function sanitizeStorageFileName(value: string) {
+  const cleaned = value
+    .normalize("NFKD")
+    .replace(/[^\w.-]+/g, "-")
+    .replace(/-+/g, "-")
+    .replace(/^-|-$/g, "")
+    .toLowerCase()
+    .slice(0, 90);
+
+  return cleaned || "media";
+}
+
+function mediaMonthKey(date = new Date()) {
+  const year = date.getUTCFullYear();
+  const month = String(date.getUTCMonth() + 1).padStart(2, "0");
+  return `${year}-${month}`;
+}
+
+function storageKey(file: File, folder: "videos" | "miniatures") {
+  return `${folder}/${mediaMonthKey()}/${crypto.randomUUID()}-${sanitizeStorageFileName(file.name)}`;
+}
+
+function isLegacyDemoMedia(url: string) {
+  return url.includes(LEGACY_FLOWER_VIDEO_URL);
+}
+
 async function uploadFileToSpaces(file: File, folder: "videos" | "miniatures") {
   try {
     const signResponse = await fetch("/api/spaces/presign", {
@@ -393,7 +435,7 @@ async function uploadFileToSpaces(file: File, folder: "videos" | "miniatures") {
 
     const payload = (await signResponse.json()) as Partial<SpacesUploadResult> & { error?: string };
     if (!signResponse.ok || !payload.uploadUrl || !payload.publicUrl || !payload.key) {
-      throw new Error(SIMULATION_NOTICE);
+      throw new Error(STORAGE_UNAVAILABLE_NOTICE);
     }
 
     const uploadResponse = await fetch(payload.uploadUrl, {
@@ -402,25 +444,50 @@ async function uploadFileToSpaces(file: File, folder: "videos" | "miniatures") {
       body: file
     });
 
-    if (!uploadResponse.ok) throw new Error(SIMULATION_NOTICE);
+    if (!uploadResponse.ok) throw new Error(STORAGE_UNAVAILABLE_NOTICE);
 
     return {
       key: payload.key,
       publicUrl: payload.publicUrl
     };
   } catch {
-    throw new Error(SIMULATION_NOTICE);
+    throw new Error(STORAGE_UNAVAILABLE_NOTICE);
   }
 }
 
-async function uploadFileOrFallback(file: File, folder: "videos" | "miniatures"): Promise<UploadReference> {
+async function uploadFileToSupabaseStorage(supabase: SupabaseClient, file: File, folder: "videos" | "miniatures") {
+  const key = storageKey(file, folder);
+  const { error } = await supabase.storage.from(SUPABASE_STORAGE_BUCKET).upload(key, file, {
+    cacheControl: "31536000",
+    contentType: file.type || "application/octet-stream",
+    upsert: false
+  });
+
+  if (error) throw error;
+
+  const {
+    data: { publicUrl }
+  } = supabase.storage.from(SUPABASE_STORAGE_BUCKET).getPublicUrl(key);
+
+  if (!publicUrl) throw new Error(STORAGE_UNAVAILABLE_NOTICE);
+
+  return {
+    key,
+    publicUrl
+  };
+}
+
+async function uploadFileOrFallback(supabase: SupabaseClient, file: File, folder: "videos" | "miniatures"): Promise<UploadReference> {
   try {
     const uploaded = await uploadFileToSpaces(file, folder);
-    return { ...uploaded, fallback: false };
+    return { ...uploaded, provider: "spaces" };
   } catch {
-    return folder === "videos"
-      ? { key: "simulation/fallback-video.mp4", publicUrl: FALLBACK_VIDEO_URL, fallback: true }
-      : { key: "simulation/fallback-image.svg", publicUrl: FALLBACK_IMAGE_URL, fallback: true };
+    try {
+      const uploaded = await uploadFileToSupabaseStorage(supabase, file, folder);
+      return { ...uploaded, provider: "supabase" };
+    } catch {
+      throw new Error(STORAGE_UNAVAILABLE_NOTICE);
+    }
   }
 }
 
@@ -556,7 +623,10 @@ function StarInput({
             transition={TAP_TRANSITION}
             onMouseEnter={() => !readonly && setHover(star)}
             onMouseLeave={() => !readonly && setHover(0)}
-            onClick={() => onChange?.(star)}
+            onClick={() => {
+              haptic(star >= 4 ? [12, 24, 12] : 12);
+              onChange?.(star);
+            }}
             className={`flex aspect-square items-center justify-center border-4 border-black transition active:translate-x-0.5 active:translate-y-0.5 disabled:cursor-default ${
               active ? "bg-[#b5f42b] text-black" : "bg-[#f2efe3] text-zinc-500"
             }`}
@@ -587,12 +657,12 @@ function MediaFrame({
     setEngaged(false);
   }, [nomination.media_url, nomination.thumbnail_url]);
 
-  if (mediaFailed) {
+  if (mediaFailed || isLegacyDemoMedia(nomination.media_url)) {
     return (
       <div className={`${height} relative flex w-full items-center justify-center bg-black`}>
         {nomination.thumbnail_url ? <img src={nomination.thumbnail_url} alt="" className="absolute inset-0 h-full w-full object-cover opacity-55" /> : null}
         <div className="relative z-10 mx-3 border-4 border-black bg-[#b5f42b] px-2 py-1 text-center text-[11px] font-black uppercase leading-none text-black">
-          Connexion au serveur de stockage en cours...
+          Rec à renvoyer depuis le Studio
         </div>
       </div>
     );
@@ -1135,10 +1205,10 @@ export default function Home() {
       const activeRoomId = roomId ?? (await ensureRoom());
       if (!activeRoomId) throw new Error("Salon introuvable.");
 
-      const thumbnailUpload = await uploadFileOrFallback(thumbnailFile, "miniatures");
+      const thumbnailUpload = await uploadFileOrFallback(supabase, thumbnailFile, "miniatures");
       setMediaProgress(mediaKind === "video" ? 0.45 : 0.82);
 
-      const mediaUpload = mediaKind === "video" ? await uploadFileOrFallback(preparedFile, "videos") : thumbnailUpload;
+      const mediaUpload = mediaKind === "video" ? await uploadFileOrFallback(supabase, preparedFile, "videos") : thumbnailUpload;
       setMediaProgress(0.82);
 
       const { data: insertedNomination, error: insertError } = await supabase
@@ -1174,7 +1244,7 @@ export default function Home() {
 
       setMediaProgress(1);
       haptic(initialRating >= 3 ? [20, 30, 20] : [25, 60]);
-      setStudioNotice(thumbnailUpload.fallback || mediaUpload.fallback ? SIMULATION_NOTICE : null);
+      setStudioNotice(thumbnailUpload.provider === "supabase" || mediaUpload.provider === "supabase" ? SUPABASE_STORAGE_NOTICE : null);
       showToast("success", "Dossier lancé dans le club.");
       resetStudioDraft();
       switchTab("direct");

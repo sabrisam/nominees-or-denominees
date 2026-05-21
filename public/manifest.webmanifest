@@ -1,10 +1,31 @@
 {
   "name": "Nominees or Denominees",
   "short_name": "NOD",
-  "description": "Flux culturel collectif et verdicts du mois.",
+  "description": "Le club des recs et trophées du mois.",
   "start_url": "/",
+  "scope": "/",
   "display": "standalone",
-  "background_color": "#f0f0f0",
-  "theme_color": "#dc2626",
-  "orientation": "portrait"
+  "background_color": "#1a1a1a",
+  "theme_color": "#e11d48",
+  "orientation": "portrait",
+  "icons": [
+    {
+      "src": "/icon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any"
+    },
+    {
+      "src": "/icon-192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "/icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any maskable"
+    }
+  ]
 }

@@ -152,7 +152,6 @@ with archived_categories as (
     id,
     1000 + row_number() over (order by sort_order, id) as archived_sort_order
   from public.categories
-  where id not in ('fierte_des_notres', 'roue_libre', 'honte_absolue', 'surprise_totale')
 )
 update public.categories as category
 set
@@ -162,10 +161,20 @@ from archived_categories
 where category.id = archived_categories.id;
 
 insert into public.categories (id, label, mood, sort_order) values
-  ('fierte_des_notres', 'La Fierté des Nôtres', 'positive', 1),
-  ('roue_libre', 'Roue Libre', 'fun', 2),
-  ('honte_absolue', 'Honte Absolue', 'critical', 3),
-  ('surprise_totale', 'Surprise Totale', 'surprise', 4)
+  ('le_zin_du_mois', 'Le Zin du mois', 'positive', 1),
+  ('fierte_des_notres', 'La Fierté des Nôtres', 'positive', 2),
+  ('xptdr', 'Xptdr', 'fun', 3),
+  ('roue_libre', 'Roue Libre', 'fun', 4),
+  ('trop_genant', 'Trop gênant', 'critical', 5),
+  ('masterclass', 'Masterclass', 'positive', 6),
+  ('derape_sec', 'Dérape sec', 'critical', 7),
+  ('dossier_lourd', 'Dossier lourd', 'surprise', 8),
+  ('mythomane', 'Mythomane', 'critical', 9),
+  ('frappe_chirurgicale', 'Frappe chirurgicale', 'positive', 10),
+  ('silence_assourdissant', 'Silence assourdissant', 'critical', 11),
+  ('performance_surprise', 'Performance surprise', 'surprise', 12),
+  ('honte_absolue', 'Honte Absolue', 'critical', 13),
+  ('surprise_totale', 'Surprise Totale', 'surprise', 14)
 on conflict (id) do update set
   label = excluded.label,
   mood = excluded.mood,
@@ -174,7 +183,22 @@ on conflict (id) do update set
 
 update public.categories
 set active = false
-where id not in ('fierte_des_notres', 'roue_libre', 'honte_absolue', 'surprise_totale');
+where id not in (
+  'le_zin_du_mois',
+  'fierte_des_notres',
+  'xptdr',
+  'roue_libre',
+  'trop_genant',
+  'masterclass',
+  'derape_sec',
+  'dossier_lourd',
+  'mythomane',
+  'frappe_chirurgicale',
+  'silence_assourdissant',
+  'performance_surprise',
+  'honte_absolue',
+  'surprise_totale'
+);
 
 create or replace function public.recalculate_nomination_status(target_nomination_id uuid)
 returns public.nomination_status
@@ -433,6 +457,13 @@ grant execute on function public.delete_own_nomination(uuid, text) to anon;
 grant execute on function public.build_monthly_ceremony(date) to anon;
 grant execute on function public.freeze_monthly_ceremony(date) to anon;
 
+insert into storage.buckets (id, name, public, file_size_limit, allowed_mime_types)
+values ('nod-media', 'nod-media', true, null, null)
+on conflict (id) do update set
+  public = true,
+  file_size_limit = null,
+  allowed_mime_types = null;
+
 alter table public.rooms enable row level security;
 alter table public.categories enable row level security;
 alter table public.nominations enable row level security;
@@ -473,6 +504,25 @@ drop policy if exists "NOD ratings delete" on public.ratings;
 drop policy if exists "NOD ceremonies read" on public.monthly_ceremonies;
 create policy "NOD ceremonies read" on public.monthly_ceremonies
 for select to anon using (true);
+
+drop policy if exists "NOD media public read" on storage.objects;
+create policy "NOD media public read" on storage.objects
+for select to anon using (bucket_id = 'nod-media');
+
+drop policy if exists "NOD media upload" on storage.objects;
+create policy "NOD media upload" on storage.objects
+for insert to anon with check (
+  bucket_id = 'nod-media'
+  and (storage.foldername(name))[1] in ('videos', 'miniatures')
+);
+
+drop policy if exists "NOD media update" on storage.objects;
+create policy "NOD media update" on storage.objects
+for update to anon using (bucket_id = 'nod-media') with check (bucket_id = 'nod-media');
+
+drop policy if exists "NOD media delete" on storage.objects;
+create policy "NOD media delete" on storage.objects
+for delete to anon using (bucket_id = 'nod-media');
 
 do $$ begin
   alter publication supabase_realtime add table public.nominations;
