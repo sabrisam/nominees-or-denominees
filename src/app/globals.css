@@ -124,6 +124,16 @@ video {
     line-height: 0.84;
   }
 
+  .rank-number {
+    display: inline-block;
+    font-family: Impact, "Arial Narrow", "Avenir Next Condensed", "SF Pro Condensed", sans-serif;
+    font-weight: 900;
+    letter-spacing: -0.08em;
+    text-transform: uppercase;
+    transform: scaleX(0.78);
+    transform-origin: left center;
+  }
+
   .paper-tear {
     height: 1px;
     margin-block: 0.55rem;

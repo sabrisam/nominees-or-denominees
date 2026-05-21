@@ -96,6 +96,8 @@ type ScoreBoard = {
   nominations: number;
 };
 
+type StarDistribution = [number, number, number, number, number];
+
 type PalmaresRow = {
   tiktokerName: string;
   avatarUrl: string;
@@ -106,6 +108,7 @@ type PalmaresRow = {
   acceptedDossiers: number;
   successRate: number;
   categoryCounts: Record<string, number>;
+  starDistribution: StarDistribution;
 };
 
 type CategoryRaceRow = {
@@ -119,6 +122,7 @@ type CategoryRaceRow = {
   pendingDossiers: number;
   rejectedDossiers: number;
   successRate: number;
+  starDistribution: StarDistribution;
 };
 
 type CategoryRace = {
@@ -187,6 +191,18 @@ function normalizeStatus(value: unknown): NominationStatus {
 
 function clampRating(value: number) {
   return Math.min(5, Math.max(1, Math.round(value)));
+}
+
+function createStarDistribution(): StarDistribution {
+  return [0, 0, 0, 0, 0];
+}
+
+function addToStarDistribution(distribution: StarDistribution, value: number) {
+  distribution[clampRating(value) - 1] += 1;
+}
+
+function maxStarDistribution(distribution: StarDistribution) {
+  return Math.max(1, ...distribution);
 }
 
 function haptic(pattern: number | number[]) {
@@ -584,7 +600,8 @@ function buildPalmaresRows(nominations: Nomination[]) {
       totalDossiers: 0,
       acceptedDossiers: 0,
       successRate: 0,
-      categoryCounts: Object.fromEntries(FEATURED_CATEGORY_IDS.map((id) => [id, 0])) as Record<string, number>
+      categoryCounts: Object.fromEntries(FEATURED_CATEGORY_IDS.map((id) => [id, 0])) as Record<string, number>,
+      starDistribution: createStarDistribution()
     };
 
     current.totalDossiers += 1;
@@ -596,6 +613,7 @@ function buildPalmaresRows(nominations: Nomination[]) {
     for (const rating of nomination.ratings) {
       current.points += rating.rating_stars;
       current.votes += 1;
+      addToStarDistribution(current.starDistribution, rating.rating_stars);
     }
 
     current.average = current.votes > 0 ? current.points / current.votes : 0;
@@ -624,7 +642,8 @@ function buildCategoryRaces(nominations: Nomination[]): CategoryRace[] {
         acceptedDossiers: 0,
         pendingDossiers: 0,
         rejectedDossiers: 0,
-        successRate: 0
+        successRate: 0,
+        starDistribution: createStarDistribution()
       };
 
       current.totalDossiers += 1;
@@ -635,6 +654,7 @@ function buildCategoryRaces(nominations: Nomination[]): CategoryRace[] {
       for (const rating of nomination.ratings) {
         current.points += rating.rating_stars;
         current.votes += 1;
+        addToStarDistribution(current.starDistribution, rating.rating_stars);
       }
 
       current.average = current.votes > 0 ? current.points / current.votes : 0;
@@ -685,6 +705,19 @@ function SectionTitle({ children, tone = "black" }: { children: ReactNode; tone?
   return (
     <div className={`rounded-[10px] border bg-white/[0.035] px-2.5 py-1.5 ${toneClass}`}>
       <h2 className="tabloid-headline text-[clamp(1.35rem,7.1vw,2.35rem)] leading-[0.84]">{children}</h2>
+    </div>
+  );
+}
+
+function MicroHistogram({ distribution, compact = false }: { distribution: StarDistribution; compact?: boolean }) {
+  const max = maxStarDistribution(distribution);
+
+  return (
+    <div className={`grid ${compact ? "h-4" : "h-5"} grid-cols-5 items-end gap-0.5`} aria-label="Répartition des étoiles">
+      {distribution.map((count, index) => {
+        const height = count === 0 ? 2 : Math.max(3, Math.round((count / max) * (compact ? 16 : 20)));
+        return <span key={`${index}-${count}`} className="block rounded-t-[2px] bg-[#d4af37]/85" style={{ height }} title={`${index + 1} étoile${index > 0 ? "s" : ""}: ${count}`} />;
+      })}
     </div>
   );
 }
@@ -880,47 +913,36 @@ function PalmaresList({ rows }: { rows: PalmaresRow[] }) {
   }
 
   return (
-    <div className="space-y-2">
+    <div className="overflow-hidden rounded-[12px] border border-white/10 bg-black/25">
       {rows.map((row, index) => (
         <motion.article
           key={row.tiktokerName}
-          initial={{ opacity: 0, y: 18 }}
+          initial={{ opacity: 0, y: 10 }}
           animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: index * 0.055, type: "spring", stiffness: 220, damping: 24 }}
-          className="brutal-card p-2.5"
+          transition={{ delay: index * 0.035, type: "spring", stiffness: 240, damping: 26 }}
+          className="border-b border-white/10 px-2 py-1.5 last:border-b-0"
         >
-          <div className="grid grid-cols-[1.45rem_2.7rem_1fr_auto] items-center gap-2">
-            <p className="tabloid-headline text-xl text-[#d4af37]">{index + 1}</p>
-            <div className="relative h-11 w-11 overflow-hidden rounded-full border border-[#d4af37]/50 bg-[#d4af37]/10">
+          <div className="grid grid-cols-[1.15rem_2.25rem_minmax(0,1fr)_auto] items-center gap-2">
+            <p className="rank-number text-[1.45rem] leading-none text-[#d4af37]">{index + 1}</p>
+            <div className="relative h-9 w-9 overflow-hidden rounded-full border border-[#d4af37]/45 bg-[#d4af37]/10">
               {row.avatarUrl ? <img src={row.avatarUrl} alt="" className="h-full w-full object-cover" /> : null}
-              {!row.avatarUrl && <span className="flex h-full w-full items-center justify-center text-xs font-black text-[#f0d889]">{initialsFor(row.tiktokerName)}</span>}
+              {!row.avatarUrl && <span className="flex h-full w-full items-center justify-center text-[10px] font-black text-[#f0d889]">{initialsFor(row.tiktokerName)}</span>}
             </div>
             <div className="min-w-0">
-              <p className="truncate text-sm font-extrabold text-white">@{row.tiktokerName}</p>
-              <p className="text-[9px] font-semibold uppercase tracking-[0.12em] text-zinc-500">
-                {row.acceptedDossiers}/{row.totalDossiers} dossiers validés
+              <p className="truncate text-xs font-black leading-none tracking-tighter text-white">@{row.tiktokerName}</p>
+              <p className="mt-0.5 truncate text-[9px] font-semibold uppercase leading-none tracking-tighter text-zinc-500">
+                {row.acceptedDossiers}/{row.totalDossiers} validés · {row.votes} notes · {row.average ? row.average.toFixed(1) : "-"}★
               </p>
             </div>
-            <span className="gold-pill">{row.points} pts</span>
+            <span className="gold-pill shrink-0">{row.points} pts</span>
           </div>
 
-          <div className="mt-2 grid grid-cols-[1fr_auto] items-center gap-2">
+          <div className="mt-1 grid grid-cols-[minmax(0,1fr)_5.5rem_2.25rem] items-end gap-2 pl-[3.4rem]">
             <div className="stat-bar">
-              <motion.div className="stat-bar-fill" initial={{ width: 0 }} animate={{ width: `${row.successRate}%` }} transition={{ delay: index * 0.06 + 0.12, duration: 0.55 }} />
+              <motion.div className="stat-bar-fill" initial={{ width: 0 }} animate={{ width: `${row.successRate}%` }} transition={{ delay: index * 0.035 + 0.1, duration: 0.45 }} />
             </div>
-            <p className="text-xs font-extrabold text-[#f0d889]">{row.successRate}%</p>
-          </div>
-
-          <div className="mt-2 grid grid-cols-4 gap-1">
-            {FEATURED_CATEGORY_IDS.map((categoryId) => {
-              const category = getCategoryMeta(categoryId);
-              return (
-                <div key={categoryId} className="rounded-[10px] border border-white/10 bg-white/[0.035] px-1.5 py-1.5 text-center">
-                  <p className="truncate text-[7px] font-black uppercase tracking-[0.08em] text-zinc-500">{category.label}</p>
-                  <p className="mt-0.5 text-sm font-black text-white">{row.categoryCounts[categoryId] ?? 0}</p>
-                </div>
-              );
-            })}
+            <MicroHistogram distribution={row.starDistribution} compact />
+            <p className="text-right text-[10px] font-black leading-none tracking-tighter text-[#f0d889]">{row.successRate}%</p>
           </div>
         </motion.article>
       ))}
@@ -936,63 +958,49 @@ function CategoryRaceBoard({ races }: { races: CategoryRace[] }) {
         const leader = rows[0];
 
         return (
-          <BrutalCard key={category.id} className="p-2.5">
-            <div className="flex items-start justify-between gap-2">
+          <BrutalCard key={category.id} className="p-0">
+            <div className="flex items-center justify-between gap-2 border-b border-white/10 px-2 py-1.5">
               <div className="min-w-0">
-                <p className="flex items-center gap-1.5 text-[8px] font-black uppercase tracking-[0.14em] text-[#d4af37]">
+                <p className="flex items-center gap-1.5 text-[9px] font-black uppercase leading-none tracking-tighter text-[#d4af37]">
                   <Icon className="h-3 w-3 shrink-0" /> {category.label}
                 </p>
-                <p className="tabloid-headline mt-0.5 truncate text-[clamp(1.3rem,6.6vw,2.1rem)] leading-[0.86] text-white">{leader ? leader.tiktokerName : "En attente"}</p>
+                <p className="mt-0.5 truncate text-[10px] font-semibold uppercase leading-none tracking-tighter text-zinc-500">{leader ? `Leader · ${leader.tiktokerName}` : "En attente"}</p>
               </div>
               <span className="gold-pill shrink-0">{totalDossiers} dossiers</span>
             </div>
 
-            <div className="mt-2 space-y-1.5">
+            <div className="divide-y divide-white/10">
               {rows.length === 0 ? (
-                <div className="rounded-[10px] border border-white/10 bg-white/[0.035] p-3 text-center text-xs font-semibold text-zinc-500">Aucun nommé pour l&apos;instant.</div>
+                <div className="px-2 py-2 text-center text-xs font-semibold text-zinc-500">Aucun nommé pour l&apos;instant.</div>
               ) : (
                 rows.map((row, index) => (
                   <motion.div
                     key={`${category.id}-${row.tiktokerName}`}
-                    initial={{ opacity: 0, y: 12 }}
+                    initial={{ opacity: 0, y: 8 }}
                     animate={{ opacity: 1, y: 0 }}
-                    transition={{ delay: index * 0.045, type: "spring", stiffness: 220, damping: 25 }}
-                    className="rounded-[10px] border border-white/10 bg-black/30 p-2"
+                    transition={{ delay: index * 0.028, type: "spring", stiffness: 240, damping: 26 }}
+                    className="px-2 py-1.5"
                   >
-                    <div className="grid grid-cols-[1.25rem_2.35rem_1fr_auto] items-center gap-2">
-                      <p className="text-xs font-black text-[#d4af37]">{index + 1}</p>
-                      <div className="h-9 w-9 overflow-hidden rounded-full border border-[#d4af37]/45 bg-[#d4af37]/10">
-                        {row.avatarUrl ? <img src={row.avatarUrl} alt="" className="h-full w-full object-cover" /> : <span className="flex h-full w-full items-center justify-center text-xs font-black text-[#f0d889]">{initialsFor(row.tiktokerName)}</span>}
+                    <div className="grid grid-cols-[1rem_2rem_minmax(0,1fr)_auto] items-center gap-2">
+                      <p className="rank-number text-[1.1rem] leading-none text-[#d4af37]">{index + 1}</p>
+                      <div className="h-8 w-8 overflow-hidden rounded-full border border-[#d4af37]/45 bg-[#d4af37]/10">
+                        {row.avatarUrl ? <img src={row.avatarUrl} alt="" className="h-full w-full object-cover" /> : <span className="flex h-full w-full items-center justify-center text-[9px] font-black text-[#f0d889]">{initialsFor(row.tiktokerName)}</span>}
                       </div>
                       <div className="min-w-0">
-                        <p className="truncate text-xs font-extrabold text-white">@{row.tiktokerName}</p>
-                        <p className="text-[8px] font-semibold uppercase tracking-[0.1em] text-zinc-500">
-                          {row.acceptedDossiers} validés / {row.totalDossiers} dossiers
+                        <p className="truncate text-xs font-black leading-none tracking-tighter text-white">@{row.tiktokerName}</p>
+                        <p className="mt-0.5 truncate text-[9px] font-semibold uppercase leading-none tracking-tighter text-zinc-500">
+                          {row.acceptedDossiers}/{row.totalDossiers} validés · {row.votes} notes · {row.average ? row.average.toFixed(1) : "-"}★
                         </p>
                       </div>
                       <span className="gold-pill shrink-0">{row.points} pts</span>
                     </div>
 
-                    <div className="mt-2 grid grid-cols-[1fr_auto] items-center gap-2">
+                    <div className="mt-1 grid grid-cols-[minmax(0,1fr)_5rem_2.25rem] items-end gap-2 pl-[3rem]">
                       <div className="stat-bar">
-                        <motion.div className="stat-bar-fill" initial={{ width: 0 }} animate={{ width: `${row.successRate}%` }} transition={{ delay: index * 0.04 + 0.1, duration: 0.5 }} />
+                        <motion.div className="stat-bar-fill" initial={{ width: 0 }} animate={{ width: `${row.successRate}%` }} transition={{ delay: index * 0.03 + 0.08, duration: 0.42 }} />
                       </div>
-                      <p className="text-[11px] font-bold text-[#f0d889]">{row.successRate}%</p>
-                    </div>
-
-                    <div className="mt-1.5 grid grid-cols-3 gap-1 text-center">
-                      <div className="rounded-[9px] bg-white/[0.04] px-1.5 py-1">
-                        <p className="text-[7px] uppercase tracking-[0.1em] text-zinc-500">Moyenne</p>
-                        <p className="text-xs font-black text-white">{row.average ? row.average.toFixed(1) : "-"}</p>
-                      </div>
-                      <div className="rounded-[9px] bg-white/[0.04] px-1.5 py-1">
-                        <p className="text-[7px] uppercase tracking-[0.1em] text-zinc-500">Notes</p>
-                        <p className="text-xs font-black text-white">{row.votes}</p>
-                      </div>
-                      <div className="rounded-[9px] bg-white/[0.04] px-1.5 py-1">
-                        <p className="text-[7px] uppercase tracking-[0.1em] text-zinc-500">En jeu</p>
-                        <p className="text-xs font-black text-white">{row.pendingDossiers}</p>
-                      </div>
+                      <MicroHistogram distribution={row.starDistribution} compact />
+                      <p className="text-right text-[10px] font-black leading-none tracking-tighter text-[#f0d889]">{row.successRate}%</p>
                     </div>
                   </motion.div>
                 ))
