@@ -7,7 +7,6 @@ export const runtime = "nodejs";
 
 const DEFAULT_BUCKET = "nod-media";
 const DEFAULT_REGION = "nyc3";
-const MAX_SINGLE_PUT_BYTES = 250 * 1024 * 1024;
 const ALLOWED_FOLDERS = new Set(["videos", "miniatures"]);
 
 function isPlaceholder(value: string) {
@@ -76,21 +75,15 @@ export async function POST(request: Request) {
     const body = (await request.json()) as {
       fileName?: unknown;
       contentType?: unknown;
-      size?: unknown;
       folder?: unknown;
     };
 
     const fileName = typeof body.fileName === "string" ? body.fileName : "media";
     const contentType = typeof body.contentType === "string" ? body.contentType : "application/octet-stream";
-    const size = typeof body.size === "number" && Number.isFinite(body.size) ? body.size : 0;
     const folder = typeof body.folder === "string" ? body.folder : "";
 
     if (!ALLOWED_FOLDERS.has(folder)) {
       return NextResponse.json({ ok: false, error: "Dossier média invalide." }, { status: 400 });
-    }
-
-    if (size <= 0 || size > MAX_SINGLE_PUT_BYTES) {
-      return NextResponse.json({ ok: false, error: "Rec trop lourd pour l'envoi direct." }, { status: 400 });
     }
 
     if (!contentType.startsWith("video/") && !contentType.startsWith("image/")) {

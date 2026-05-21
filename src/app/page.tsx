@@ -101,8 +101,6 @@ const USER_DEVICE_ID_KEY = "nod_user_device_id";
 const PSEUDO_KEY = "nod_pseudo";
 const ROOM_CODE_KEY = "nod_room_code";
 const DEFAULT_ROOM_CODE = "NOD-CLUB";
-const MAX_DIRECT_UPLOAD_BYTES = 250 * 1024 * 1024;
-const MAX_VIDEO_DURATION_SECONDS = 15;
 const MIN_PUBLIC_RATINGS = 2;
 const STAR_VALUES = [1, 2, 3, 4, 5] as const;
 const DIRECT_TITLE = "DIRECT";
@@ -355,10 +353,6 @@ async function extractVideoThumbnail(file: File) {
     await waitForMediaEvent(video, "loadedmetadata");
 
     const duration = Number.isFinite(video.duration) ? video.duration : 0;
-    if (duration > MAX_VIDEO_DURATION_SECONDS + 0.5) {
-      throw new Error("Rec trop long : 15 secondes max.");
-    }
-
     const seekTo = duration > 0.2 ? 0.1 : 0;
     if (seekTo > 0) {
       video.currentTime = seekTo;
@@ -393,7 +387,6 @@ async function uploadFileToSpaces(file: File, folder: "videos" | "miniatures") {
       body: JSON.stringify({
         fileName: file.name,
         contentType: file.type || "application/octet-stream",
-        size: file.size,
         folder
       })
     });
@@ -1010,10 +1003,6 @@ export default function Home() {
       showToast("error", "Choisis une vidéo, une photo ou une capture.");
       return;
     }
-    if (nextFile.size > MAX_DIRECT_UPLOAD_BYTES) {
-      showToast("error", "Fichier trop lourd pour ce rec.");
-      return;
-    }
 
     setIsPreparingMedia(true);
     setMediaProgress(0);
@@ -1425,7 +1414,7 @@ export default function Home() {
                       <span className="flex flex-col items-center px-6 text-center text-white">
                         {isPreparingMedia ? <Loader2 className="mb-3 h-9 w-9 animate-spin text-[#b5f42b]" /> : <UploadCloud className="mb-3 h-9 w-9 text-[#b5f42b]" />}
                         <span className="text-3xl font-black uppercase leading-none">{isPreparingMedia ? "Chargement du studio..." : "Déposer le rec"}</span>
-                        <span className="mt-2 text-sm font-black uppercase text-[#b5f42b]">15 secondes max</span>
+                        <span className="mt-2 text-sm font-black uppercase text-[#b5f42b]">Vidéo ou capture libre</span>
                       </span>
                     )}
                     <input ref={fileInputRef} type="file" accept="video/*,image/*" onChange={(event) => void prepareMedia(event.target.files?.[0] ?? null)} className="hidden" />
