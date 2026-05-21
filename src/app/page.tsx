@@ -13,10 +13,10 @@ import {
   Check,
   Clock3,
   Crown,
-  Lock,
-  Pencil,
   Flame,
   Loader2,
+  Lock,
+  Pencil,
   Plus,
   RefreshCw,
   ShieldAlert,
@@ -30,8 +30,8 @@ import {
 import type { LucideIcon } from "lucide-react";
 import type { RealtimeChannel } from "@supabase/supabase-js";
 
-type Tab = "feed" | "vote" | "studio" | "trophies" | "archive";
-type NominationStatus = "pending" | "accepted" | "rejected";
+type Tab = "direct" | "vote" | "studio" | "zins" | "bannis";
+type DossierStatus = "pending" | "accepted" | "rejected";
 type VerdictChoice = "propel" | "ban";
 type ToastTone = "success" | "error" | "info";
 type CategoryMood = "positive" | "critical" | "fun";
@@ -44,28 +44,35 @@ type Participant = {
   pseudo: string;
 };
 
-type VoteValue = {
-  rating: number;
-  choice: VerdictChoice;
-  pseudo: string;
+type Tiktokeur = {
+  id: string;
+  name: string;
+  avatar_emoji: string;
+};
+
+type Rating = {
+  id: string;
+  dossier_id: string;
+  voter_id: string;
+  stars_count: number;
+  comment: string;
   voted_at: string;
 };
 
-type Votes = Record<string, VoteValue | undefined>;
-
-type Nomination = {
+type Dossier = {
   id: string;
-  room_id: string;
-  image_url: string;
-  image_storage_path: string | null;
-  video_url: string | null;
-  video_storage_path: string | null;
-  category_id: string;
-  comment: string;
   submitted_by: string;
-  status: NominationStatus;
-  votes: Votes;
+  tiktokeur_id: string;
+  category_id: string;
+  media_url: string;
+  media_storage_path: string | null;
+  thumbnail_url: string | null;
+  thumbnail_storage_path: string | null;
+  media_kind: MediaKind;
+  comment: string;
   created_at: string;
+  tiktokeur: Tiktokeur;
+  ratings: Rating[];
 };
 
 type CategoryMeta = {
@@ -87,19 +94,26 @@ type UploadReference = {
   fallback: boolean;
 };
 
+type ScoreBoard = {
+  target: Tiktokeur;
+  category?: CategoryMeta;
+  points: number;
+  votes: number;
+  average: number;
+  dossiers: number;
+};
+
 const LEGACY_SESSION_ID_KEY = "nod_session_id";
 const USER_DEVICE_ID_KEY = "nod_user_device_id";
 const PSEUDO_KEY = "nod_pseudo";
-const ROOM_CODE_KEY = "nod_room_code";
-const DEFAULT_ROOM_CODE = "NOD-CLUB";
-const MIN_VERDICT_VOTES = 2;
 const MAX_DIRECT_UPLOAD_BYTES = 5 * 1024 * 1024 * 1024;
+const MIN_PUBLIC_RATINGS = 2;
 const STAR_VALUES = [1, 2, 3, 4, 5] as const;
-const DIRECT_TITLE = "LE ZIN DU MOIS";
-const VOTE_TITLE = "DOSSIERS À VOTER";
-const HIGH_SCORE_TITLE = "LA FIERTÉ DES NÔTRES";
-const TROPHY_TITLE = "LES ZINS PROPULSÉS";
-const LOW_SCORE_TITLE = "LES DOSSIERS BANNIS";
+const DIRECT_TITLE = "DIRECT";
+const VOTE_TITLE = "À VOTER";
+const STUDIO_TITLE = "STUDIO";
+const ZINS_TITLE = "LES ZINS";
+const BANNIS_TITLE = "LA HONTE DE LA OUMMA : LES DOSSIERS BANNIS";
 const SIMULATION_NOTICE = "MODE SIMULATION : stockage en cours d'activation.";
 const FALLBACK_VIDEO_URL = "https://interactive-examples.mdn.mozilla.net/media/cc0-videos/flower.mp4";
 const FALLBACK_IMAGE_URL =
@@ -108,29 +122,29 @@ const TAP_REBOUND = { scale: 0.96, rotate: -0.5 };
 const TAP_TRANSITION = { type: "spring", stiffness: 620, damping: 24 } as const;
 
 const CATEGORIES: CategoryMeta[] = [
-  { id: "moment_marquant", label: "Le Zin du mois", mood: "positive", icon: Crown },
-  { id: "pepite_cachee", label: "La fierté des nôtres", mood: "positive", icon: BadgeCheck },
-  { id: "style_remarquable", label: "La honte de la Oumma", mood: "critical", icon: ShieldAlert },
+  { id: "zin_du_mois", label: "Le Zin du mois", mood: "positive", icon: Crown },
+  { id: "fierte_des_notres", label: "La fierté des nôtres", mood: "positive", icon: BadgeCheck },
+  { id: "honte_oumma", label: "La honte de la Oumma", mood: "critical", icon: ShieldAlert },
   { id: "roue_libre", label: "Roue libre", mood: "fun", icon: Flame },
-  { id: "malaise_public", label: "Trop gênant", mood: "critical", icon: ShieldAlert },
-  { id: "fou_rire", label: "Xptdr", mood: "fun", icon: Sparkles },
-  { id: "replique_culte", label: "Masterclass", mood: "positive", icon: Trophy },
-  { id: "derapage_leger", label: "Dérape sec", mood: "critical", icon: Flame },
-  { id: "choix_discutable", label: "Dossier lourd", mood: "critical", icon: Archive },
-  { id: "signal_alerte", label: "Mythomane", mood: "critical", icon: ShieldAlert },
-  { id: "elan_creatif", label: "Frappe chirurgicale", mood: "positive", icon: Zap },
-  { id: "silence_genant", label: "Silence assourdissant", mood: "critical", icon: Clock3 },
+  { id: "trop_genant", label: "Trop gênant", mood: "critical", icon: ShieldAlert },
+  { id: "xptdr", label: "Xptdr", mood: "fun", icon: Sparkles },
+  { id: "masterclass", label: "Masterclass", mood: "positive", icon: Trophy },
+  { id: "derape_sec", label: "Dérape sec", mood: "critical", icon: Flame },
+  { id: "dossier_lourd", label: "Dossier lourd", mood: "critical", icon: Archive },
+  { id: "mythomane", label: "Mythomane", mood: "critical", icon: ShieldAlert },
+  { id: "frappe_chirurgicale", label: "Frappe chirurgicale", mood: "positive", icon: Zap },
+  { id: "silence_assourdissant", label: "Silence assourdissant", mood: "critical", icon: Clock3 },
   { id: "performance_surprise", label: "Performance surprise", mood: "positive", icon: Camera }
 ];
 
 const CATEGORY_BY_ID = Object.fromEntries(CATEGORIES.map((category) => [category.id, category])) as Record<string, CategoryMeta>;
 
 const TAB_ITEMS: Array<{ id: Tab; label: string; icon: LucideIcon }> = [
-  { id: "feed", label: "Direct", icon: Sparkles },
+  { id: "direct", label: "Direct", icon: Sparkles },
   { id: "vote", label: "À voter", icon: Zap },
   { id: "studio", label: "Studio", icon: Plus },
-  { id: "trophies", label: "Trophées", icon: Crown },
-  { id: "archive", label: "Bannis", icon: ShieldAlert }
+  { id: "zins", label: "Les Zins", icon: Crown },
+  { id: "bannis", label: "Bannis", icon: ShieldAlert }
 ];
 
 const TAB_ORDER: Tab[] = TAB_ITEMS.map((item) => item.id);
@@ -143,19 +157,8 @@ function toText(value: unknown, fallback = "") {
   return typeof value === "string" ? value : fallback;
 }
 
-function toIntOrNull(value: unknown) {
-  return typeof value === "number" && Number.isFinite(value) ? value : null;
-}
-
-function isSimulationUploadError(error: unknown) {
-  if (!(error instanceof Error)) return false;
-  const message = error.message.toLowerCase();
-  return message.includes("stockage") || message.includes("serveur") || message.includes("archive") || message.includes("signature");
-}
-
-function isMetadataColumnError(error: unknown) {
-  const message = error instanceof Error ? error.message.toLowerCase() : isRecord(error) ? `${toText(error.message)} ${toText(error.details)} ${toText(error.hint)}`.toLowerCase() : "";
-  return message.includes("title") || message.includes("votes_count") || message.includes("user_device_id") || message.includes("category");
+function toNumber(value: unknown, fallback = 0) {
+  return typeof value === "number" && Number.isFinite(value) ? value : fallback;
 }
 
 function clampRating(value: number) {
@@ -168,9 +171,7 @@ function haptic(pattern: number | number[]) {
 }
 
 function makeSessionId() {
-  if (typeof crypto !== "undefined" && "randomUUID" in crypto) {
-    return crypto.randomUUID();
-  }
+  if (typeof crypto !== "undefined" && "randomUUID" in crypto) return crypto.randomUUID();
   return `session-${Date.now()}-${Math.random().toString(36).slice(2, 12)}`;
 }
 
@@ -182,69 +183,43 @@ function sanitizePseudo(value: string) {
     .slice(0, 24);
 }
 
-function sanitizeRoomCode(value: string) {
+function sanitizeTargetName(value: string) {
   return value
     .trim()
-    .toUpperCase()
-    .replace(/[^A-Z0-9-]/g, "")
-    .slice(0, 24);
+    .replace(/\s+/g, " ")
+    .replace(/[^\w\sÀ-ÖØ-öø-ÿ'@.-]/g, "")
+    .slice(0, 32);
 }
 
-function normalizeStatus(value: unknown): NominationStatus | null {
-  if (value === "pending" || value === "accepted" || value === "rejected") return value;
-  if (value === "resolved") return "accepted";
-  return null;
+function sanitizeEmoji(value: string) {
+  const trimmed = value.trim();
+  return trimmed ? Array.from(trimmed).slice(0, 2).join("") : "🎥";
 }
 
-function normalizeChoice(value: unknown): VerdictChoice | null {
-  if (value === "propel" || value === "nominee") return "propel";
-  if (value === "ban" || value === "ejected") return "ban";
-  return null;
+function getCategoryMeta(value: string) {
+  return CATEGORY_BY_ID[value] ?? { id: "custom", label: value || "Sans catégorie", mood: "fun", icon: Archive };
 }
 
-function parseVotes(value: unknown): Votes {
-  if (!isRecord(value)) return {};
-
-  return Object.entries(value).reduce<Votes>((acc, [sessionId, rawVote]) => {
-    if (!isRecord(rawVote)) return acc;
-
-    const rating = toIntOrNull(rawVote.rating);
-    const choice = normalizeChoice(rawVote.choice);
-    if (rating === null || !choice) return acc;
-
-    acc[sessionId] = {
-      rating: clampRating(rating),
-      choice,
-      pseudo: sanitizePseudo(toText(rawVote.pseudo, "Invité")) || "Invité",
-      voted_at: toText(rawVote.voted_at, new Date().toISOString())
-    };
-
-    return acc;
-  }, {});
+function statusFromRatings(ratings: Rating[]): DossierStatus {
+  if (ratings.length < MIN_PUBLIC_RATINGS) return "pending";
+  return averageRating(ratings) >= 3 ? "accepted" : "rejected";
 }
 
-function getVoteList(votes: Votes) {
-  return Object.values(votes).filter((vote): vote is VoteValue => Boolean(vote));
+function statusLabel(status: DossierStatus) {
+  if (status === "accepted") return "PROPULSÉ";
+  if (status === "rejected") return "BANNI";
+  return "À VOTER";
 }
 
-function voteCount(votes: Votes) {
-  return getVoteList(votes).length;
+function statusClass(status: DossierStatus) {
+  if (status === "accepted") return "border-black bg-[#b5f42b] text-black";
+  if (status === "rejected") return "border-black bg-[#e11d48] text-white";
+  return "border-black bg-[#b5f42b] text-black";
 }
 
-function averageFromVotes(votes: Votes) {
-  const ratings = getVoteList(votes).map((vote) => vote.rating);
-  if (ratings.length === 0) return null;
-  return ratings.reduce((sum, rating) => sum + rating, 0) / ratings.length;
-}
-
-function computeStatus(votes: Votes): NominationStatus {
-  const average = averageFromVotes(votes);
-  if (average === null || voteCount(votes) < MIN_VERDICT_VOTES) return "pending";
-  return average >= 3 ? "accepted" : "rejected";
-}
-
-function averageRating(nomination: Nomination) {
-  return averageFromVotes(nomination.votes);
+function averageRating(ratings: Rating[]) {
+  if (ratings.length === 0) return 0;
+  return ratings.reduce((sum, rating) => sum + rating.stars_count, 0) / ratings.length;
 }
 
 function countdownToNextCeremony() {
@@ -257,37 +232,54 @@ function countdownToNextCeremony() {
   return { days, hours, mins };
 }
 
-function getCategoryMeta(value: string): CategoryMeta {
-  return CATEGORY_BY_ID[value] ?? { id: "custom", label: value || "Sans catégorie", mood: "fun", icon: Archive };
+function isCurrentMonth(dateValue: string) {
+  const date = new Date(dateValue);
+  const now = new Date();
+  return date.getFullYear() === now.getFullYear() && date.getMonth() === now.getMonth();
 }
 
-function statusLabel(status: NominationStatus) {
-  if (status === "accepted") return "VALIDÉ";
-  if (status === "rejected") return "BANNI";
-  return "À VOTER";
+function parseTiktokeur(value: unknown): Tiktokeur {
+  const row = Array.isArray(value) ? value[0] : value;
+  if (!isRecord(row)) {
+    return { id: "inconnu", name: "Profil inconnu", avatar_emoji: "🎥" };
+  }
+
+  return {
+    id: toText(row.id, "inconnu"),
+    name: toText(row.name, "Profil inconnu"),
+    avatar_emoji: sanitizeEmoji(toText(row.avatar_emoji, "🎥"))
+  };
 }
 
-function statusClass(status: NominationStatus) {
-  if (status === "accepted") return "border-black bg-[#b5f42b] text-black";
-  if (status === "rejected") return "border-black bg-[#e11d48] text-white";
-  return "border-black bg-[#b5f42b] text-black";
-}
-
-function parseNomination(row: Record<string, unknown>): Nomination {
-  const votes = parseVotes(row.votes);
+function parseRating(row: Record<string, unknown>): Rating {
   return {
     id: toText(row.id, `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`),
-    room_id: toText(row.room_id),
-    image_url: toText(row.image_url),
-    image_storage_path: toText(row.image_storage_path) || null,
-    video_url: toText(row.video_url) || null,
-    video_storage_path: toText(row.video_storage_path) || null,
-    category_id: toText(row.category_id, toText(row.category, "moment_marquant")),
+    dossier_id: toText(row.dossier_id),
+    voter_id: toText(row.voter_id),
+    stars_count: clampRating(toNumber(row.stars_count, 1)),
     comment: toText(row.comment),
+    voted_at: toText(row.voted_at, new Date().toISOString())
+  };
+}
+
+function parseDossier(row: Record<string, unknown>): Dossier {
+  const ratings = Array.isArray(row.ratings) ? row.ratings.filter(isRecord).map(parseRating) : [];
+  const rawMediaKind = toText(row.media_kind, "image");
+
+  return {
+    id: toText(row.id, `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`),
     submitted_by: toText(row.submitted_by, "session-inconnue"),
-    status: normalizeStatus(row.status) ?? computeStatus(votes),
-    votes,
-    created_at: toText(row.created_at, new Date().toISOString())
+    tiktokeur_id: toText(row.tiktokeur_id),
+    category_id: toText(row.category_id, CATEGORIES[0].id),
+    media_url: toText(row.media_url, FALLBACK_IMAGE_URL),
+    media_storage_path: toText(row.media_storage_path) || null,
+    thumbnail_url: toText(row.thumbnail_url) || null,
+    thumbnail_storage_path: toText(row.thumbnail_storage_path) || null,
+    media_kind: rawMediaKind === "video" ? "video" : "image",
+    comment: toText(row.comment),
+    created_at: toText(row.created_at, new Date().toISOString()),
+    tiktokeur: parseTiktokeur(row.tiktokeurs),
+    ratings
   };
 }
 
@@ -425,9 +417,7 @@ async function uploadFileToSpaces(file: File, folder: "videos" | "miniatures") {
       body: file
     });
 
-    if (!uploadResponse.ok) {
-      throw new Error(SIMULATION_NOTICE);
-    }
+    if (!uploadResponse.ok) throw new Error(SIMULATION_NOTICE);
 
     return {
       key: payload.key,
@@ -473,6 +463,33 @@ function setUrl(urlSetter: (value: string | null) => void, currentUrl: string | 
   urlSetter(nextFile ? URL.createObjectURL(nextFile) : null);
 }
 
+function buildScoreBoard(dossiers: Dossier[], categoryId?: string) {
+  const monthly = dossiers.filter((dossier) => isCurrentMonth(dossier.created_at) && (!categoryId || dossier.category_id === categoryId));
+  const byTarget = new Map<string, ScoreBoard>();
+
+  for (const dossier of monthly) {
+    const category = getCategoryMeta(dossier.category_id);
+    const existing = byTarget.get(dossier.tiktokeur.id) ?? {
+      target: dossier.tiktokeur,
+      category: categoryId ? category : undefined,
+      points: 0,
+      votes: 0,
+      average: 0,
+      dossiers: 0
+    };
+
+    existing.dossiers += 1;
+    for (const rating of dossier.ratings) {
+      existing.points += rating.stars_count;
+      existing.votes += 1;
+    }
+    existing.average = existing.votes > 0 ? existing.points / existing.votes : 0;
+    byTarget.set(dossier.tiktokeur.id, existing);
+  }
+
+  return Array.from(byTarget.values()).sort((a, b) => b.average - a.average || b.points - a.points || b.votes - a.votes);
+}
+
 function Sticker({
   children,
   tone = "red",
@@ -492,10 +509,6 @@ function Sticker({
           : "border-black bg-[#e11d48] text-white";
 
   return <span className={`inline-flex border-4 px-2 py-1 text-[10px] font-black uppercase leading-none ${toneClass} ${className}`}>{children}</span>;
-}
-
-function JaggedSticker({ children, className = "" }: { children: ReactNode; className?: string }) {
-  return <span className={`jagged-sticker ${className}`}>{children}</span>;
 }
 
 function SectionTitle({ children, tone = "black" }: { children: ReactNode; tone?: "black" | "red" | "yellow" }) {
@@ -567,11 +580,11 @@ function StarInput({
 }
 
 function MediaFrame({
-  nomination,
+  dossier,
   height = "h-72",
   controls = true
 }: {
-  nomination: Nomination;
+  dossier: Dossier;
   height?: string;
   controls?: boolean;
 }) {
@@ -581,12 +594,12 @@ function MediaFrame({
   useEffect(() => {
     setMediaFailed(false);
     setEngaged(false);
-  }, [nomination.image_url, nomination.video_url]);
+  }, [dossier.media_url, dossier.thumbnail_url]);
 
   if (mediaFailed) {
     return (
       <div className={`${height} relative flex w-full items-center justify-center bg-black`}>
-        {nomination.image_url ? <img src={nomination.image_url} alt="" className="absolute inset-0 h-full w-full object-cover opacity-55" /> : null}
+        {dossier.thumbnail_url ? <img src={dossier.thumbnail_url} alt="" className="absolute inset-0 h-full w-full object-cover opacity-55" /> : null}
         <div className="relative z-10 mx-3 border-4 border-black bg-[#b5f42b] px-2 py-1 text-center text-[11px] font-black uppercase leading-none text-black">
           Connexion au serveur de stockage en cours...
         </div>
@@ -594,11 +607,11 @@ function MediaFrame({
     );
   }
 
-  if (nomination.video_url) {
+  if (dossier.media_kind === "video") {
     return (
       <video
-        src={nomination.video_url}
-        poster={nomination.image_url}
+        src={dossier.media_url}
+        poster={dossier.thumbnail_url ?? undefined}
         controls={controls || engaged}
         loop
         playsInline
@@ -614,7 +627,7 @@ function MediaFrame({
     );
   }
 
-  return <img src={nomination.image_url} alt="" onError={() => setMediaFailed(true)} className={`${height} block w-full bg-black object-cover`} />;
+  return <img src={dossier.media_url || dossier.thumbnail_url || FALLBACK_IMAGE_URL} alt="" onError={() => setMediaFailed(true)} className={`${height} block w-full bg-black object-cover`} />;
 }
 
 function OwnershipBadge({ owned, className = "" }: { owned: boolean; className?: string }) {
@@ -633,38 +646,42 @@ function OwnershipBadge({ owned, className = "" }: { owned: boolean; className?:
   );
 }
 
-function NominationTile({
-  nomination,
+function DossierTile({
+  dossier,
   index = 0,
   owned = false,
   onEdit,
   onRemove,
   busy = false
 }: {
-  nomination: Nomination;
+  dossier: Dossier;
   index?: number;
   owned?: boolean;
   onEdit?: () => void;
   onRemove?: () => void;
   busy?: boolean;
 }) {
-  const category = getCategoryMeta(nomination.category_id);
+  const category = getCategoryMeta(dossier.category_id);
   const Icon = category.icon;
-  const rating = averageRating(nomination);
-  const showLaughSticker = category.id === "fou_rire" || category.label.toLowerCase() === "xptdr";
+  const rating = averageRating(dossier.ratings);
+  const status = statusFromRatings(dossier.ratings);
 
   return (
     <BrutalCard tone={index % 3 === 0 ? "yellow" : "paper"} className="overflow-hidden">
-      <div className="media-cut relative h-[clamp(5.4rem,27vw,7.25rem)] border-b-4 border-black">
-        <MediaFrame nomination={nomination} height="h-full" controls={false} />
+      <div className="media-cut relative h-[clamp(5.8rem,29vw,7.75rem)] border-b-4 border-black">
+        <MediaFrame dossier={dossier} height="h-full" controls={false} />
         <OwnershipBadge owned={owned} className="absolute left-1 top-1 -rotate-2" />
-        {showLaughSticker && <JaggedSticker className="absolute -bottom-3 left-1.5 -rotate-12">FOUS RIRES DU MOIS</JaggedSticker>}
+        <Sticker tone={status === "rejected" ? "red" : "yellow"} className="absolute bottom-1 right-1 rotate-2">
+          {statusLabel(status)}
+        </Sticker>
       </div>
       <div className="min-w-0 p-1.5">
-        <span className={`inline-flex border-4 px-1.5 py-1 text-[9px] font-black uppercase leading-none ${statusClass(nomination.status)}`}>{statusLabel(nomination.status)}</span>
-        <p className="mt-1.5 line-clamp-2 text-[clamp(1rem,5.6vw,1.55rem)] font-black uppercase leading-[0.86]">&quot;{nomination.comment || "Dossier à juger"}&quot;</p>
+        <p className="text-[clamp(1.3rem,7.4vw,1.9rem)] font-black uppercase leading-[0.82]">
+          {dossier.tiktokeur.avatar_emoji} {dossier.tiktokeur.name}
+        </p>
+        <p className="mt-1 line-clamp-2 text-[0.95rem] font-black uppercase leading-[0.9]">&quot;{dossier.comment || "Dossier à juger"}&quot;</p>
         <p className="mt-1.5 flex min-w-0 items-center gap-1 truncate text-[10px] font-black uppercase leading-none">
-          <Icon className="h-3 w-3 shrink-0 text-[#e11d48]" /> {category.label} / {voteCount(nomination.votes)} votes / {rating ? rating.toFixed(1) : "-"} sur 5
+          <Icon className="h-3 w-3 shrink-0 text-[#e11d48]" /> {category.label} / {dossier.ratings.length} notes / {rating ? rating.toFixed(1) : "-"} sur 5
         </p>
         {owned && (
           <div className="mt-1.5 grid grid-cols-2 gap-1">
@@ -696,12 +713,9 @@ export default function Home() {
   const [supabase, setSupabase] = useState<ReturnType<typeof getSupabaseBrowserClient>>(null);
   const [bootingSession, setBootingSession] = useState(true);
   const [participant, setParticipant] = useState<Participant | null>(null);
-  const [roomId, setRoomId] = useState<string | null>(null);
-  const [roomCode, setRoomCode] = useState(DEFAULT_ROOM_CODE);
 
-  const [tab, setTab] = useState<Tab>("feed");
-  const [nominations, setNominations] = useState<Nomination[]>([]);
-  const [localNominations, setLocalNominations] = useState<Nomination[]>([]);
+  const [tab, setTab] = useState<Tab>("direct");
+  const [dossiers, setDossiers] = useState<Dossier[]>([]);
   const [syncing, setSyncing] = useState(false);
 
   const [toast, setToast] = useState<ToastState>(null);
@@ -716,14 +730,17 @@ export default function Home() {
   const [mediaProgress, setMediaProgress] = useState(0);
   const [studioNotice, setStudioNotice] = useState<string | null>(null);
   const [isPreparingMedia, setIsPreparingMedia] = useState(false);
+  const [targetName, setTargetName] = useState("");
+  const [targetEmoji, setTargetEmoji] = useState("🎥");
   const [catId, setCatId] = useState(CATEGORIES[0].id);
   const [comment, setComment] = useState("");
   const [initialRating, setInitialRating] = useState(4);
   const [uploadLoading, setUploadLoading] = useState(false);
-  const [editingNominationId, setEditingNominationId] = useState<string | null>(null);
+  const [editingDossierId, setEditingDossierId] = useState<string | null>(null);
   const [mutationBusyId, setMutationBusyId] = useState<string | null>(null);
 
   const [ratingDraftById, setRatingDraftById] = useState<Record<string, number>>({});
+  const [reviewDraftById, setReviewDraftById] = useState<Record<string, string>>({});
   const [voteBusyId, setVoteBusyId] = useState<string | null>(null);
   const [shakeId, setShakeId] = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement | null>(null);
@@ -762,8 +779,6 @@ export default function Home() {
       localStorage.setItem(USER_DEVICE_ID_KEY, nextId);
       localStorage.setItem(LEGACY_SESSION_ID_KEY, nextId);
       localStorage.setItem(PSEUDO_KEY, nextPseudo);
-      localStorage.setItem(ROOM_CODE_KEY, DEFAULT_ROOM_CODE);
-      setRoomCode(DEFAULT_ROOM_CODE);
       setParticipant({ id: nextId, pseudo: nextPseudo });
     } finally {
       setBootingSession(false);
@@ -798,107 +813,68 @@ export default function Home() {
     setUrl(setThumbnailPreviewUrlState, thumbnailPreviewUrl, null);
   }, [previewUrl, thumbnailPreviewUrl]);
 
-  const ensureRoom = useCallback(async () => {
-    if (!supabase) return null;
-
-    const cleanCode = sanitizeRoomCode(roomCode) || DEFAULT_ROOM_CODE;
-    localStorage.setItem(ROOM_CODE_KEY, cleanCode);
-    setRoomCode(cleanCode);
-
-    const { data, error } = await supabase.from("rooms").upsert({ code: cleanCode }, { onConflict: "code" }).select("id").single();
-
-    if (error) throw error;
-
-    const nextRoomId = toText(data?.id);
-    if (nextRoomId) setRoomId(nextRoomId);
-    return nextRoomId || null;
-  }, [roomCode, supabase]);
-
-  const fetchNominations = useCallback(
-    async (silent = false, forcedRoomId?: string | null) => {
-      const activeRoomId = forcedRoomId ?? roomId;
-      if (!supabase || !activeRoomId) return;
+  const fetchDossiers = useCallback(
+    async (silent = false) => {
+      if (!supabase) return;
 
       setSyncing(true);
 
       try {
         const { data, error } = await supabase
-          .from("nominations")
-          .select("id,room_id,image_url,image_storage_path,video_url,video_storage_path,category_id,comment,submitted_by,status,votes,created_at")
-          .eq("room_id", activeRoomId)
+          .from("dossiers")
+          .select(
+            "id,submitted_by,tiktokeur_id,category_id,media_url,media_storage_path,thumbnail_url,thumbnail_storage_path,media_kind,comment,created_at,tiktokeurs!inner(id,name,avatar_emoji),ratings(id,dossier_id,voter_id,stars_count,comment,voted_at)"
+          )
           .order("created_at", { ascending: false });
 
         if (error) throw error;
 
-        const rows = ((data ?? []) as Record<string, unknown>[]).map(parseNomination);
-        setNominations(rows);
+        const rows = ((data ?? []) as Record<string, unknown>[]).map(parseDossier);
+        setDossiers(rows);
       } catch (err) {
         if (!silent) {
-          const message = err instanceof Error ? err.message : "Le flux refuse de répondre.";
+          const message = err instanceof Error ? err.message : "Le direct refuse de répondre.";
           showToast("error", message);
         }
       } finally {
         setSyncing(false);
       }
     },
-    [roomId, showToast, supabase]
+    [showToast, supabase]
   );
 
   useEffect(() => {
     if (!participant || !supabase) return;
-
-    let cancelled = false;
-
-    void (async () => {
-      try {
-        const activeRoomId = await ensureRoom();
-        if (!cancelled && activeRoomId) {
-          await fetchNominations(false, activeRoomId);
-        }
-      } catch (err) {
-        const message = err instanceof Error ? err.message : "Flux inaccessible.";
-        showToast("error", message);
-      }
-    })();
-
-    return () => {
-      cancelled = true;
-    };
-  }, [ensureRoom, fetchNominations, participant, showToast, supabase]);
+    void fetchDossiers();
+  }, [fetchDossiers, participant, supabase]);
 
   useEffect(() => {
-    if (!participant || !supabase || !roomId) return;
+    if (!participant || !supabase) return;
 
     const poll = window.setInterval(() => {
-      void fetchNominations(true);
+      void fetchDossiers(true);
     }, 20000);
 
     const channel = supabase
-      .channel(`nod_salon_${roomId}`, { config: { broadcast: { self: false } } })
-      .on("postgres_changes", { event: "*", schema: "public", table: "nominations", filter: `room_id=eq.${roomId}` }, (payload) => {
-        if (payload.eventType === "INSERT" || payload.eventType === "UPDATE") {
-          const nextNomination = parseNomination(payload.new as Record<string, unknown>);
-          setNominations((prev) => {
-            const exists = prev.some((nomination) => nomination.id === nextNomination.id);
-            if (payload.eventType === "INSERT" || !exists) return [nextNomination, ...prev.filter((nomination) => nomination.id !== nextNomination.id)];
-            return prev.map((nomination) => (nomination.id === nextNomination.id ? nextNomination : nomination));
-          });
-          return;
+      .channel("nod_tournoi_direct", { config: { broadcast: { self: false } } })
+      .on("postgres_changes", { event: "*", schema: "public", table: "dossiers" }, (payload) => {
+        if (payload.eventType === "INSERT") {
+          const submittedBy = toText((payload.new as Record<string, unknown>).submitted_by);
+          if (submittedBy !== participant.id) showToast("info", "Nouveau dossier à juger.");
         }
-
-        if (payload.eventType === "DELETE") {
-          const deletedId = toText((payload.old as Record<string, unknown>).id);
-          if (deletedId) setNominations((prev) => prev.filter((nomination) => nomination.id !== deletedId));
-          return;
-        }
-
-        void fetchNominations(true);
+        void fetchDossiers(true);
       })
-      .on("broadcast", { event: "vote" }, () => {
-        void fetchNominations(true);
+      .on("postgres_changes", { event: "*", schema: "public", table: "ratings" }, () => {
+        void fetchDossiers(true);
+      })
+      .on("postgres_changes", { event: "*", schema: "public", table: "tiktokeurs" }, () => {
+        void fetchDossiers(true);
       })
       .on("broadcast", { event: "dossier" }, () => {
-        void fetchNominations(true);
+        void fetchDossiers(true);
+      })
+      .on("broadcast", { event: "rating" }, () => {
+        void fetchDossiers(true);
       })
       .subscribe();
 
@@ -909,47 +885,32 @@ export default function Home() {
       channelRef.current = null;
       void supabase.removeChannel(channel);
     };
-  }, [fetchNominations, participant, roomId, supabase]);
-
-  const allNominations = useMemo(() => {
-    const localIds = new Set(localNominations.map((nomination) => nomination.id));
-    return [...localNominations, ...nominations.filter((nomination) => !localIds.has(nomination.id))];
-  }, [localNominations, nominations]);
+  }, [fetchDossiers, participant, showToast, supabase]);
 
   const pendingForMe = useMemo(() => {
     if (!participant) return [];
-    return allNominations.filter((nomination) => nomination.status === "pending" && !nomination.votes[participant.id]);
-  }, [allNominations, participant]);
+    return dossiers.filter((dossier) => !dossier.ratings.some((rating) => rating.voter_id === participant.id));
+  }, [dossiers, participant]);
 
-  const archive = useMemo(() => {
-    const data = allNominations.filter((nomination) => nomination.status === "accepted" || nomination.status === "rejected");
-    return data.sort((a, b) => (averageRating(b) ?? 0) - (averageRating(a) ?? 0));
-  }, [allNominations]);
-
-  const accepted = useMemo(() => archive.filter((nomination) => nomination.status === "accepted"), [archive]);
-  const rejected = useMemo(() => archive.filter((nomination) => nomination.status === "rejected"), [archive]);
-  const feedItems = useMemo(() => allNominations.slice(0, 8), [allNominations]);
-
+  const accepted = useMemo(() => dossiers.filter((dossier) => statusFromRatings(dossier.ratings) === "accepted"), [dossiers]);
+  const rejected = useMemo(() => dossiers.filter((dossier) => statusFromRatings(dossier.ratings) === "rejected"), [dossiers]);
+  const feedItems = useMemo(() => dossiers.slice(0, 8), [dossiers]);
+  const monthlyDossiers = useMemo(() => dossiers.filter((dossier) => isCurrentMonth(dossier.created_at)), [dossiers]);
+  const ultimateWinner = useMemo(() => buildScoreBoard(dossiers)[0] ?? null, [dossiers]);
   const categoryWinners = useMemo(() => {
     return CATEGORIES.map((category) => {
-      const inCategory = accepted.filter((nomination) => nomination.category_id === category.id);
-      if (inCategory.length === 0) return null;
-      const winner = [...inCategory].sort((a, b) => (averageRating(b) ?? 0) - (averageRating(a) ?? 0))[0];
-      return { category, winner };
-    }).filter(Boolean) as Array<{ category: CategoryMeta; winner: Nomination }>;
-  }, [accepted]);
+      const winner = buildScoreBoard(dossiers, category.id)[0];
+      return winner ? { category, winner } : null;
+    }).filter(Boolean) as Array<{ category: CategoryMeta; winner: ScoreBoard }>;
+  }, [dossiers]);
 
-  const headlineItems = useMemo(() => {
-    const byCategory = new Map<string, Nomination>();
-    for (const nomination of allNominations) {
-      if (!byCategory.has(nomination.category_id)) byCategory.set(nomination.category_id, nomination);
-    }
-    return Array.from(byCategory.values()).slice(0, 4);
-  }, [allNominations]);
-  const editingNomination = useMemo(() => allNominations.find((nomination) => nomination.id === editingNominationId) ?? null, [allNominations, editingNominationId]);
-  const isEditingStudio = Boolean(editingNomination);
-  const uploadReady = isEditingStudio ? comment.trim().length >= 3 : Boolean(preparedFile && thumbnailFile && comment.trim().length >= 3 && !isPreparingMedia);
-  const ownsNomination = useCallback((nomination: Nomination) => Boolean(participant && nomination.submitted_by === participant.id), [participant]);
+  const editingDossier = useMemo(() => dossiers.find((dossier) => dossier.id === editingDossierId) ?? null, [dossiers, editingDossierId]);
+  const isEditingStudio = Boolean(editingDossier);
+  const cleanTargetName = sanitizeTargetName(targetName);
+  const uploadReady = isEditingStudio
+    ? comment.trim().length >= 3 && cleanTargetName.length >= 2
+    : Boolean(preparedFile && thumbnailFile && comment.trim().length >= 3 && cleanTargetName.length >= 2 && !isPreparingMedia);
+  const ownsDossier = useCallback((dossier: Dossier) => Boolean(participant && dossier.submitted_by === participant.id), [participant]);
 
   const revealContainer = reduceMotion
     ? {}
@@ -988,122 +949,39 @@ export default function Home() {
 
   const resetStudioDraft = useCallback(() => {
     clearPreparedMedia();
+    setTargetName("");
+    setTargetEmoji("🎥");
     setComment("");
     setInitialRating(4);
     setCatId(CATEGORIES[0].id);
   }, [clearPreparedMedia]);
 
-  const startEditNomination = useCallback(
-    (nomination: Nomination) => {
-      if (!ownsNomination(nomination)) {
-        showToast("info", "Dossier verrouillé : seul l'auteur peut le modifier.");
+  const startEditDossier = useCallback(
+    (dossier: Dossier) => {
+      if (!ownsDossier(dossier)) {
+        showToast("info", "Dossier verrouillé.");
         return;
       }
 
       haptic(15);
       clearPreparedMedia();
-      setEditingNominationId(nomination.id);
-      setComment(nomination.comment);
-      setCatId(nomination.category_id);
-      setStudioNotice("MODE MODIF : vous seul pouvez toucher ce dossier.");
+      setEditingDossierId(dossier.id);
+      setTargetName(dossier.tiktokeur.name);
+      setTargetEmoji(dossier.tiktokeur.avatar_emoji);
+      setComment(dossier.comment);
+      setCatId(dossier.category_id);
+      setStudioNotice("MODE MODIF : auteur seulement.");
       switchTab("studio");
     },
-    [clearPreparedMedia, ownsNomination, showToast, switchTab]
+    [clearPreparedMedia, ownsDossier, showToast, switchTab]
   );
 
-  const cancelEditNomination = useCallback(() => {
+  const cancelEditDossier = useCallback(() => {
     haptic(15);
-    setEditingNominationId(null);
+    setEditingDossierId(null);
     setStudioNotice(null);
     resetStudioDraft();
   }, [resetStudioDraft]);
-
-  const saveEditedNomination = async () => {
-    if (!participant || !supabase || !editingNomination || !ownsNomination(editingNomination) || mutationBusyId) return;
-
-    const cleanedComment = comment.trim();
-    if (cleanedComment.length < 3) {
-      showToast("error", "Ajoute une note valide.");
-      return;
-    }
-
-    haptic([20, 30, 20]);
-    setMutationBusyId(editingNomination.id);
-
-    try {
-      if (editingNomination.id.startsWith("local-")) {
-        setLocalNominations((prev) => prev.map((item) => (item.id === editingNomination.id ? { ...item, comment: cleanedComment, category_id: catId } : item)));
-      } else {
-        const { error: rpcError } = await supabase.rpc("update_own_nomination", {
-          target_nomination_id: editingNomination.id,
-          editor_id: participant.id,
-          next_comment: cleanedComment,
-          next_category_id: catId
-        });
-
-        if (rpcError) {
-          const { error: fallbackError } = await supabase
-            .from("nominations")
-            .update({ comment: cleanedComment, category_id: catId })
-            .eq("id", editingNomination.id)
-            .eq("submitted_by", participant.id);
-          if (fallbackError) throw fallbackError;
-        }
-      }
-
-      showToast("success", "Dossier modifié.");
-      setEditingNominationId(null);
-      setStudioNotice(null);
-      resetStudioDraft();
-      switchTab("feed");
-      await channelRef.current?.send({ type: "broadcast", event: "dossier", payload: { id: editingNomination.id } });
-      void fetchNominations(true);
-    } catch (err) {
-      const message = err instanceof Error ? err.message : "Modification refusée.";
-      showToast("error", message);
-    } finally {
-      setMutationBusyId(null);
-    }
-  };
-
-  const removeNomination = async (nomination: Nomination) => {
-    if (!participant || !supabase || !ownsNomination(nomination) || mutationBusyId) return;
-    const confirmed = window.confirm("Retirer ce dossier du flux ?");
-    if (!confirmed) return;
-
-    haptic([25, 60]);
-    setMutationBusyId(nomination.id);
-
-    try {
-      if (nomination.id.startsWith("local-")) {
-        setLocalNominations((prev) => prev.filter((item) => item.id !== nomination.id));
-      } else {
-        const { error: rpcError } = await supabase.rpc("delete_own_nomination", {
-          target_nomination_id: nomination.id,
-          editor_id: participant.id
-        });
-
-        if (rpcError) {
-          const { error: fallbackError } = await supabase.from("nominations").delete().eq("id", nomination.id).eq("submitted_by", participant.id);
-          if (fallbackError) throw fallbackError;
-        }
-      }
-
-      if (editingNominationId === nomination.id) {
-        setEditingNominationId(null);
-        resetStudioDraft();
-      }
-
-      showToast("info", "Dossier retiré.");
-      await channelRef.current?.send({ type: "broadcast", event: "dossier", payload: { id: nomination.id } });
-      void fetchNominations(true);
-    } catch (err) {
-      const message = err instanceof Error ? err.message : "Retrait refusé.";
-      showToast("error", message);
-    } finally {
-      setMutationBusyId(null);
-    }
-  };
 
   const prepareMedia = async (nextFile: File | null) => {
     if (!nextFile) return;
@@ -1130,7 +1008,7 @@ export default function Home() {
         setUrl(setPreviewUrlState, null, compressed);
         setUrl(setThumbnailPreviewUrlState, null, compressed);
         setMediaProgress(1);
-        showToast("success", "Image prête.");
+        showToast("success", "Capture prête.");
         return;
       }
 
@@ -1141,7 +1019,7 @@ export default function Home() {
       setUrl(setPreviewUrlState, null, nextFile);
       setUrl(setThumbnailPreviewUrlState, null, thumbnail);
       setMediaProgress(1);
-      showToast("success", "Aperçu prêt.");
+      showToast("success", "Rec prêt.");
     } catch (err) {
       clearPreparedMedia();
       const message = err instanceof Error ? err.message : "Média impossible à préparer.";
@@ -1151,9 +1029,95 @@ export default function Home() {
     }
   };
 
-  const uploadNomination = async () => {
-    if (editingNomination) {
-      await saveEditedNomination();
+  const upsertTiktokeur = async () => {
+    if (!supabase) throw new Error("Direct indisponible.");
+    const name = sanitizeTargetName(targetName);
+    if (name.length < 2) throw new Error("Ajoute le profil TikTok visé.");
+
+    const { data, error } = await supabase
+      .from("tiktokeurs")
+      .upsert({ name, avatar_emoji: sanitizeEmoji(targetEmoji) }, { onConflict: "name" })
+      .select("id,name,avatar_emoji")
+      .single();
+
+    if (error) throw error;
+    return parseTiktokeur(data as Record<string, unknown>);
+  };
+
+  const saveEditedDossier = async () => {
+    if (!participant || !supabase || !editingDossier || !ownsDossier(editingDossier) || mutationBusyId) return;
+
+    const cleanedComment = comment.trim();
+    if (cleanedComment.length < 3) {
+      showToast("error", "Ajoute un contexte net.");
+      return;
+    }
+
+    haptic([20, 30, 20]);
+    setMutationBusyId(editingDossier.id);
+
+    try {
+      const target = await upsertTiktokeur();
+      const { error } = await supabase.rpc("update_own_dossier", {
+        target_dossier_id: editingDossier.id,
+        editor_id: participant.id,
+        next_comment: cleanedComment,
+        next_category_id: catId,
+        next_tiktokeur_id: target.id
+      });
+
+      if (error) throw error;
+
+      showToast("success", "Dossier modifié.");
+      setEditingDossierId(null);
+      setStudioNotice(null);
+      resetStudioDraft();
+      switchTab("direct");
+      await channelRef.current?.send({ type: "broadcast", event: "dossier", payload: { id: editingDossier.id } });
+      void fetchDossiers(true);
+    } catch (err) {
+      const message = err instanceof Error ? err.message : "Modification refusée.";
+      showToast("error", message);
+    } finally {
+      setMutationBusyId(null);
+    }
+  };
+
+  const removeDossier = async (dossier: Dossier) => {
+    if (!participant || !supabase || !ownsDossier(dossier) || mutationBusyId) return;
+    const confirmed = window.confirm("Retirer ce dossier du club ?");
+    if (!confirmed) return;
+
+    haptic([25, 60]);
+    setMutationBusyId(dossier.id);
+
+    try {
+      const { error } = await supabase.rpc("delete_own_dossier", {
+        target_dossier_id: dossier.id,
+        editor_id: participant.id
+      });
+
+      if (error) throw error;
+
+      if (editingDossierId === dossier.id) {
+        setEditingDossierId(null);
+        resetStudioDraft();
+      }
+
+      showToast("info", "Dossier retiré.");
+      await channelRef.current?.send({ type: "broadcast", event: "dossier", payload: { id: dossier.id } });
+      void fetchDossiers(true);
+    } catch (err) {
+      const message = err instanceof Error ? err.message : "Retrait refusé.";
+      showToast("error", message);
+    } finally {
+      setMutationBusyId(null);
+    }
+  };
+
+  const uploadDossier = async () => {
+    if (editingDossier) {
+      await saveEditedDossier();
       return;
     }
 
@@ -1163,8 +1127,8 @@ export default function Home() {
     }
 
     const cleanedComment = comment.trim();
-    if (!preparedFile || !thumbnailFile || !mediaKind || cleanedComment.length < 3) {
-      showToast("error", "Ajoute un média et une note valide.");
+    if (!preparedFile || !thumbnailFile || !mediaKind || cleanedComment.length < 3 || cleanTargetName.length < 2) {
+      showToast("error", "Ajoute le profil, le média et le contexte.");
       return;
     }
 
@@ -1173,104 +1137,78 @@ export default function Home() {
     setMediaProgress(0.15);
     setStudioNotice(null);
 
-    const starterVote: VoteValue = {
-      rating: clampRating(initialRating),
-      choice: initialRating >= 3 ? "propel" : "ban",
-      pseudo: participant.pseudo,
-      voted_at: new Date().toISOString()
-    };
-    const votes: Votes = { [participant.id]: starterVote };
-    let activeRoomId = roomId || "local-studio";
-
     try {
-      activeRoomId = roomId ?? (await ensureRoom()) ?? activeRoomId;
-      if (!activeRoomId) throw new Error("Flux introuvable.");
-
-      const imageUpload = await uploadFileOrFallback(thumbnailFile, "miniatures");
+      const target = await upsertTiktokeur();
+      const thumbnailUpload = await uploadFileOrFallback(thumbnailFile, "miniatures");
       setMediaProgress(mediaKind === "video" ? 0.45 : 0.82);
 
-      let videoUpload: UploadReference | null = null;
+      let mediaUpload: UploadReference;
       if (mediaKind === "video") {
-        videoUpload = await uploadFileOrFallback(preparedFile, "videos");
-        setMediaProgress(0.82);
+        mediaUpload = await uploadFileOrFallback(preparedFile, "videos");
+      } else {
+        mediaUpload = thumbnailUpload;
       }
+      setMediaProgress(0.82);
 
-      const basePayload = {
-        room_id: activeRoomId,
-        image_url: imageUpload.publicUrl,
-        image_storage_path: imageUpload.key,
-        video_url: videoUpload?.publicUrl ?? (imageUpload.fallback ? FALLBACK_VIDEO_URL : null),
-        video_storage_path: videoUpload?.key ?? (imageUpload.fallback ? "simulation/fallback-video.mp4" : null),
-        category_id: catId,
-        comment: cleanedComment,
-        submitted_by: participant.id,
-        votes,
-        status: computeStatus(votes)
-      };
-
-      const extendedPayload = {
-        ...basePayload,
-        title: cleanedComment,
-        category: catId,
-        votes_count: voteCount(votes),
-        user_device_id: participant.id
-      };
-
-      let insertResult = await supabase
-        .from("nominations")
-        .insert(extendedPayload)
-        .select("id,room_id,image_url,image_storage_path,video_url,video_storage_path,category_id,comment,submitted_by,status,votes,created_at")
+      const { data: insertedDossier, error: insertError } = await supabase
+        .from("dossiers")
+        .insert({
+          submitted_by: participant.id,
+          tiktokeur_id: target.id,
+          category_id: catId,
+          media_url: mediaUpload.publicUrl,
+          media_storage_path: mediaUpload.key,
+          thumbnail_url: thumbnailUpload.publicUrl,
+          thumbnail_storage_path: thumbnailUpload.key,
+          media_kind: mediaKind,
+          comment: cleanedComment
+        })
+        .select("id")
         .single();
 
-      if (insertResult.error && isMetadataColumnError(insertResult.error)) {
-        insertResult = await supabase
-          .from("nominations")
-          .insert(basePayload)
-          .select("id,room_id,image_url,image_storage_path,video_url,video_storage_path,category_id,comment,submitted_by,status,votes,created_at")
-          .single();
-      }
+      if (insertError) throw insertError;
+      const dossierId = toText(insertedDossier?.id);
+      if (!dossierId) throw new Error("Dossier non créé.");
 
-      if (insertResult.error) throw insertResult.error;
-      if (insertResult.data) {
-        const insertedNomination = parseNomination(insertResult.data as Record<string, unknown>);
-        setNominations((prev) => [insertedNomination, ...prev.filter((nomination) => nomination.id !== insertedNomination.id)]);
-      }
+      const { error: ratingError } = await supabase.rpc("submit_dossier_rating", {
+        target_dossier_id: dossierId,
+        voter_id: participant.id,
+        stars: clampRating(initialRating),
+        reaction_comment: cleanedComment
+      });
+
+      if (ratingError) throw ratingError;
 
       setMediaProgress(1);
       haptic(initialRating >= 3 ? [20, 30, 20] : [25, 60]);
-      setStudioNotice(imageUpload.fallback || videoUpload?.fallback ? SIMULATION_NOTICE : null);
-      showToast("success", "Dossier envoyé dans le flux.");
+      setStudioNotice(thumbnailUpload.fallback || mediaUpload.fallback ? SIMULATION_NOTICE : null);
+      showToast("success", "Dossier lancé dans le club.");
       resetStudioDraft();
-      switchTab("feed");
-      await channelRef.current?.send({ type: "broadcast", event: "dossier", payload: { roomId: activeRoomId } });
-      void fetchNominations(true, activeRoomId);
+      switchTab("direct");
+      await channelRef.current?.send({ type: "broadcast", event: "dossier", payload: { id: dossierId } });
+      void fetchDossiers(true);
     } catch (err) {
       const message = err instanceof Error ? err.message : "Échec de l'envoi.";
-      showToast("error", isSimulationUploadError(err) ? "Synchronisation impossible." : message);
+      showToast("error", message);
     } finally {
       setUploadLoading(false);
     }
   };
 
-  const applyVote = async (id: string, choice: VerdictChoice) => {
+  const applyRating = async (id: string, choice: VerdictChoice) => {
     if (!participant || !supabase || voteBusyId) return;
 
-    const nomination = allNominations.find((item) => item.id === id);
-    if (!nomination) return;
+    const dossier = dossiers.find((item) => item.id === id);
+    if (!dossier) return;
+
+    const cleanedReview = (reviewDraftById[id] ?? "").trim();
+    if (cleanedReview.length < 2) {
+      showToast("error", "Ajoute ta réaction.");
+      return;
+    }
 
     const draft = clampRating(ratingDraftById[id] ?? 4);
-    const finalRating = choice === "propel" ? Math.max(3, draft) : Math.min(2, draft);
-    const votePayload: VoteValue = {
-      rating: finalRating,
-      choice,
-      pseudo: participant.pseudo,
-      voted_at: new Date().toISOString()
-    };
-    const nextVotes: Votes = {
-      ...nomination.votes,
-      [participant.id]: votePayload
-    };
-    const nextStatus = computeStatus(nextVotes);
+    const stars = choice === "propel" ? Math.max(3, draft) : Math.min(2, draft);
 
     haptic(choice === "propel" ? [20, 30, 20] : [25, 60]);
     setVoteBusyId(id);
@@ -1278,41 +1216,32 @@ export default function Home() {
     window.setTimeout(() => setShakeId(null), 520);
 
     try {
-      if (id.startsWith("local-")) {
-        setLocalNominations((prev) => prev.map((item) => (item.id === id ? { ...item, votes: nextVotes, status: nextStatus } : item)));
-        setRatingDraftById((prev) => {
-          const copy = { ...prev };
-          delete copy[id];
-          return copy;
-        });
-        voteBurst(choice);
-        showToast("success", nextStatus === "accepted" ? "Verdict collectif: VALIDÉ." : nextStatus === "rejected" ? "Verdict collectif: REJETÉ." : "Vote enregistré.");
-        return;
-      }
-
-      const { error: rpcError } = await supabase.rpc("submit_nomination_vote", {
-        target_nomination_id: id,
+      const { error } = await supabase.rpc("submit_dossier_rating", {
+        target_dossier_id: id,
         voter_id: participant.id,
-        vote_payload: votePayload
+        stars,
+        reaction_comment: cleanedReview
       });
 
-      if (rpcError) {
-        const { error: fallbackError } = await supabase.from("nominations").update({ votes: nextVotes, status: nextStatus }).eq("id", id);
-        if (fallbackError) throw fallbackError;
-      }
+      if (error) throw error;
 
       setRatingDraftById((prev) => {
         const copy = { ...prev };
         delete copy[id];
         return copy;
       });
+      setReviewDraftById((prev) => {
+        const copy = { ...prev };
+        delete copy[id];
+        return copy;
+      });
 
       voteBurst(choice);
-      showToast("success", nextStatus === "accepted" ? "Verdict collectif: VALIDÉ." : nextStatus === "rejected" ? "Verdict collectif: REJETÉ." : "Vote enregistré.");
-      await channelRef.current?.send({ type: "broadcast", event: "vote", payload: { id, status: nextStatus } });
-      void fetchNominations(true);
+      showToast("success", `${verdictLabel(choice)} enregistré.`);
+      await channelRef.current?.send({ type: "broadcast", event: "rating", payload: { id } });
+      void fetchDossiers(true);
     } catch (err) {
-      const message = err instanceof Error ? err.message : "Impossible de voter.";
+      const message = err instanceof Error ? err.message : "Note refusée.";
       showToast("error", message);
     } finally {
       setVoteBusyId(null);
@@ -1374,10 +1303,10 @@ export default function Home() {
         <header className="sticky top-0 z-30 mb-2 grid grid-cols-[1fr_auto] gap-1 bg-[#1a1a1a] py-1.5">
           <div className="ticker border-4 border-black bg-[#b5f42b] text-black">
             <span className="ticker-track">
-              CÉRÉMONIE LE 1ER DU MOIS / DANS {ceremonyCountdown.days}J {ceremonyCountdown.hours}H {ceremonyCountdown.mins}M / CÉRÉMONIE LE 1ER DU MOIS / DANS {ceremonyCountdown.days}J {ceremonyCountdown.hours}H {ceremonyCountdown.mins}M
+              CÉRÉMONIE LE 1ER DU MOIS / DANS {ceremonyCountdown.days}J {ceremonyCountdown.hours}H {ceremonyCountdown.mins}M / TOURNOI DU MOIS / {monthlyDossiers.length} DOSSIERS EN JEU / CÉRÉMONIE LE 1ER DU MOIS / DANS {ceremonyCountdown.days}J {ceremonyCountdown.hours}H {ceremonyCountdown.mins}M
             </span>
           </div>
-          <motion.button whileTap={TAP_REBOUND} transition={TAP_TRANSITION} onClick={() => void fetchNominations()} disabled={syncing || !supabase} className="brutal-icon-button disabled:opacity-50" aria-label="Rafraîchir le flux">
+          <motion.button whileTap={TAP_REBOUND} transition={TAP_TRANSITION} onClick={() => void fetchDossiers()} disabled={syncing || !supabase} className="brutal-icon-button disabled:opacity-50" aria-label="Rafraîchir le direct">
             <RefreshCw className={`h-4 w-4 ${syncing ? "animate-spin" : ""}`} />
           </motion.button>
         </header>
@@ -1388,8 +1317,8 @@ export default function Home() {
             <p className="text-[clamp(2rem,11vw,3rem)] font-black leading-none">{pendingForMe.length}</p>
           </BrutalCard>
           <BrutalCard tone="red" className="p-1.5">
-            <p className="text-[10px] font-black uppercase leading-none">Propulsés</p>
-            <p className="text-[clamp(2rem,11vw,3rem)] font-black leading-none">{accepted.length}</p>
+            <p className="text-[10px] font-black uppercase leading-none">Dossiers</p>
+            <p className="text-[clamp(2rem,11vw,3rem)] font-black leading-none">{monthlyDossiers.length}</p>
           </BrutalCard>
           <BrutalCard tone="black" className="p-1.5">
             <p className="text-[10px] font-black uppercase leading-none">Bannis</p>
@@ -1398,9 +1327,9 @@ export default function Home() {
         </section>
 
         <AnimatePresence mode="wait">
-          {tab === "feed" && (
+          {tab === "direct" && (
             <motion.section
-              key="feed"
+              key="direct"
               {...pageTransition}
               {...revealContainer}
               drag={reduceMotion ? false : "x"}
@@ -1411,14 +1340,14 @@ export default function Home() {
             >
               <motion.div {...revealItem}>
                 <BrutalCard className="relative overflow-hidden p-2">
-                  <h1 className="tabloid-headline text-[clamp(3rem,16vw,5.35rem)] leading-[0.78]">
+                  <h1 className="tabloid-headline text-[clamp(2.9rem,15vw,5rem)] leading-[0.78]">
                     NOMINEES
                     <span className="mx-2 inline-block -rotate-3 border-4 border-black bg-[#e11d48] px-2 py-0.5 text-[clamp(1.35rem,6.5vw,2.15rem)] font-black leading-none text-white">OR</span>
                     <span className="block text-[#e11d48]">DENOMINEES</span>
                   </h1>
                   <div className="paper-tear -mt-[4px]" />
                   <div className="-mt-[4px] border-4 border-black bg-black px-2 py-1 text-white">
-                    <p className="tabloid-headline text-[clamp(1.35rem,7.6vw,2.35rem)] leading-[0.85]">{DIRECT_TITLE}</p>
+                    <p className="tabloid-headline text-[clamp(1.35rem,7.6vw,2.35rem)] leading-[0.85]">LE CLUB DES RECS DU MOIS</p>
                   </div>
                 </BrutalCard>
               </motion.div>
@@ -1428,19 +1357,19 @@ export default function Home() {
                 {feedItems.length === 0 ? (
                   <BrutalCard className="p-4 text-center">
                     <Camera className="mx-auto mb-3 h-9 w-9" />
-                    <p className="text-2xl font-black uppercase leading-none">Aucune capture.</p>
+                    <p className="text-2xl font-black uppercase leading-none">Aucun rec.</p>
                   </BrutalCard>
                 ) : (
                   <div className="grid grid-cols-2 gap-2">
-                    {(headlineItems.length ? headlineItems : feedItems).map((nomination, index) => (
-                      <NominationTile
-                        key={nomination.id}
-                        nomination={nomination}
+                    {feedItems.map((dossier, index) => (
+                      <DossierTile
+                        key={dossier.id}
+                        dossier={dossier}
                         index={index}
-                        owned={ownsNomination(nomination)}
-                        onEdit={() => startEditNomination(nomination)}
-                        onRemove={() => void removeNomination(nomination)}
-                        busy={mutationBusyId === nomination.id}
+                        owned={ownsDossier(dossier)}
+                        onEdit={() => startEditDossier(dossier)}
+                        onRemove={() => void removeDossier(dossier)}
+                        busy={mutationBusyId === dossier.id}
                       />
                     ))}
                   </div>
@@ -1466,42 +1395,49 @@ export default function Home() {
                   <p className="text-3xl font-black uppercase leading-none">File vide.</p>
                 </BrutalCard>
               ) : (
-                pendingForMe.map((nomination) => {
-                  const category = getCategoryMeta(nomination.category_id);
+                pendingForMe.map((dossier) => {
+                  const category = getCategoryMeta(dossier.category_id);
                   const Icon = category.icon;
-                  const draftRating = clampRating(ratingDraftById[nomination.id] ?? 4);
+                  const draftRating = clampRating(ratingDraftById[dossier.id] ?? 4);
 
                   return (
                     <motion.article
-                      key={nomination.id}
-                      animate={
-                        shakeId === nomination.id
-                          ? { x: [0, -12, 12, -9, 9, 0], rotate: [0, -1.2, 1.2, -0.8, 0.8, 0] }
-                          : { x: 0, rotate: 0 }
-                      }
+                      key={dossier.id}
+                      animate={shakeId === dossier.id ? { x: [0, -12, 12, -9, 9, 0], rotate: [0, -1.2, 1.2, -0.8, 0.8, 0] } : { x: 0, rotate: 0 }}
                       transition={{ duration: 0.42 }}
                       className="brutal-card overflow-hidden"
                     >
                       <div className="relative border-b-4 border-black bg-black">
-                        <MediaFrame nomination={nomination} height="h-[min(46svh,23rem)]" />
+                        <MediaFrame dossier={dossier} height="h-[min(43svh,22rem)]" />
                         <Sticker tone="yellow" className="absolute left-2 top-2 -rotate-2">
                           À voter
                         </Sticker>
-                        <OwnershipBadge owned={ownsNomination(nomination)} className="absolute right-2 top-2 rotate-2" />
+                        <OwnershipBadge owned={ownsDossier(dossier)} className="absolute right-2 top-2 rotate-2" />
                         <div className="absolute bottom-2 left-2 right-2 border-4 border-black bg-[#f2efe3] p-2">
                           <p className="flex items-center gap-1 text-[10px] font-black uppercase text-[#e11d48]">
                             <Icon className="h-3.5 w-3.5" /> {category.label}
                           </p>
-                          <p className="text-[clamp(1.8rem,10vw,3rem)] font-black uppercase leading-[0.84]">&quot;{nomination.comment}&quot;</p>
+                          <p className="text-[clamp(1.8rem,10vw,3rem)] font-black uppercase leading-[0.84]">
+                            {dossier.tiktokeur.avatar_emoji} {dossier.tiktokeur.name}
+                          </p>
                         </div>
                       </div>
                       <div className="space-y-2 p-2">
-                        <StarInput value={draftRating} onChange={(value) => setRatingDraftById((prev) => ({ ...prev, [nomination.id]: value }))} size="lg" />
+                        <p className="border-4 border-black bg-white p-2 text-lg font-black uppercase leading-[0.9]">&quot;{dossier.comment}&quot;</p>
+                        <StarInput value={draftRating} onChange={(value) => setRatingDraftById((prev) => ({ ...prev, [dossier.id]: value }))} size="lg" />
+                        <textarea
+                          value={reviewDraftById[dossier.id] ?? ""}
+                          onChange={(event) => setReviewDraftById((prev) => ({ ...prev, [dossier.id]: event.target.value }))}
+                          placeholder="Ta réaction sur ce dossier ?"
+                          rows={2}
+                          maxLength={180}
+                          className="brutal-input w-full resize-none p-2 text-base font-black uppercase"
+                        />
                         <div className="grid grid-cols-2 gap-2">
-                          <motion.button whileTap={TAP_REBOUND} transition={TAP_TRANSITION} onClick={() => void applyVote(nomination.id, "propel")} disabled={voteBusyId === nomination.id} className="brutal-action bg-[#b5f42b] text-black disabled:opacity-50">
+                          <motion.button whileTap={TAP_REBOUND} transition={TAP_TRANSITION} onClick={() => void applyRating(dossier.id, "propel")} disabled={voteBusyId === dossier.id} className="brutal-action bg-[#b5f42b] text-black disabled:opacity-50">
                             Propulser
                           </motion.button>
-                          <motion.button whileTap={TAP_REBOUND} transition={TAP_TRANSITION} onClick={() => void applyVote(nomination.id, "ban")} disabled={voteBusyId === nomination.id} className="brutal-action bg-[#e11d48] text-white disabled:opacity-50">
+                          <motion.button whileTap={TAP_REBOUND} transition={TAP_TRANSITION} onClick={() => void applyRating(dossier.id, "ban")} disabled={voteBusyId === dossier.id} className="brutal-action bg-[#e11d48] text-white disabled:opacity-50">
                             Bannir
                           </motion.button>
                         </div>
@@ -1524,13 +1460,13 @@ export default function Home() {
               className="space-y-2"
             >
               <BrutalCard tone="black" className="p-2">
-                <h2 className="tabloid-headline text-[clamp(2rem,10.5vw,3.45rem)] leading-[0.84] text-white">{isEditingStudio ? "MODIFIER LE DOSSIER" : "STUDIO DE CAPTURE"}</h2>
+                <h2 className="tabloid-headline text-[clamp(2rem,10.5vw,3.45rem)] leading-[0.84] text-white">{isEditingStudio ? "MODIFIER LE DOSSIER" : STUDIO_TITLE}</h2>
               </BrutalCard>
 
               <BrutalCard className="p-1.5">
-                {editingNomination ? (
+                {editingDossier ? (
                   <div className="relative min-h-[min(38svh,18rem)] overflow-hidden border-4 border-black bg-black">
-                    <MediaFrame nomination={editingNomination} height="h-[min(38svh,18rem)]" />
+                    <MediaFrame dossier={editingDossier} height="h-[min(38svh,18rem)]" />
                     <OwnershipBadge owned className="absolute left-2 top-2 -rotate-2" />
                   </div>
                 ) : (
@@ -1550,8 +1486,8 @@ export default function Home() {
                     ) : (
                       <span className="flex flex-col items-center px-6 text-center text-white">
                         {isPreparingMedia ? <Loader2 className="mb-3 h-9 w-9 animate-spin text-[#b5f42b]" /> : <UploadCloud className="mb-3 h-9 w-9 text-[#b5f42b]" />}
-                        <span className="text-3xl font-black uppercase leading-none">{isPreparingMedia ? "Chargement du studio..." : "Aperçu vidéo original"}</span>
-                        <span className="mt-2 text-sm font-black uppercase text-[#b5f42b]">Vidéo, photo, capture d&apos;écran</span>
+                        <span className="text-3xl font-black uppercase leading-none">{isPreparingMedia ? "Chargement du studio..." : "Déposer le rec"}</span>
+                        <span className="mt-2 text-sm font-black uppercase text-[#b5f42b]">Vidéo, photo, capture</span>
                       </span>
                     )}
                     <input ref={fileInputRef} type="file" accept="video/*,image/*" onChange={(event) => void prepareMedia(event.target.files?.[0] ?? null)} className="hidden" />
@@ -1567,12 +1503,17 @@ export default function Home() {
 
               {(isPreparingMedia || uploadLoading) && (
                 <BrutalCard tone="yellow" className="p-2">
-                  <p className="tabloid-headline text-[clamp(1.6rem,8vw,2.45rem)] leading-[0.85]">{uploadLoading ? "CHARGEMENT DU DOSSIER..." : "PRÉPARATION DU DOSSIER..."}</p>
+                  <p className="tabloid-headline text-[clamp(1.6rem,8vw,2.45rem)] leading-[0.85]">{uploadLoading ? "CHARGEMENT DU DOSSIER..." : "PRÉPARATION DU REC..."}</p>
                   <div className="mt-2 h-5 border-4 border-black bg-[#f2efe3]">
                     <motion.div className="h-full bg-[#e11d48]" animate={{ width: `${Math.round(mediaProgress * 100)}%` }} />
                   </div>
                 </BrutalCard>
               )}
+
+              <div className="grid grid-cols-[1fr_4.6rem] gap-2">
+                <input value={targetName} onChange={(event) => setTargetName(event.target.value)} placeholder="Profil TikTok visé" maxLength={32} className="brutal-input w-full px-3 py-3 text-lg font-black uppercase" />
+                <input value={targetEmoji} onChange={(event) => setTargetEmoji(event.target.value)} aria-label="Emoji du profil" maxLength={4} className="brutal-input w-full px-2 py-3 text-center text-lg font-black uppercase" />
+              </div>
 
               <select value={catId} onChange={(event) => setCatId(event.target.value)} className="brutal-input w-full appearance-none px-3 py-3 text-lg font-black uppercase">
                 {CATEGORIES.map((category) => (
@@ -1582,42 +1523,35 @@ export default function Home() {
                 ))}
               </select>
 
-              <textarea
-                value={comment}
-                onChange={(event) => setComment(event.target.value)}
-                placeholder="Pourquoi mérite-t-il un PROPULSER ou un BANNIR ?"
-                rows={3}
-                maxLength={240}
-                className="brutal-input w-full resize-none p-3 text-lg font-black uppercase"
-              />
+              <textarea value={comment} onChange={(event) => setComment(event.target.value)} placeholder="Pourquoi ce dossier mérite le club ?" rows={3} maxLength={240} className="brutal-input w-full resize-none p-3 text-lg font-black uppercase" />
 
               {!isEditingStudio && (
                 <BrutalCard tone="yellow" className="p-2">
                   <StarInput value={initialRating} onChange={setInitialRating} size="lg" />
-                  <p className="mt-2 border-t-4 border-black pt-2 text-center text-sm font-black uppercase">Vote initial : {verdictLabel(initialRating >= 3 ? "propel" : "ban")}</p>
+                  <p className="mt-2 border-t-4 border-black pt-2 text-center text-sm font-black uppercase">Note initiale : {initialRating} / 5</p>
                 </BrutalCard>
               )}
 
               {isEditingStudio ? (
                 <div className="grid grid-cols-[1fr_auto] gap-2">
-                  <motion.button whileTap={TAP_REBOUND} transition={TAP_TRANSITION} onClick={() => void saveEditedNomination()} disabled={mutationBusyId === editingNominationId || !uploadReady} className="brutal-submit flex w-full items-center justify-center gap-2 bg-[#b5f42b] text-black disabled:opacity-50">
-                    {mutationBusyId === editingNominationId ? <Loader2 className="h-6 w-6 animate-spin" /> : "Sauvegarder modif"}
+                  <motion.button whileTap={TAP_REBOUND} transition={TAP_TRANSITION} onClick={() => void saveEditedDossier()} disabled={mutationBusyId === editingDossierId || !uploadReady} className="brutal-submit flex w-full items-center justify-center gap-2 bg-[#b5f42b] text-black disabled:opacity-50">
+                    {mutationBusyId === editingDossierId ? <Loader2 className="h-6 w-6 animate-spin" /> : "Sauvegarder"}
                   </motion.button>
-                  <motion.button whileTap={TAP_REBOUND} transition={TAP_TRANSITION} onClick={cancelEditNomination} className="border-4 border-black bg-[#f2efe3] px-4 text-lg font-black uppercase text-black shadow-[5px_5px_0_#000]" type="button">
+                  <motion.button whileTap={TAP_REBOUND} transition={TAP_TRANSITION} onClick={cancelEditDossier} className="border-4 border-black bg-[#f2efe3] px-4 text-lg font-black uppercase text-black shadow-[5px_5px_0_#000]" type="button">
                     Annuler
                   </motion.button>
                 </div>
               ) : (
-                <motion.button whileTap={TAP_REBOUND} transition={TAP_TRANSITION} onClick={() => void uploadNomination()} disabled={uploadLoading || !uploadReady} className="brutal-submit flex w-full items-center justify-center gap-2 disabled:opacity-50">
-                  {uploadLoading ? <Loader2 className="h-6 w-6 animate-spin" /> : "Uploader le dossier"}
+                <motion.button whileTap={TAP_REBOUND} transition={TAP_TRANSITION} onClick={() => void uploadDossier()} disabled={uploadLoading || !uploadReady} className="brutal-submit flex w-full items-center justify-center gap-2 disabled:opacity-50">
+                  {uploadLoading ? <Loader2 className="h-6 w-6 animate-spin" /> : "Lancer le dossier"}
                 </motion.button>
               )}
             </motion.section>
           )}
 
-          {tab === "trophies" && (
+          {tab === "zins" && (
             <motion.section
-              key="trophies"
+              key="zins"
               {...pageTransition}
               drag={reduceMotion ? false : "x"}
               dragConstraints={{ left: 0, right: 0 }}
@@ -1626,8 +1560,22 @@ export default function Home() {
               className="space-y-2"
             >
               <BrutalCard tone="black" className="p-2 text-white">
-                <h2 className="tabloid-headline text-[clamp(2.35rem,12vw,4.2rem)] leading-[0.8]">{TROPHY_TITLE}</h2>
+                <h2 className="tabloid-headline text-[clamp(2.35rem,12vw,4.2rem)] leading-[0.8]">{ZINS_TITLE}</h2>
               </BrutalCard>
+
+              {ultimateWinner && (
+                <BrutalCard tone="yellow" className="p-2">
+                  <Sticker tone="red" className="-rotate-2">
+                    TikTokeur du mois
+                  </Sticker>
+                  <p className="mt-2 text-[clamp(2.2rem,12vw,4rem)] font-black uppercase leading-[0.8]">
+                    {ultimateWinner.target.avatar_emoji} {ultimateWinner.target.name}
+                  </p>
+                  <p className="mt-2 inline-flex border-4 border-black bg-black px-2 py-1 text-xs font-black uppercase text-white">
+                    {ultimateWinner.points} points / {ultimateWinner.average.toFixed(1)} sur 5
+                  </p>
+                </BrutalCard>
+              )}
 
               {categoryWinners.length === 0 ? (
                 <BrutalCard tone="yellow" className="p-4 text-center">
@@ -1638,30 +1586,16 @@ export default function Home() {
                 categoryWinners.map(({ category, winner }, index) => {
                   const Icon = category.icon;
                   return (
-                    <BrutalCard key={winner.id} tone={index % 2 === 0 ? "yellow" : "paper"} className="overflow-hidden">
-                      <div className="grid grid-cols-[7rem_1fr]">
-                        <div className="media-cut h-28 border-r-4 border-black">
-                          <MediaFrame nomination={winner} height="h-28" controls={false} />
-                        </div>
-                        <div className="min-w-0 p-2">
-                          <OwnershipBadge owned={ownsNomination(winner)} className="mb-1 -rotate-1" />
-                          <p className="flex items-center gap-1 text-[10px] font-black uppercase text-[#e11d48]">
-                            <Icon className="h-3.5 w-3.5" /> {category.label}
-                          </p>
-                          <p className="mt-2 truncate text-2xl font-black uppercase leading-none">&quot;{winner.comment}&quot;</p>
-                          <p className="mt-2 inline-flex border-4 border-black bg-[#e11d48] px-2 py-1 text-xs font-black uppercase text-white">{averageRating(winner)?.toFixed(1)} / 5</p>
-                          {ownsNomination(winner) && (
-                            <div className="mt-2 grid max-w-56 grid-cols-2 gap-1">
-                              <motion.button whileTap={TAP_REBOUND} transition={TAP_TRANSITION} onClick={() => startEditNomination(winner)} className="owner-action bg-[#0ea5e9] text-white" type="button">
-                                Modifier
-                              </motion.button>
-                              <motion.button whileTap={TAP_REBOUND} transition={TAP_TRANSITION} onClick={() => void removeNomination(winner)} disabled={mutationBusyId === winner.id} className="owner-action bg-zinc-700 text-white disabled:opacity-60" type="button">
-                                Retirer
-                              </motion.button>
-                            </div>
-                          )}
-                        </div>
-                      </div>
+                    <BrutalCard key={category.id} tone={index % 2 === 0 ? "paper" : "yellow"} className="p-2">
+                      <p className="flex items-center gap-1 text-[10px] font-black uppercase text-[#e11d48]">
+                        <Icon className="h-3.5 w-3.5" /> {category.label}
+                      </p>
+                      <p className="mt-1 text-[clamp(1.75rem,9vw,2.8rem)] font-black uppercase leading-[0.84]">
+                        {winner.target.avatar_emoji} {winner.target.name}
+                      </p>
+                      <p className="mt-1 inline-flex border-4 border-black bg-[#e11d48] px-2 py-1 text-xs font-black uppercase text-white">
+                        {winner.average.toFixed(1)} / 5 / {winner.votes} notes
+                      </p>
                     </BrutalCard>
                   );
                 })
@@ -1669,9 +1603,9 @@ export default function Home() {
             </motion.section>
           )}
 
-          {tab === "archive" && (
+          {tab === "bannis" && (
             <motion.section
-              key="archive"
+              key="bannis"
               {...pageTransition}
               drag={reduceMotion ? false : "x"}
               dragConstraints={{ left: 0, right: 0 }}
@@ -1680,7 +1614,7 @@ export default function Home() {
               className="space-y-2"
             >
               <BrutalCard tone="red" className="p-2">
-                <h2 className="tabloid-headline text-[clamp(2.35rem,12vw,4.2rem)] leading-[0.8] text-white">{LOW_SCORE_TITLE}</h2>
+                <h2 className="tabloid-headline text-[clamp(2.35rem,12vw,4.2rem)] leading-[0.8] text-white">{BANNIS_TITLE}</h2>
               </BrutalCard>
 
               {rejected.length === 0 ? (
@@ -1689,25 +1623,27 @@ export default function Home() {
                   <p className="text-3xl font-black uppercase leading-none">Aucun banni.</p>
                 </BrutalCard>
               ) : (
-                rejected.map((nomination) => {
-                  const rating = averageRating(nomination);
+                rejected.map((dossier) => {
+                  const rating = averageRating(dossier.ratings);
                   return (
-                    <BrutalCard key={nomination.id} tone={nomination.status === "accepted" ? "yellow" : "paper"} className="overflow-hidden">
+                    <BrutalCard key={dossier.id} className="overflow-hidden">
                       <div className="grid grid-cols-[5.5rem_1fr]">
                         <div className="media-cut h-24 border-r-4 border-black">
-                          <MediaFrame nomination={nomination} height="h-24" controls={false} />
+                          <MediaFrame dossier={dossier} height="h-24" controls={false} />
                         </div>
                         <div className="min-w-0 p-2">
-                          <OwnershipBadge owned={ownsNomination(nomination)} className="mb-1 -rotate-1" />
-                          <span className={`inline-flex border-4 px-2 py-1 text-[10px] font-black uppercase ${statusClass(nomination.status)}`}>{statusLabel(nomination.status)}</span>
-                          <p className="mt-2 truncate text-lg font-black uppercase leading-none">&quot;{nomination.comment}&quot;</p>
-                          <p className="mt-1 text-xs font-black uppercase">{rating ? rating.toFixed(1) : "-"} / 5 / {voteCount(nomination.votes)} votes</p>
-                          {ownsNomination(nomination) && (
+                          <OwnershipBadge owned={ownsDossier(dossier)} className="mb-1 -rotate-1" />
+                          <span className={`inline-flex border-4 px-2 py-1 text-[10px] font-black uppercase ${statusClass("rejected")}`}>Banni</span>
+                          <p className="mt-2 truncate text-lg font-black uppercase leading-none">
+                            {dossier.tiktokeur.avatar_emoji} {dossier.tiktokeur.name}
+                          </p>
+                          <p className="mt-1 text-xs font-black uppercase">{rating ? rating.toFixed(1) : "-"} / 5 / {dossier.ratings.length} notes</p>
+                          {ownsDossier(dossier) && (
                             <div className="mt-2 grid max-w-56 grid-cols-2 gap-1">
-                              <motion.button whileTap={TAP_REBOUND} transition={TAP_TRANSITION} onClick={() => startEditNomination(nomination)} className="owner-action bg-[#0ea5e9] text-white" type="button">
+                              <motion.button whileTap={TAP_REBOUND} transition={TAP_TRANSITION} onClick={() => startEditDossier(dossier)} className="owner-action bg-[#0ea5e9] text-white" type="button">
                                 Modifier
                               </motion.button>
-                              <motion.button whileTap={TAP_REBOUND} transition={TAP_TRANSITION} onClick={() => void removeNomination(nomination)} disabled={mutationBusyId === nomination.id} className="owner-action bg-zinc-700 text-white disabled:opacity-60" type="button">
+                              <motion.button whileTap={TAP_REBOUND} transition={TAP_TRANSITION} onClick={() => void removeDossier(dossier)} disabled={mutationBusyId === dossier.id} className="owner-action bg-zinc-700 text-white disabled:opacity-60" type="button">
                                 Retirer
                               </motion.button>
                             </div>
@@ -1732,7 +1668,7 @@ export default function Home() {
           onClick={() => switchTab("studio")}
           className="brutal-fab fixed right-5 z-40 flex h-16 w-16 items-center justify-center"
           style={{ bottom: "calc(env(safe-area-inset-bottom) + 84px)" }}
-          aria-label="Uploader un dossier"
+          aria-label="Lancer un dossier"
         >
           <Plus className="h-8 w-8" />
         </motion.button>
@@ -1746,7 +1682,13 @@ export default function Home() {
             const badge = item.id === "vote" ? pendingForMe.length : 0;
 
             return (
-              <motion.button key={item.id} whileTap={TAP_REBOUND} transition={TAP_TRANSITION} onClick={() => switchTab(item.id)} className={`relative flex flex-col items-center justify-center gap-1 border-4 border-black px-1 py-2 transition active:translate-x-0.5 active:translate-y-0.5 ${active ? "bg-[#e11d48] text-white" : "bg-[#f2efe3] text-black"}`}>
+              <motion.button
+                key={item.id}
+                whileTap={TAP_REBOUND}
+                transition={TAP_TRANSITION}
+                onClick={() => switchTab(item.id)}
+                className={`relative flex flex-col items-center justify-center gap-1 border-4 border-black px-1 py-2 transition active:translate-x-0.5 active:translate-y-0.5 ${active ? "bg-[#e11d48] text-white" : "bg-[#f2efe3] text-black"}`}
+              >
                 <Icon className="relative z-10 h-5 w-5" strokeWidth={1.5} />
                 <span className="relative z-10 text-[9px] font-black uppercase">{item.label}</span>
                 {badge > 0 && (

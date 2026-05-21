@@ -1,13 +1,7 @@
--- Nominees or Denominees - Supabase multiplayer foundation
+-- Nominees or Denominees - tournoi multijoueur relationnel
 -- Run this file in Supabase SQL Editor before starting the PWA.
 
 create extension if not exists pgcrypto;
-
-do $$ begin
-  create type public.nomination_status as enum ('pending', 'accepted', 'rejected');
-exception
-  when duplicate_object then null;
-end $$;
 
 create table if not exists public.rooms (
   id uuid primary key default gen_random_uuid(),
@@ -25,48 +19,50 @@ create table if not exists public.categories (
   created_at timestamptz not null default now()
 );
 
-create table if not exists public.nominations (
+create table if not exists public.tiktokeurs (
   id uuid primary key default gen_random_uuid(),
-  room_id uuid not null references public.rooms(id) on delete cascade,
-  category_id text not null references public.categories(id),
-  image_url text not null,
-  image_storage_path text,
-  video_url text,
-  video_storage_path text,
-  title text,
-  category text,
-  user_device_id text,
-  votes_count integer not null default 0 check (votes_count >= 0),
-  comment text not null check (char_length(comment) between 3 and 240),
-  submitted_by text not null check (char_length(submitted_by) between 8 and 96),
-  status public.nomination_status not null default 'pending',
-  votes jsonb not null default '{}'::jsonb check (jsonb_typeof(votes) = 'object'),
+  name text not null unique check (char_length(name) between 2 and 48),
+  avatar_emoji text not null default '🎥' check (char_length(avatar_emoji) between 1 and 12),
   created_at timestamptz not null default now(),
   updated_at timestamptz not null default now()
 );
 
+create table if not exists public.dossiers (
+  id uuid primary key default gen_random_uuid(),
+  submitted_by text not null check (char_length(submitted_by) between 8 and 96),
+  tiktokeur_id uuid not null references public.tiktokeurs(id) on delete restrict,
+  category_id text not null references public.categories(id),
+  media_url text not null,
+  media_storage_path text,
+  thumbnail_url text,
+  thumbnail_storage_path text,
+  media_kind text not null default 'image' check (media_kind in ('video', 'image')),
+  comment text not null check (char_length(comment) between 3 and 240),
+  created_at timestamptz not null default now(),
+  updated_at timestamptz not null default now()
+);
+
+create table if not exists public.ratings (
+  id uuid primary key default gen_random_uuid(),
+  dossier_id uuid not null references public.dossiers(id) on delete cascade,
+  voter_id text not null check (char_length(voter_id) between 8 and 96),
+  stars_count integer not null check (stars_count between 1 and 5),
+  comment text not null check (char_length(comment) between 2 and 180),
+  voted_at timestamptz not null default now(),
+  unique (dossier_id, voter_id)
+);
+
 drop table if exists public.trial_rounds;
 
-alter table public.nominations
-  add column if not exists title text,
-  add column if not exists category text,
-  add column if not exists user_device_id text,
-  add column if not exists votes_count integer not null default 0;
-
-update public.nominations
-set
-  title = coalesce(nullif(title, ''), comment),
-  category = coalesce(nullif(category, ''), category_id),
-  user_device_id = coalesce(nullif(user_device_id, ''), submitted_by),
-  votes_count = jsonb_object_length(coalesce(votes, '{}'::jsonb));
-
 create index if not exists rooms_code_idx on public.rooms(code);
-create index if not exists nominations_room_created_idx on public.nominations(room_id, created_at desc);
-create index if not exists nominations_room_status_idx on public.nominations(room_id, status);
-create index if not exists nominations_owner_idx on public.nominations(submitted_by);
-create index if not exists nominations_user_device_idx on public.nominations(user_device_id);
-create index if not exists nominations_video_path_idx on public.nominations(video_storage_path)
-  where video_storage_path is not null;
+create index if not exists categories_active_sort_idx on public.categories(active, sort_order);
+create index if not exists tiktokeurs_name_idx on public.tiktokeurs(name);
+create index if not exists dossiers_created_idx on public.dossiers(created_at desc);
+create index if not exists dossiers_owner_idx on public.dossiers(submitted_by);
+create index if not exists dossiers_tiktokeur_idx on public.dossiers(tiktokeur_id);
+create index if not exists dossiers_category_idx on public.dossiers(category_id);
+create index if not exists ratings_dossier_idx on public.ratings(dossier_id, voted_at desc);
+create index if not exists ratings_voter_idx on public.ratings(voter_id);
 
 create or replace function public.set_updated_at()
 returns trigger
@@ -83,44 +79,47 @@ create trigger rooms_set_updated_at
 before update on public.rooms
 for each row execute function public.set_updated_at();
 
-drop trigger if exists nominations_set_updated_at on public.nominations;
-create trigger nominations_set_updated_at
-before update on public.nominations
+drop trigger if exists tiktokeurs_set_updated_at on public.tiktokeurs;
+create trigger tiktokeurs_set_updated_at
+before update on public.tiktokeurs
+for each row execute function public.set_updated_at();
+
+drop trigger if exists dossiers_set_updated_at on public.dossiers;
+create trigger dossiers_set_updated_at
+before update on public.dossiers
 for each row execute function public.set_updated_at();
 
 update public.categories
 set sort_order = sort_order + 1000
-where id in (
-  'moment_marquant',
-  'pepite_cachee',
-  'style_remarquable',
+where id not in (
+  'zin_du_mois',
+  'fierte_des_notres',
+  'honte_oumma',
   'roue_libre',
-  'malaise_public',
-  'fou_rire',
-  'replique_culte',
-  'derapage_leger',
-  'choix_discutable',
-  'signal_alerte',
-  'elan_creatif',
-  'silence_genant',
-  'performance_surprise',
-  'scene_improbable',
-  'voyage_express'
+  'trop_genant',
+  'xptdr',
+  'masterclass',
+  'derape_sec',
+  'dossier_lourd',
+  'mythomane',
+  'frappe_chirurgicale',
+  'silence_assourdissant',
+  'performance_surprise'
 );
 
 insert into public.categories (id, label, mood, sort_order) values
-  ('moment_marquant', 'Le Zin du mois', 'positive', 1),
-  ('pepite_cachee', 'La fierté des nôtres', 'positive', 2),
-  ('style_remarquable', 'La honte de la Oumma', 'critical', 3),
+  ('zin_du_mois', 'Le Zin du mois', 'positive', 1),
+  ('fierte_des_notres', 'La fierté des nôtres', 'positive', 2),
+  ('honte_oumma', 'La honte de la Oumma', 'critical', 3),
   ('roue_libre', 'Roue libre', 'fun', 4),
-  ('malaise_public', 'Trop gênant', 'critical', 5),
-  ('fou_rire', 'Xptdr', 'fun', 6),
-  ('replique_culte', 'Masterclass', 'positive', 7),
-  ('derapage_leger', 'Dérape sec', 'critical', 8),
-  ('choix_discutable', 'Dossier lourd', 'critical', 9),
-  ('signal_alerte', 'Mythomane', 'critical', 10),
-  ('elan_creatif', 'Frappe chirurgicale', 'positive', 11),
-  ('silence_genant', 'Silence assourdissant', 'critical', 12),
+  ('trop_genant', 'Trop gênant', 'critical', 5),
+  ('xptdr', 'Xptdr', 'fun', 6),
+  ('masterclass', 'Masterclass', 'positive', 7),
+  ('derape_sec', 'Dérape sec', 'critical', 8),
+  ('dossier_lourd', 'Dossier lourd', 'critical', 9),
+  ('mythomane', 'Mythomane', 'critical', 10),
+  ('frappe_chirurgicale', 'Frappe chirurgicale', 'positive', 11),
+  ('silence_assourdissant', 'Silence assourdissant', 'critical', 12),
   ('performance_surprise', 'Performance surprise', 'positive', 13)
 on conflict (id) do update set
   label = excluded.label,
@@ -131,93 +130,78 @@ on conflict (id) do update set
 update public.categories
 set active = false
 where id not in (
-  'moment_marquant',
-  'pepite_cachee',
-  'style_remarquable',
+  'zin_du_mois',
+  'fierte_des_notres',
+  'honte_oumma',
   'roue_libre',
-  'malaise_public',
-  'fou_rire',
-  'replique_culte',
-  'derapage_leger',
-  'choix_discutable',
-  'signal_alerte',
-  'elan_creatif',
-  'silence_genant',
+  'trop_genant',
+  'xptdr',
+  'masterclass',
+  'derape_sec',
+  'dossier_lourd',
+  'mythomane',
+  'frappe_chirurgicale',
+  'silence_assourdissant',
   'performance_surprise'
 );
 
-create or replace function public.nod_status_from_votes(next_votes jsonb)
-returns public.nomination_status
-language sql
-immutable
-as $$
-  with valid_votes as (
-    select (entry.value ->> 'rating')::numeric as rating
-    from jsonb_each(coalesce(next_votes, '{}'::jsonb)) as entry
-    where jsonb_typeof(entry.value) = 'object'
-      and entry.value ? 'rating'
-      and (entry.value ->> 'rating') ~ '^[0-9]+(\.[0-9]+)?$'
-  )
-  select case
-    when count(*) < 2 then 'pending'::public.nomination_status
-    when avg(rating) >= 3 then 'accepted'::public.nomination_status
-    else 'rejected'::public.nomination_status
-  end
-  from valid_votes;
-$$;
-
-create or replace function public.submit_nomination_vote(
-  target_nomination_id uuid,
+create or replace function public.submit_dossier_rating(
+  target_dossier_id uuid,
   voter_id text,
-  vote_payload jsonb
+  stars integer,
+  reaction_comment text
 )
-returns public.nominations
+returns public.ratings
 language plpgsql
 security definer
 set search_path = public
 as $$
 declare
-  updated_nomination public.nominations;
+  updated_rating public.ratings;
 begin
   if voter_id is null or char_length(voter_id) < 8 or char_length(voter_id) > 96 then
     raise exception 'Identifiant de votant invalide';
   end if;
 
-  if jsonb_typeof(vote_payload) <> 'object' then
-    raise exception 'Vote invalide';
-  end if;
-
-  update public.nominations
-  set
-    votes = jsonb_set(coalesce(votes, '{}'::jsonb), array[voter_id], vote_payload, true),
-    status = public.nod_status_from_votes(jsonb_set(coalesce(votes, '{}'::jsonb), array[voter_id], vote_payload, true)),
-    votes_count = jsonb_object_length(jsonb_set(coalesce(votes, '{}'::jsonb), array[voter_id], vote_payload, true))
-  where id = target_nomination_id
-  returning * into updated_nomination;
-
-  if updated_nomination.id is null then
+  if not exists (select 1 from public.dossiers where id = target_dossier_id) then
     raise exception 'Dossier introuvable';
   end if;
 
-  return updated_nomination;
+  if stars < 1 or stars > 5 then
+    raise exception 'Note invalide';
+  end if;
+
+  reaction_comment := btrim(coalesce(reaction_comment, ''));
+  if char_length(reaction_comment) < 2 or char_length(reaction_comment) > 180 then
+    raise exception 'Réaction invalide';
+  end if;
+
+  insert into public.ratings (dossier_id, voter_id, stars_count, comment)
+  values (target_dossier_id, voter_id, stars, reaction_comment)
+  on conflict (dossier_id, voter_id) do update set
+    stars_count = excluded.stars_count,
+    comment = excluded.comment,
+    voted_at = now()
+  returning * into updated_rating;
+
+  return updated_rating;
 end;
 $$;
 
-grant execute on function public.submit_nomination_vote(uuid, text, jsonb) to anon;
-
-create or replace function public.update_own_nomination(
-  target_nomination_id uuid,
+create or replace function public.update_own_dossier(
+  target_dossier_id uuid,
   editor_id text,
   next_comment text,
-  next_category_id text
+  next_category_id text,
+  next_tiktokeur_id uuid
 )
-returns public.nominations
+returns public.dossiers
 language plpgsql
 security definer
 set search_path = public
 as $$
 declare
-  updated_nomination public.nominations;
+  updated_dossier public.dossiers;
 begin
   if editor_id is null or char_length(editor_id) < 8 or char_length(editor_id) > 96 then
     raise exception 'Identifiant propriétaire invalide';
@@ -225,33 +209,36 @@ begin
 
   next_comment := btrim(coalesce(next_comment, ''));
   if char_length(next_comment) < 3 or char_length(next_comment) > 240 then
-    raise exception 'Note invalide';
+    raise exception 'Contexte invalide';
   end if;
 
   if not exists (select 1 from public.categories where id = next_category_id and active = true) then
     raise exception 'Catégorie invalide';
   end if;
 
-  update public.nominations
+  if not exists (select 1 from public.tiktokeurs where id = next_tiktokeur_id) then
+    raise exception 'Profil TikTok introuvable';
+  end if;
+
+  update public.dossiers
   set
     comment = next_comment,
-    title = next_comment,
     category_id = next_category_id,
-    category = next_category_id
-  where id = target_nomination_id
+    tiktokeur_id = next_tiktokeur_id
+  where id = target_dossier_id
     and submitted_by = editor_id
-  returning * into updated_nomination;
+  returning * into updated_dossier;
 
-  if updated_nomination.id is null then
+  if updated_dossier.id is null then
     raise exception 'Modification verrouillée';
   end if;
 
-  return updated_nomination;
+  return updated_dossier;
 end;
 $$;
 
-create or replace function public.delete_own_nomination(
-  target_nomination_id uuid,
+create or replace function public.delete_own_dossier(
+  target_dossier_id uuid,
   editor_id text
 )
 returns boolean
@@ -266,8 +253,8 @@ begin
     raise exception 'Identifiant propriétaire invalide';
   end if;
 
-  delete from public.nominations
-  where id = target_nomination_id
+  delete from public.dossiers
+  where id = target_dossier_id
     and submitted_by = editor_id
   returning id into deleted_id;
 
@@ -279,12 +266,15 @@ begin
 end;
 $$;
 
-grant execute on function public.update_own_nomination(uuid, text, text, text) to anon;
-grant execute on function public.delete_own_nomination(uuid, text) to anon;
+grant execute on function public.submit_dossier_rating(uuid, text, integer, text) to anon;
+grant execute on function public.update_own_dossier(uuid, text, text, text, uuid) to anon;
+grant execute on function public.delete_own_dossier(uuid, text) to anon;
 
 alter table public.rooms enable row level security;
 alter table public.categories enable row level security;
-alter table public.nominations enable row level security;
+alter table public.tiktokeurs enable row level security;
+alter table public.dossiers enable row level security;
+alter table public.ratings enable row level security;
 
 drop policy if exists "NOD rooms read" on public.rooms;
 create policy "NOD rooms read" on public.rooms
@@ -298,14 +288,33 @@ drop policy if exists "NOD categories read" on public.categories;
 create policy "NOD categories read" on public.categories
 for select to anon using (active = true);
 
-drop policy if exists "NOD nominations read" on public.nominations;
-create policy "NOD nominations read" on public.nominations
+drop policy if exists "NOD tiktokeurs read" on public.tiktokeurs;
+create policy "NOD tiktokeurs read" on public.tiktokeurs
 for select to anon using (true);
 
-drop policy if exists "NOD nominations write" on public.nominations;
-drop policy if exists "NOD nominations insert" on public.nominations;
-create policy "NOD nominations insert" on public.nominations
+drop policy if exists "NOD tiktokeurs write" on public.tiktokeurs;
+create policy "NOD tiktokeurs write" on public.tiktokeurs
 for insert to anon with check (true);
 
-drop policy if exists "NOD nominations update" on public.nominations;
-drop policy if exists "NOD nominations delete" on public.nominations;
+drop policy if exists "NOD tiktokeurs update avatar" on public.tiktokeurs;
+create policy "NOD tiktokeurs update avatar" on public.tiktokeurs
+for update to anon using (true) with check (true);
+
+drop policy if exists "NOD dossiers read" on public.dossiers;
+create policy "NOD dossiers read" on public.dossiers
+for select to anon using (true);
+
+drop policy if exists "NOD dossiers insert" on public.dossiers;
+create policy "NOD dossiers insert" on public.dossiers
+for insert to anon with check (true);
+
+drop policy if exists "NOD dossiers update" on public.dossiers;
+drop policy if exists "NOD dossiers delete" on public.dossiers;
+
+drop policy if exists "NOD ratings read" on public.ratings;
+create policy "NOD ratings read" on public.ratings
+for select to anon using (true);
+
+drop policy if exists "NOD ratings insert" on public.ratings;
+drop policy if exists "NOD ratings update" on public.ratings;
+drop policy if exists "NOD ratings delete" on public.ratings;
