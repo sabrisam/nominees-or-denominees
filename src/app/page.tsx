@@ -135,10 +135,10 @@ const DEFAULT_ROOM_CODE = "NOD-CLUB";
 const MIN_PUBLIC_RATINGS = 2;
 const STAR_VALUES = [1, 2, 3, 4, 5] as const;
 const DIRECT_TITLE = "DIRECT";
-const VOTE_TITLE = "VOTING";
+const VOTE_TITLE = "À VOTER";
 const STUDIO_TITLE = "STUDIO";
 const PALMARES_TITLE = "PALMARÈS";
-const WINNERS_TITLE = "WINNERS";
+const WINNERS_TITLE = "TROPHÉES";
 const SUPABASE_STORAGE_BUCKET = process.env.NEXT_PUBLIC_SUPABASE_STORAGE_BUCKET || "nod-media";
 const SUPABASE_STORAGE_NOTICE = "Stockage de secours Supabase activé.";
 const STORAGE_UNAVAILABLE_NOTICE = "Stockage indisponible : vérifie Supabase Storage ou Spaces.";
@@ -160,10 +160,10 @@ const FEATURED_CATEGORY_IDS = ["le_zin_du_mois", "fierte_des_notres", "xptdr", "
 
 const TAB_ITEMS: Array<{ id: Tab; label: string; icon: LucideIcon }> = [
   { id: "direct", label: "Direct", icon: Sparkles },
-  { id: "vote", label: "Voting", icon: Zap },
+  { id: "vote", label: "À voter", icon: Zap },
   { id: "studio", label: "Studio", icon: Plus },
   { id: "palmares", label: "Palmarès", icon: Trophy },
-  { id: "winners", label: "Winners", icon: Crown }
+  { id: "winners", label: "Trophées", icon: Crown }
 ];
 
 const TAB_ORDER: Tab[] = TAB_ITEMS.map((item) => item.id);
@@ -677,14 +677,14 @@ function Sticker({
           ? "border-white/10 bg-white/5 text-white"
           : "border-red-400/30 bg-red-950/40 text-red-100";
 
-  return <span className={`inline-flex rounded-full border px-2.5 py-1 text-[10px] font-bold uppercase tracking-[0.12em] leading-none ${toneClass} ${className}`}>{children}</span>;
+  return <span className={`inline-flex rounded-[10px] border px-2 py-0.5 text-[8px] font-black uppercase tracking-[0.1em] leading-none ${toneClass} ${className}`}>{children}</span>;
 }
 
 function SectionTitle({ children, tone = "black" }: { children: ReactNode; tone?: "black" | "red" | "yellow" }) {
   const toneClass = tone === "red" ? "border-red-400/30 text-red-100" : tone === "yellow" ? "border-[#d4af37]/60 text-[#f0d889]" : "border-white/10 text-white";
   return (
-    <div className={`rounded-2xl border bg-white/[0.035] px-3 py-2 ${toneClass}`}>
-      <h2 className="tabloid-headline text-[clamp(1.55rem,8.4vw,2.9rem)] leading-[0.92]">{children}</h2>
+    <div className={`rounded-[10px] border bg-white/[0.035] px-2.5 py-1.5 ${toneClass}`}>
+      <h2 className="tabloid-headline text-[clamp(1.35rem,7.1vw,2.35rem)] leading-[0.84]">{children}</h2>
     </div>
   );
 }
@@ -719,10 +719,10 @@ function StarInput({
   size?: "sm" | "md" | "lg";
 }) {
   const [hover, setHover] = useState(0);
-  const iconSizeClass = size === "sm" ? "h-4 w-4" : size === "lg" ? "h-7 w-7" : "h-5 w-5";
+  const iconSizeClass = size === "sm" ? "h-3.5 w-3.5" : size === "lg" ? "h-6 w-6" : "h-[1.125rem] w-[1.125rem]";
 
   return (
-    <div className="grid grid-cols-5 gap-2">
+    <div className="grid grid-cols-5 gap-1.5">
       {STAR_VALUES.map((star) => {
         const active = star <= (hover || value);
         return (
@@ -738,7 +738,7 @@ function StarInput({
               haptic(10);
               onChange?.(star);
             }}
-            className={`flex aspect-square items-center justify-center rounded-2xl border transition disabled:cursor-default ${
+            className={`flex aspect-square items-center justify-center rounded-[10px] border transition disabled:cursor-default ${
               active ? "border-[#d4af37]/80 bg-[#d4af37]/20 text-[#f0d889]" : "border-white/10 bg-white/[0.04] text-zinc-600"
             }`}
             aria-label={`${star} étoiles`}
@@ -806,14 +806,14 @@ function MediaFrame({
 
 function OwnershipBadge({ owned, className = "" }: { owned: boolean; className?: string }) {
   return (
-    <span className={`inline-flex items-center gap-1 rounded-full border px-2.5 py-1 text-[10px] font-bold uppercase tracking-[0.1em] leading-none ${owned ? "border-[#d4af37]/70 bg-[#d4af37]/15 text-[#f0d889]" : "border-white/10 bg-white/10 text-white"} ${className}`}>
+    <span className={`inline-flex items-center gap-1 rounded-[10px] border px-2 py-0.5 text-[8px] font-black uppercase tracking-[0.08em] leading-none ${owned ? "border-[#d4af37]/70 bg-[#d4af37]/15 text-[#f0d889]" : "border-white/10 bg-white/10 text-white"} ${className}`}>
       {owned ? (
         <>
-          PAR VOUS <Pencil className="h-3 w-3" strokeWidth={3} />
+          PAR VOUS <Pencil className="h-2.5 w-2.5" strokeWidth={3} />
         </>
       ) : (
         <>
-          PAR AUTRE <Lock className="h-3 w-3" strokeWidth={3} />
+          PAR AUTRE <Lock className="h-2.5 w-2.5" strokeWidth={3} />
         </>
       )}
     </span>
@@ -841,18 +841,18 @@ function NominationTile({
 
   return (
     <BrutalCard tone={index % 3 === 0 ? "yellow" : "paper"} className="overflow-hidden">
-      <div className="media-cut relative aspect-[9/16] border-b border-[#d4af37]/20">
+      <div className="media-cut relative aspect-[4/3] border-b border-[#d4af37]/20">
         <MediaFrame nomination={nomination} height="h-full" controls={false} />
         <OwnershipBadge owned={owned} className="absolute left-2 top-2" />
         <Sticker tone={nomination.status === "rejected" ? "red" : "yellow"} className="absolute bottom-2 right-2">
           {statusLabel(nomination.status)}
         </Sticker>
       </div>
-      <div className="min-w-0 p-3">
-        <p className="tabloid-headline text-[clamp(1.35rem,6.5vw,2rem)] leading-[0.95] text-white">{nomination.tiktoker_name}</p>
-        <p className="mt-1 line-clamp-2 text-xs font-medium leading-snug text-zinc-300">&quot;{nomination.comment || "Dossier à juger"}&quot;</p>
-        <p className="mt-2 flex min-w-0 items-center gap-1 truncate text-[10px] font-bold uppercase tracking-[0.1em] leading-none text-[#d4af37]">
-          <Icon className="h-3 w-3 shrink-0" /> {category.label} / {nomination.ratings.length} notes / {rating ? rating.toFixed(1) : "-"} sur 5
+      <div className="min-w-0 p-2">
+        <p className="tabloid-headline text-[clamp(1.05rem,5.5vw,1.45rem)] leading-[0.86] text-white">{nomination.tiktoker_name}</p>
+        <p className="mt-1 line-clamp-2 text-[10px] font-medium leading-tight text-zinc-300">&quot;{nomination.comment || "Dossier à juger"}&quot;</p>
+        <p className="mt-1.5 flex min-w-0 items-center gap-1 truncate text-[8px] font-black uppercase tracking-[0.08em] leading-none text-[#d4af37]">
+          <Icon className="h-2.5 w-2.5 shrink-0" /> {category.label} / {nomination.ratings.length} notes / {rating ? rating.toFixed(1) : "-"} sur 5
         </p>
         {owned && (
           <div className="mt-1.5 grid grid-cols-2 gap-1">
@@ -872,52 +872,52 @@ function NominationTile({
 function PalmaresList({ rows }: { rows: PalmaresRow[] }) {
   if (rows.length === 0) {
     return (
-      <BrutalCard className="p-5 text-center">
-        <Trophy className="mx-auto mb-3 h-9 w-9 text-[#d4af37]" />
-        <p className="tabloid-headline text-3xl leading-none">Aucun classement.</p>
+      <BrutalCard className="p-3 text-center">
+        <Trophy className="mx-auto mb-2 h-8 w-8 text-[#d4af37]" />
+        <p className="tabloid-headline text-2xl leading-none">Aucun classement.</p>
       </BrutalCard>
     );
   }
 
   return (
-    <div className="space-y-3">
+    <div className="space-y-2">
       {rows.map((row, index) => (
         <motion.article
           key={row.tiktokerName}
           initial={{ opacity: 0, y: 18 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ delay: index * 0.055, type: "spring", stiffness: 220, damping: 24 }}
-          className="brutal-card p-3"
+          className="brutal-card p-2.5"
         >
-          <div className="grid grid-cols-[2rem_3.3rem_1fr_auto] items-center gap-3">
-            <p className="tabloid-headline text-2xl text-[#d4af37]">{index + 1}</p>
-            <div className="relative h-14 w-14 overflow-hidden rounded-full border border-[#d4af37]/50 bg-[#d4af37]/10">
+          <div className="grid grid-cols-[1.45rem_2.7rem_1fr_auto] items-center gap-2">
+            <p className="tabloid-headline text-xl text-[#d4af37]">{index + 1}</p>
+            <div className="relative h-11 w-11 overflow-hidden rounded-full border border-[#d4af37]/50 bg-[#d4af37]/10">
               {row.avatarUrl ? <img src={row.avatarUrl} alt="" className="h-full w-full object-cover" /> : null}
-              {!row.avatarUrl && <span className="flex h-full w-full items-center justify-center text-sm font-black text-[#f0d889]">{initialsFor(row.tiktokerName)}</span>}
+              {!row.avatarUrl && <span className="flex h-full w-full items-center justify-center text-xs font-black text-[#f0d889]">{initialsFor(row.tiktokerName)}</span>}
             </div>
             <div className="min-w-0">
-              <p className="truncate text-base font-extrabold text-white">@{row.tiktokerName}</p>
-              <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-zinc-500">
+              <p className="truncate text-sm font-extrabold text-white">@{row.tiktokerName}</p>
+              <p className="text-[9px] font-semibold uppercase tracking-[0.12em] text-zinc-500">
                 {row.acceptedDossiers}/{row.totalDossiers} dossiers validés
               </p>
             </div>
             <span className="gold-pill">{row.points} pts</span>
           </div>
 
-          <div className="mt-3 grid grid-cols-[1fr_auto] items-center gap-3">
+          <div className="mt-2 grid grid-cols-[1fr_auto] items-center gap-2">
             <div className="stat-bar">
               <motion.div className="stat-bar-fill" initial={{ width: 0 }} animate={{ width: `${row.successRate}%` }} transition={{ delay: index * 0.06 + 0.12, duration: 0.55 }} />
             </div>
-            <p className="text-sm font-extrabold text-[#f0d889]">{row.successRate}%</p>
+            <p className="text-xs font-extrabold text-[#f0d889]">{row.successRate}%</p>
           </div>
 
-          <div className="mt-3 grid grid-cols-4 gap-1.5">
+          <div className="mt-2 grid grid-cols-4 gap-1">
             {FEATURED_CATEGORY_IDS.map((categoryId) => {
               const category = getCategoryMeta(categoryId);
               return (
-                <div key={categoryId} className="rounded-xl border border-white/10 bg-white/[0.035] px-2 py-2 text-center">
-                  <p className="truncate text-[9px] font-bold uppercase tracking-[0.11em] text-zinc-500">{category.label}</p>
-                  <p className="mt-1 text-lg font-black text-white">{row.categoryCounts[categoryId] ?? 0}</p>
+                <div key={categoryId} className="rounded-[10px] border border-white/10 bg-white/[0.035] px-1.5 py-1.5 text-center">
+                  <p className="truncate text-[7px] font-black uppercase tracking-[0.08em] text-zinc-500">{category.label}</p>
+                  <p className="mt-0.5 text-sm font-black text-white">{row.categoryCounts[categoryId] ?? 0}</p>
                 </div>
               );
             })}
@@ -930,26 +930,26 @@ function PalmaresList({ rows }: { rows: PalmaresRow[] }) {
 
 function CategoryRaceBoard({ races }: { races: CategoryRace[] }) {
   return (
-    <div className="space-y-3">
+    <div className="space-y-2">
       {races.map(({ category, rows, totalDossiers }) => {
         const Icon = category.icon;
         const leader = rows[0];
 
         return (
-          <BrutalCard key={category.id} className="p-3">
-            <div className="flex items-start justify-between gap-3">
+          <BrutalCard key={category.id} className="p-2.5">
+            <div className="flex items-start justify-between gap-2">
               <div className="min-w-0">
-                <p className="flex items-center gap-2 text-[10px] font-bold uppercase tracking-[0.18em] text-[#d4af37]">
-                  <Icon className="h-3.5 w-3.5 shrink-0" /> {category.label}
+                <p className="flex items-center gap-1.5 text-[8px] font-black uppercase tracking-[0.14em] text-[#d4af37]">
+                  <Icon className="h-3 w-3 shrink-0" /> {category.label}
                 </p>
-                <p className="tabloid-headline mt-1 truncate text-[clamp(1.55rem,7.5vw,2.5rem)] leading-[0.94] text-white">{leader ? leader.tiktokerName : "En attente"}</p>
+                <p className="tabloid-headline mt-0.5 truncate text-[clamp(1.3rem,6.6vw,2.1rem)] leading-[0.86] text-white">{leader ? leader.tiktokerName : "En attente"}</p>
               </div>
               <span className="gold-pill shrink-0">{totalDossiers} dossiers</span>
             </div>
 
-            <div className="mt-3 space-y-2">
+            <div className="mt-2 space-y-1.5">
               {rows.length === 0 ? (
-                <div className="rounded-2xl border border-white/10 bg-white/[0.035] p-4 text-center text-sm font-semibold text-zinc-500">Aucun nommé pour l&apos;instant.</div>
+                <div className="rounded-[10px] border border-white/10 bg-white/[0.035] p-3 text-center text-xs font-semibold text-zinc-500">Aucun nommé pour l&apos;instant.</div>
               ) : (
                 rows.map((row, index) => (
                   <motion.div
@@ -957,16 +957,16 @@ function CategoryRaceBoard({ races }: { races: CategoryRace[] }) {
                     initial={{ opacity: 0, y: 12 }}
                     animate={{ opacity: 1, y: 0 }}
                     transition={{ delay: index * 0.045, type: "spring", stiffness: 220, damping: 25 }}
-                    className="rounded-2xl border border-white/10 bg-black/30 p-2"
+                    className="rounded-[10px] border border-white/10 bg-black/30 p-2"
                   >
-                    <div className="grid grid-cols-[1.5rem_2.75rem_1fr_auto] items-center gap-2">
-                      <p className="text-sm font-black text-[#d4af37]">{index + 1}</p>
-                      <div className="h-11 w-11 overflow-hidden rounded-full border border-[#d4af37]/45 bg-[#d4af37]/10">
+                    <div className="grid grid-cols-[1.25rem_2.35rem_1fr_auto] items-center gap-2">
+                      <p className="text-xs font-black text-[#d4af37]">{index + 1}</p>
+                      <div className="h-9 w-9 overflow-hidden rounded-full border border-[#d4af37]/45 bg-[#d4af37]/10">
                         {row.avatarUrl ? <img src={row.avatarUrl} alt="" className="h-full w-full object-cover" /> : <span className="flex h-full w-full items-center justify-center text-xs font-black text-[#f0d889]">{initialsFor(row.tiktokerName)}</span>}
                       </div>
                       <div className="min-w-0">
-                        <p className="truncate text-sm font-extrabold text-white">@{row.tiktokerName}</p>
-                        <p className="text-[10px] font-semibold uppercase tracking-[0.12em] text-zinc-500">
+                        <p className="truncate text-xs font-extrabold text-white">@{row.tiktokerName}</p>
+                        <p className="text-[8px] font-semibold uppercase tracking-[0.1em] text-zinc-500">
                           {row.acceptedDossiers} validés / {row.totalDossiers} dossiers
                         </p>
                       </div>
@@ -977,21 +977,21 @@ function CategoryRaceBoard({ races }: { races: CategoryRace[] }) {
                       <div className="stat-bar">
                         <motion.div className="stat-bar-fill" initial={{ width: 0 }} animate={{ width: `${row.successRate}%` }} transition={{ delay: index * 0.04 + 0.1, duration: 0.5 }} />
                       </div>
-                      <p className="text-xs font-bold text-[#f0d889]">{row.successRate}%</p>
+                      <p className="text-[11px] font-bold text-[#f0d889]">{row.successRate}%</p>
                     </div>
 
-                    <div className="mt-2 grid grid-cols-3 gap-1 text-center">
-                      <div className="rounded-xl bg-white/[0.04] px-2 py-1">
-                        <p className="text-[9px] uppercase tracking-[0.12em] text-zinc-500">Moyenne</p>
-                        <p className="text-sm font-black text-white">{row.average ? row.average.toFixed(1) : "-"}</p>
+                    <div className="mt-1.5 grid grid-cols-3 gap-1 text-center">
+                      <div className="rounded-[9px] bg-white/[0.04] px-1.5 py-1">
+                        <p className="text-[7px] uppercase tracking-[0.1em] text-zinc-500">Moyenne</p>
+                        <p className="text-xs font-black text-white">{row.average ? row.average.toFixed(1) : "-"}</p>
                       </div>
-                      <div className="rounded-xl bg-white/[0.04] px-2 py-1">
-                        <p className="text-[9px] uppercase tracking-[0.12em] text-zinc-500">Notes</p>
-                        <p className="text-sm font-black text-white">{row.votes}</p>
+                      <div className="rounded-[9px] bg-white/[0.04] px-1.5 py-1">
+                        <p className="text-[7px] uppercase tracking-[0.1em] text-zinc-500">Notes</p>
+                        <p className="text-xs font-black text-white">{row.votes}</p>
                       </div>
-                      <div className="rounded-xl bg-white/[0.04] px-2 py-1">
-                        <p className="text-[9px] uppercase tracking-[0.12em] text-zinc-500">En jeu</p>
-                        <p className="text-sm font-black text-white">{row.pendingDossiers}</p>
+                      <div className="rounded-[9px] bg-white/[0.04] px-1.5 py-1">
+                        <p className="text-[7px] uppercase tracking-[0.1em] text-zinc-500">En jeu</p>
+                        <p className="text-xs font-black text-white">{row.pendingDossiers}</p>
                       </div>
                     </div>
                   </motion.div>
@@ -1581,13 +1581,13 @@ export default function Home() {
   }
 
   return (
-    <div className="tabloid-app flex min-h-screen flex-col justify-between bg-[#050505] pb-[calc(env(safe-area-inset-bottom)+70px)]">
+    <div className="tabloid-app flex min-h-screen flex-col justify-between bg-[#050505] pb-[calc(env(safe-area-inset-bottom)+58px)]">
       <PaperBackdrop />
 
       <AnimatePresence>
         {toast && (
           <motion.div initial={{ opacity: 0, y: -18 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -14 }} className="fixed left-1/2 z-[100] w-[92%] max-w-sm -translate-x-1/2" style={{ top: "calc(env(safe-area-inset-top) + 10px)" }}>
-            <div className={`flex items-center gap-2 rounded-2xl border px-4 py-3 text-sm font-bold uppercase tracking-[0.08em] shadow-[0_18px_48px_rgba(0,0,0,0.45)] backdrop-blur-xl ${toast.tone === "success" ? "border-[#d4af37]/60 bg-[#d4af37]/20 text-[#f0d889]" : toast.tone === "error" ? "border-red-400/40 bg-red-950/80 text-red-100" : "border-white/10 bg-black/80 text-white"}`}>
+            <div className={`flex items-center gap-2 rounded-[10px] border px-3 py-2 text-xs font-black uppercase tracking-[0.06em] shadow-[0_14px_36px_rgba(0,0,0,0.45)] backdrop-blur-xl ${toast.tone === "success" ? "border-[#d4af37]/60 bg-[#d4af37]/20 text-[#f0d889]" : toast.tone === "error" ? "border-red-400/40 bg-red-950/80 text-red-100" : "border-white/10 bg-black/80 text-white"}`}>
               {toast.tone === "success" ? <Check className="h-4 w-4" /> : toast.tone === "error" ? <ShieldAlert className="h-4 w-4" /> : <Sparkles className="h-4 w-4" />}
               <span>{toast.message}</span>
             </div>
@@ -1595,8 +1595,8 @@ export default function Home() {
         )}
       </AnimatePresence>
 
-      <main className="relative z-10 mx-auto min-h-0 w-full max-w-[30rem] flex-1 overflow-y-auto overscroll-contain px-2 pb-4" style={{ paddingTop: "calc(env(safe-area-inset-top) + 6px)" }}>
-        <header className="sticky top-0 z-30 mb-3 grid grid-cols-[1fr_auto] gap-2 bg-[#050505]/85 py-2 backdrop-blur-xl">
+      <main className="relative z-10 mx-auto min-h-0 w-full max-w-[30rem] flex-1 overflow-y-auto overscroll-contain px-2 pb-3" style={{ paddingTop: "calc(env(safe-area-inset-top) + 5px)" }}>
+        <header className="sticky top-0 z-30 mb-2 grid grid-cols-[1fr_auto] gap-1.5 bg-[#050505]/85 py-1.5 backdrop-blur-xl">
           <div className="ticker">
             <span className="ticker-track">
               CÉRÉMONIE LE 1ER DU MOIS / DANS {ceremonyCountdown.days}J {ceremonyCountdown.hours}H {ceremonyCountdown.mins}M / TOURNOI DU MOIS / {monthlyNominations.length} DOSSIERS EN JEU / CÉRÉMONIE LE 1ER DU MOIS / DANS {ceremonyCountdown.days}J {ceremonyCountdown.hours}H {ceremonyCountdown.mins}M
@@ -1607,48 +1607,48 @@ export default function Home() {
           </motion.button>
         </header>
 
-        <section className="mb-3 grid grid-cols-3 gap-2">
+        <section className="mb-2 grid grid-cols-3 gap-1.5">
           <BrutalCard tone="yellow" className="p-1.5">
-            <p className="text-[10px] font-bold uppercase tracking-[0.14em] leading-none text-[#d4af37]">Academy</p>
-            <p className="tabloid-headline text-[clamp(2rem,11vw,3rem)] leading-none">{pendingForMe.length}</p>
+            <p className="text-[8px] font-black uppercase tracking-[0.1em] leading-none text-[#d4af37]">À voter</p>
+            <p className="tabloid-headline text-[clamp(1.6rem,8.5vw,2.45rem)] leading-none">{pendingForMe.length}</p>
           </BrutalCard>
           <BrutalCard tone="red" className="p-1.5">
-            <p className="text-[10px] font-bold uppercase tracking-[0.14em] leading-none text-[#d4af37]">Validés</p>
-            <p className="tabloid-headline text-[clamp(2rem,11vw,3rem)] leading-none">{accepted.length}</p>
+            <p className="text-[8px] font-black uppercase tracking-[0.1em] leading-none text-[#d4af37]">Propulsés</p>
+            <p className="tabloid-headline text-[clamp(1.6rem,8.5vw,2.45rem)] leading-none">{accepted.length}</p>
           </BrutalCard>
           <BrutalCard tone="black" className="p-1.5">
-            <p className="text-[10px] font-bold uppercase tracking-[0.14em] leading-none text-zinc-500">Bannis</p>
-            <p className="tabloid-headline text-[clamp(2rem,11vw,3rem)] leading-none">{rejected.length}</p>
+            <p className="text-[8px] font-black uppercase tracking-[0.1em] leading-none text-zinc-500">Bannis</p>
+            <p className="tabloid-headline text-[clamp(1.6rem,8.5vw,2.45rem)] leading-none">{rejected.length}</p>
           </BrutalCard>
         </section>
 
         <AnimatePresence mode="wait">
           {tab === "direct" && (
-            <motion.section key="direct" {...pageTransition} {...revealContainer} drag={reduceMotion ? false : "x"} dragConstraints={{ left: 0, right: 0 }} onDragEnd={(_, info) => handleSectionDrag(info)} transition={{ duration: reduceMotion ? 0.01 : 0.26, type: "spring", stiffness: 230, damping: 25 }} className="space-y-2">
+            <motion.section key="direct" {...pageTransition} {...revealContainer} drag={reduceMotion ? false : "x"} dragConstraints={{ left: 0, right: 0 }} onDragEnd={(_, info) => handleSectionDrag(info)} transition={{ duration: reduceMotion ? 0.01 : 0.26, type: "spring", stiffness: 230, damping: 25 }} className="space-y-1.5">
               <motion.div {...revealItem}>
-                <BrutalCard className="relative overflow-hidden p-4">
-                  <p className="mb-2 text-[10px] font-bold uppercase tracking-[0.28em] text-[#d4af37]">Red Carpet</p>
-                  <h1 className="tabloid-headline text-[clamp(2.85rem,14vw,5rem)] leading-[0.92] text-[#f5f1e8]">
+                <BrutalCard className="relative overflow-hidden p-3">
+                  <p className="mb-1.5 text-[8px] font-black uppercase tracking-[0.2em] text-[#d4af37]">Club live</p>
+                  <h1 className="tabloid-headline text-[clamp(2.15rem,10.8vw,3.55rem)] leading-[0.84] text-[#f5f1e8]">
                     NOMINEES
-                    <span className="mx-2 inline-block rounded-full border border-[#d4af37]/70 bg-[#d4af37]/15 px-3 py-1 text-[clamp(1.15rem,5.5vw,1.9rem)] font-bold leading-none text-[#f0d889]">or</span>
+                    <span className="mx-1.5 inline-block rounded-[8px] border border-[#d4af37]/70 bg-[#d4af37]/15 px-2 py-0.5 text-[clamp(0.85rem,4.2vw,1.35rem)] font-black uppercase leading-none text-[#f0d889]">or</span>
                     <span className="block text-[#d4af37]">DENOMINEES</span>
                   </h1>
                   <div className="paper-tear -mt-[4px]" />
-                  <div className="rounded-2xl border border-[#d4af37]/30 bg-black/40 px-3 py-2 text-white">
-                    <p className="text-[11px] font-bold uppercase tracking-[0.2em] text-zinc-400">Le club des recs du mois</p>
+                  <div className="rounded-[10px] border border-[#d4af37]/30 bg-black/40 px-2.5 py-1.5 text-white">
+                    <p className="text-[9px] font-black uppercase tracking-[0.16em] text-zinc-400">Le club des recs du mois</p>
                   </div>
                 </BrutalCard>
               </motion.div>
 
-              <motion.div {...revealItem} className="space-y-2">
+              <motion.div {...revealItem} className="space-y-1.5">
                 <SectionTitle>{DIRECT_TITLE}</SectionTitle>
                 {feedItems.length === 0 ? (
-                  <BrutalCard className="p-4 text-center">
-                    <Camera className="mx-auto mb-3 h-9 w-9" />
-                    <p className="text-2xl font-black uppercase leading-none">Aucun rec.</p>
+                  <BrutalCard className="p-3 text-center">
+                    <Camera className="mx-auto mb-2 h-8 w-8" />
+                    <p className="text-xl font-black uppercase leading-none">Aucun rec.</p>
                   </BrutalCard>
                 ) : (
-                  <div className="grid grid-cols-2 gap-2">
+                  <div className="grid grid-cols-2 gap-1.5">
                     {feedItems.map((nomination, index) => (
                       <NominationTile key={nomination.id} nomination={nomination} index={index} owned={ownsNomination(nomination)} onEdit={() => startEditNomination(nomination)} onRemove={() => void removeNomination(nomination)} busy={mutationBusyId === nomination.id} />
                     ))}
@@ -1659,12 +1659,12 @@ export default function Home() {
           )}
 
           {tab === "vote" && (
-            <motion.section key="vote" {...pageTransition} drag={reduceMotion ? false : "x"} dragConstraints={{ left: 0, right: 0 }} onDragEnd={(_, info) => handleSectionDrag(info)} transition={{ duration: reduceMotion ? 0.01 : 0.26, type: "spring", stiffness: 230, damping: 25 }} className="space-y-2">
+            <motion.section key="vote" {...pageTransition} drag={reduceMotion ? false : "x"} dragConstraints={{ left: 0, right: 0 }} onDragEnd={(_, info) => handleSectionDrag(info)} transition={{ duration: reduceMotion ? 0.01 : 0.26, type: "spring", stiffness: 230, damping: 25 }} className="space-y-1.5">
               <SectionTitle tone="yellow">{VOTE_TITLE}</SectionTitle>
               {pendingForMe.length === 0 ? (
-                <BrutalCard tone="yellow" className="p-4 text-center">
-                  <Check className="mx-auto mb-3 h-9 w-9" />
-                  <p className="text-3xl font-black uppercase leading-none">File vide.</p>
+                <BrutalCard tone="yellow" className="p-3 text-center">
+                  <Check className="mx-auto mb-2 h-8 w-8" />
+                  <p className="text-2xl font-black uppercase leading-none">File vide.</p>
                 </BrutalCard>
               ) : (
                 pendingForMe.map((nomination) => {
@@ -1675,23 +1675,23 @@ export default function Home() {
                   return (
                     <motion.article key={nomination.id} animate={shakeId === nomination.id ? { x: [0, -8, 8, -5, 5, 0], scale: [1, 0.99, 1.01, 1] } : { x: 0, scale: 1 }} transition={{ duration: 0.42 }} className="brutal-card overflow-hidden">
                       <div className="relative border-b border-[#d4af37]/20 bg-black">
-                        <MediaFrame nomination={nomination} height="aspect-[9/16] max-h-[58svh]" />
+                        <MediaFrame nomination={nomination} height="aspect-[9/16] max-h-[52svh]" />
                         <Sticker tone="yellow" className="absolute left-2 top-2 -rotate-2">
                           À voter
                         </Sticker>
                         <OwnershipBadge owned={ownsNomination(nomination)} className="absolute right-2 top-2 rotate-2" />
-                        <div className="absolute bottom-3 left-3 right-3 rounded-2xl border border-[#d4af37]/35 bg-black/75 p-3 backdrop-blur-md">
-                          <p className="flex items-center gap-1 text-[10px] font-bold uppercase tracking-[0.14em] text-[#d4af37]">
-                            <Icon className="h-3.5 w-3.5" /> {category.label}
+                        <div className="absolute bottom-2 left-2 right-2 rounded-[10px] border border-[#d4af37]/35 bg-black/75 p-2 backdrop-blur-md">
+                          <p className="flex items-center gap-1 text-[8px] font-black uppercase tracking-[0.12em] text-[#d4af37]">
+                            <Icon className="h-3 w-3" /> {category.label}
                           </p>
-                          <p className="tabloid-headline text-[clamp(1.8rem,9.5vw,3rem)] leading-[0.92] text-white">{nomination.tiktoker_name}</p>
+                          <p className="tabloid-headline text-[clamp(1.45rem,7.5vw,2.35rem)] leading-[0.84] text-white">{nomination.tiktoker_name}</p>
                         </div>
                       </div>
-                      <div className="space-y-2 p-2">
-                        <p className="rounded-2xl border border-white/10 bg-white/[0.04] p-3 text-sm font-medium leading-snug text-zinc-200">&quot;{nomination.comment}&quot;</p>
+                      <div className="space-y-1.5 p-2">
+                        <p className="rounded-[10px] border border-white/10 bg-white/[0.04] p-2 text-xs font-medium leading-tight text-zinc-200">&quot;{nomination.comment}&quot;</p>
                         <StarInput value={draftRating} onChange={(value) => setRatingDraftById((prev) => ({ ...prev, [nomination.id]: value }))} size="lg" />
-                        <textarea value={reviewDraftById[nomination.id] ?? ""} onChange={(event) => setReviewDraftById((prev) => ({ ...prev, [nomination.id]: event.target.value }))} placeholder="Ta réaction sur ce dossier ?" rows={2} maxLength={180} className="brutal-input w-full resize-none p-2 text-base font-black uppercase" />
-                        <div className="grid grid-cols-2 gap-2">
+                        <textarea value={reviewDraftById[nomination.id] ?? ""} onChange={(event) => setReviewDraftById((prev) => ({ ...prev, [nomination.id]: event.target.value }))} placeholder="Ta réaction sur ce dossier ?" rows={2} maxLength={180} className="brutal-input w-full resize-none p-2 text-sm font-black uppercase" />
+                        <div className="grid grid-cols-2 gap-1.5">
                           <motion.button whileTap={TAP_REBOUND} transition={TAP_TRANSITION} onClick={() => void applyRating(nomination.id, "propel")} disabled={voteBusyId === nomination.id} className="brutal-action bg-[#d4af37] text-black disabled:opacity-50">
                             Propulser
                           </motion.button>
@@ -1708,19 +1708,19 @@ export default function Home() {
           )}
 
           {tab === "studio" && (
-            <motion.section key="studio" {...pageTransition} drag={reduceMotion ? false : "x"} dragConstraints={{ left: 0, right: 0 }} onDragEnd={(_, info) => handleSectionDrag(info)} transition={{ duration: reduceMotion ? 0.01 : 0.26, type: "spring", stiffness: 230, damping: 25 }} className="space-y-2">
+            <motion.section key="studio" {...pageTransition} drag={reduceMotion ? false : "x"} dragConstraints={{ left: 0, right: 0 }} onDragEnd={(_, info) => handleSectionDrag(info)} transition={{ duration: reduceMotion ? 0.01 : 0.26, type: "spring", stiffness: 230, damping: 25 }} className="space-y-1.5">
               <BrutalCard tone="black" className="p-2">
-                <h2 className="tabloid-headline text-[clamp(2rem,10.5vw,3.45rem)] leading-[0.84] text-white">{isEditingStudio ? "MODIFIER LE DOSSIER" : STUDIO_TITLE}</h2>
+                <h2 className="tabloid-headline text-[clamp(1.55rem,8.2vw,2.65rem)] leading-[0.82] text-white">{isEditingStudio ? "MODIFIER LE DOSSIER" : STUDIO_TITLE}</h2>
               </BrutalCard>
 
               <BrutalCard className="p-1.5">
                 {editingNomination ? (
-                  <div className="relative overflow-hidden rounded-2xl border border-[#d4af37]/25 bg-black">
-                    <MediaFrame nomination={editingNomination} height="aspect-[9/16] max-h-[58svh]" />
+                  <div className="relative overflow-hidden rounded-[10px] border border-[#d4af37]/25 bg-black">
+                    <MediaFrame nomination={editingNomination} height="aspect-[9/16] max-h-[52svh]" />
                     <OwnershipBadge owned className="absolute left-2 top-2 -rotate-2" />
                   </div>
                 ) : (
-                  <motion.button whileTap={TAP_REBOUND} transition={TAP_TRANSITION} onClick={() => fileInputRef.current?.click()} disabled={isPreparingMedia || uploadLoading} className="relative flex aspect-[9/16] max-h-[58svh] w-full items-center justify-center overflow-hidden rounded-2xl border border-[#d4af37]/25 bg-black text-left transition disabled:opacity-70">
+                  <motion.button whileTap={TAP_REBOUND} transition={TAP_TRANSITION} onClick={() => fileInputRef.current?.click()} disabled={isPreparingMedia || uploadLoading} className="relative flex aspect-[9/16] max-h-[52svh] w-full items-center justify-center overflow-hidden rounded-[10px] border border-[#d4af37]/25 bg-black text-left transition disabled:opacity-70">
                     {previewUrl ? (
                       mediaKind === "video" ? (
                         <video src={previewUrl} poster={thumbnailPreviewUrl ?? undefined} className="absolute inset-0 h-full w-full object-cover" controls loop playsInline muted preload="metadata" />
@@ -1730,8 +1730,8 @@ export default function Home() {
                     ) : (
                       <span className="flex flex-col items-center px-6 text-center text-white">
                         {isPreparingMedia ? <Loader2 className="mb-3 h-9 w-9 animate-spin text-[#d4af37]" /> : <UploadCloud className="mb-3 h-9 w-9 text-[#d4af37]" />}
-                        <span className="tabloid-headline text-3xl leading-none">{isPreparingMedia ? "Chargement du studio..." : "Déposer le rec"}</span>
-                        <span className="mt-2 text-sm font-bold uppercase tracking-[0.14em] text-[#d4af37]">Vidéo ou capture libre</span>
+                        <span className="tabloid-headline text-2xl leading-none">{isPreparingMedia ? "Chargement du studio..." : "Déposer le rec"}</span>
+                        <span className="mt-1.5 text-[10px] font-black uppercase tracking-[0.12em] text-[#d4af37]">Vidéo ou capture libre</span>
                       </span>
                     )}
                     <input ref={fileInputRef} type="file" accept="video/*,image/*" onChange={(event) => void prepareMedia(event.target.files?.[0] ?? null)} className="hidden" />
@@ -1741,22 +1741,22 @@ export default function Home() {
 
               {studioNotice && (
                 <BrutalCard tone="yellow" className="p-2">
-                  <p className="tabloid-headline text-[clamp(1.25rem,6.5vw,2rem)] leading-[0.85]">{studioNotice}</p>
+                  <p className="tabloid-headline text-[clamp(1.05rem,5.8vw,1.65rem)] leading-[0.82]">{studioNotice}</p>
                 </BrutalCard>
               )}
 
               {(isPreparingMedia || uploadLoading) && (
                 <BrutalCard tone="yellow" className="p-2">
-                  <p className="tabloid-headline text-[clamp(1.6rem,8vw,2.45rem)] leading-[0.85]">{uploadLoading ? "CHARGEMENT DU DOSSIER..." : "PRÉPARATION DU REC..."}</p>
-                  <div className="stat-bar mt-3">
+                  <p className="tabloid-headline text-[clamp(1.25rem,6.5vw,2rem)] leading-[0.82]">{uploadLoading ? "CHARGEMENT DU DOSSIER..." : "PRÉPARATION DU REC..."}</p>
+                  <div className="stat-bar mt-2">
                     <motion.div className="stat-bar-fill" animate={{ width: `${Math.round(mediaProgress * 100)}%` }} />
                   </div>
                 </BrutalCard>
               )}
 
-              <input value={tiktokerName} onChange={(event) => setTiktokerName(event.target.value)} placeholder="TikToker visé" maxLength={48} className="brutal-input w-full px-3 py-3 text-lg font-black uppercase" />
+              <input value={tiktokerName} onChange={(event) => setTiktokerName(event.target.value)} placeholder="TikToker visé" maxLength={48} className="brutal-input w-full px-2.5 py-2.5 text-sm font-black uppercase" />
 
-              <select value={catId} onChange={(event) => setCatId(event.target.value)} className="brutal-input w-full appearance-none px-3 py-3 text-lg font-black uppercase">
+              <select value={catId} onChange={(event) => setCatId(event.target.value)} className="brutal-input w-full appearance-none px-2.5 py-2.5 text-sm font-black uppercase">
                 {CATEGORIES.map((category) => (
                   <option key={category.id} value={category.id}>
                     {category.label}
@@ -1764,12 +1764,12 @@ export default function Home() {
                 ))}
               </select>
 
-              <textarea value={comment} onChange={(event) => setComment(event.target.value)} placeholder="Pourquoi ce dossier mérite le club ?" rows={3} maxLength={240} className="brutal-input w-full resize-none p-3 text-lg font-black uppercase" />
+              <textarea value={comment} onChange={(event) => setComment(event.target.value)} placeholder="Pourquoi ce dossier mérite le club ?" rows={3} maxLength={240} className="brutal-input w-full resize-none p-2.5 text-sm font-black uppercase" />
 
               {!isEditingStudio && (
                 <BrutalCard tone="yellow" className="p-2">
                   <StarInput value={initialRating} onChange={setInitialRating} size="lg" />
-                  <p className="mt-3 border-t border-[#d4af37]/20 pt-3 text-center text-sm font-bold uppercase tracking-[0.14em] text-[#d4af37]">Note initiale : {initialRating} / 5</p>
+                  <p className="mt-2 border-t border-[#d4af37]/20 pt-2 text-center text-[10px] font-black uppercase tracking-[0.12em] text-[#d4af37]">Note initiale : {initialRating} / 5</p>
                 </BrutalCard>
               )}
 
@@ -1778,7 +1778,7 @@ export default function Home() {
                   <motion.button whileTap={TAP_REBOUND} transition={TAP_TRANSITION} onClick={() => void saveEditedNomination()} disabled={mutationBusyId === editingNominationId || !uploadReady} className="brutal-submit flex w-full items-center justify-center gap-2 disabled:opacity-50">
                     {mutationBusyId === editingNominationId ? <Loader2 className="h-6 w-6 animate-spin" /> : "Sauvegarder"}
                   </motion.button>
-                  <motion.button whileTap={TAP_REBOUND} transition={TAP_TRANSITION} onClick={cancelEditNomination} className="rounded-2xl border border-white/10 bg-white/[0.06] px-4 text-sm font-bold uppercase tracking-[0.12em] text-white" type="button">
+                  <motion.button whileTap={TAP_REBOUND} transition={TAP_TRANSITION} onClick={cancelEditNomination} className="rounded-[10px] border border-white/10 bg-white/[0.06] px-3 text-xs font-black uppercase tracking-[0.1em] text-white" type="button">
                     Annuler
                   </motion.button>
                 </div>
@@ -1791,41 +1791,41 @@ export default function Home() {
           )}
 
           {tab === "palmares" && (
-            <motion.section key="palmares" {...pageTransition} drag={reduceMotion ? false : "x"} dragConstraints={{ left: 0, right: 0 }} onDragEnd={(_, info) => handleSectionDrag(info)} transition={{ duration: reduceMotion ? 0.01 : 0.26, type: "spring", stiffness: 230, damping: 25 }} className="space-y-3">
-              <BrutalCard tone="black" className="p-4 text-white">
-                <p className="mb-2 text-[10px] font-bold uppercase tracking-[0.28em] text-[#d4af37]">Leaderboard</p>
-                <h2 className="tabloid-headline text-[clamp(2.55rem,12vw,4.4rem)] leading-[0.92]">{PALMARES_TITLE}</h2>
+            <motion.section key="palmares" {...pageTransition} drag={reduceMotion ? false : "x"} dragConstraints={{ left: 0, right: 0 }} onDragEnd={(_, info) => handleSectionDrag(info)} transition={{ duration: reduceMotion ? 0.01 : 0.26, type: "spring", stiffness: 230, damping: 25 }} className="space-y-2">
+              <BrutalCard tone="black" className="p-3 text-white">
+                <p className="mb-1 text-[8px] font-black uppercase tracking-[0.2em] text-[#d4af37]">Classement</p>
+                <h2 className="tabloid-headline text-[clamp(2rem,9.8vw,3.35rem)] leading-[0.84]">{PALMARES_TITLE}</h2>
               </BrutalCard>
               <PalmaresList rows={palmaresRows} />
             </motion.section>
           )}
 
           {tab === "winners" && (
-            <motion.section key="winners" {...pageTransition} drag={reduceMotion ? false : "x"} dragConstraints={{ left: 0, right: 0 }} onDragEnd={(_, info) => handleSectionDrag(info)} transition={{ duration: reduceMotion ? 0.01 : 0.26, type: "spring", stiffness: 230, damping: 25 }} className="space-y-3">
-              <BrutalCard tone="black" className="p-4 text-white">
-                <p className="mb-2 text-[10px] font-bold uppercase tracking-[0.28em] text-[#d4af37]">Hall of Fame</p>
-                <h2 className="tabloid-headline text-[clamp(2.55rem,12vw,4.4rem)] leading-[0.92]">{WINNERS_TITLE}</h2>
+            <motion.section key="winners" {...pageTransition} drag={reduceMotion ? false : "x"} dragConstraints={{ left: 0, right: 0 }} onDragEnd={(_, info) => handleSectionDrag(info)} transition={{ duration: reduceMotion ? 0.01 : 0.26, type: "spring", stiffness: 230, damping: 25 }} className="space-y-2">
+              <BrutalCard tone="black" className="p-3 text-white">
+                <p className="mb-1 text-[8px] font-black uppercase tracking-[0.2em] text-[#d4af37]">Cérémonie</p>
+                <h2 className="tabloid-headline text-[clamp(2rem,9.8vw,3.35rem)] leading-[0.84]">{WINNERS_TITLE}</h2>
               </BrutalCard>
 
               {ultimateWinner && (
-                <BrutalCard tone="yellow" className="p-4">
+                <BrutalCard tone="yellow" className="p-3">
                   <Sticker tone="yellow">TikToker du mois</Sticker>
-                  <p className="tabloid-headline mt-3 text-[clamp(2.2rem,12vw,4rem)] leading-[0.92] text-white">{ultimateWinner.tiktokerName}</p>
-                  <span className="gold-pill mt-3">{ultimateWinner.points} points</span>
+                  <p className="tabloid-headline mt-2 text-[clamp(1.7rem,8.8vw,2.8rem)] leading-[0.84] text-white">{ultimateWinner.tiktokerName}</p>
+                  <span className="gold-pill mt-2">{ultimateWinner.points} points</span>
                 </BrutalCard>
               )}
 
               {paparazziOr && (
-                <BrutalCard className="p-4">
+                <BrutalCard className="p-3">
                   <Sticker tone="paper">Paparazzi d&apos;Or</Sticker>
-                  <p className="tabloid-headline mt-3 text-[clamp(1.7rem,9vw,2.8rem)] leading-[0.95] text-white">{paparazziOr.tiktoker_name}</p>
-                  <span className="gold-pill mt-3">{totalPoints(paparazziOr.ratings)} points sur un dossier</span>
+                  <p className="tabloid-headline mt-2 text-[clamp(1.45rem,7.4vw,2.25rem)] leading-[0.84] text-white">{paparazziOr.tiktoker_name}</p>
+                  <span className="gold-pill mt-2">{totalPoints(paparazziOr.ratings)} points sur un dossier</span>
                 </BrutalCard>
               )}
 
-              <BrutalCard tone="black" className="p-3">
-                <p className="text-[10px] font-bold uppercase tracking-[0.28em] text-[#d4af37]">Course aux trophées</p>
-                <h3 className="tabloid-headline mt-1 text-[clamp(1.8rem,9vw,3.1rem)] leading-[0.92] text-white">Toutes les catégories</h3>
+              <BrutalCard tone="black" className="p-2.5">
+                <p className="text-[8px] font-black uppercase tracking-[0.2em] text-[#d4af37]">Course aux trophées</p>
+                <h3 className="tabloid-headline mt-0.5 text-[clamp(1.45rem,7.5vw,2.4rem)] leading-[0.84] text-white">Toutes les catégories</h3>
               </BrutalCard>
 
               <CategoryRaceBoard races={categoryRaces} />
@@ -1835,12 +1835,12 @@ export default function Home() {
       </main>
 
       {tab !== "studio" && (
-        <motion.button initial={reduceMotion ? { opacity: 1 } : { opacity: 0, scale: 0.96, y: 8 }} animate={{ opacity: 1, scale: 1, y: 0 }} whileTap={TAP_REBOUND} transition={TAP_TRANSITION} onClick={() => switchTab("studio")} className="brutal-fab fixed right-5 z-40 flex h-16 w-16 items-center justify-center" style={{ bottom: "calc(env(safe-area-inset-bottom) + 84px)" }} aria-label="Lancer un dossier">
-          <Plus className="h-8 w-8" />
+        <motion.button initial={reduceMotion ? { opacity: 1 } : { opacity: 0, scale: 0.96, y: 8 }} animate={{ opacity: 1, scale: 1, y: 0 }} whileTap={TAP_REBOUND} transition={TAP_TRANSITION} onClick={() => switchTab("studio")} className="brutal-fab fixed right-5 z-40 flex h-12 w-12 items-center justify-center" style={{ bottom: "calc(env(safe-area-inset-bottom) + 76px)" }} aria-label="Lancer un dossier">
+          <Plus className="h-6 w-6" />
         </motion.button>
       )}
 
-      <nav className="bottom-tabloid fixed bottom-0 left-0 right-0 z-40 px-2 pt-2" style={{ paddingBottom: "calc(env(safe-area-inset-bottom) + 10px)" }}>
+      <nav className="bottom-tabloid fixed bottom-0 left-0 right-0 z-40 px-2 pt-1.5" style={{ paddingBottom: "calc(env(safe-area-inset-bottom) + 8px)" }}>
         <div className="mx-auto grid w-full max-w-[30rem] grid-cols-5 gap-1">
           {TAB_ITEMS.map((item) => {
             const Icon = item.icon;
@@ -1848,11 +1848,11 @@ export default function Home() {
             const badge = item.id === "vote" ? pendingForMe.length : 0;
 
             return (
-              <motion.button key={item.id} whileTap={TAP_REBOUND} transition={TAP_TRANSITION} onClick={() => switchTab(item.id)} className={`relative flex flex-col items-center justify-center gap-1 rounded-2xl border px-1 py-2 transition ${active ? "border-[#d4af37]/70 bg-[#d4af37]/18 text-[#f0d889]" : "border-white/10 bg-white/[0.045] text-zinc-400"}`}>
-                <Icon className="relative z-10 h-5 w-5" strokeWidth={1.5} />
-                <span className="relative z-10 text-[9px] font-black uppercase">{item.label}</span>
+              <motion.button key={item.id} whileTap={TAP_REBOUND} transition={TAP_TRANSITION} onClick={() => switchTab(item.id)} className={`relative flex flex-col items-center justify-center gap-0.5 rounded-[10px] border px-1 py-1.5 transition ${active ? "border-[#d4af37]/70 bg-[#d4af37]/18 text-[#f0d889]" : "border-white/10 bg-white/[0.045] text-zinc-400"}`}>
+                <Icon className="relative z-10 h-4 w-4" strokeWidth={1.5} />
+                <span className="relative z-10 text-[8px] font-black uppercase">{item.label}</span>
                 {badge > 0 && (
-                  <span className="absolute right-0 top-0 z-20 inline-flex h-5 min-w-[20px] items-center justify-center rounded-full border border-[#d4af37]/80 bg-[#d4af37] px-1 text-[9px] font-black text-black">
+                  <span className="absolute right-0 top-0 z-20 inline-flex h-4 min-w-[16px] items-center justify-center rounded-full border border-[#d4af37]/80 bg-[#d4af37] px-1 text-[8px] font-black text-black">
                     {badge > 9 ? "9+" : badge}
                   </span>
                 )}
