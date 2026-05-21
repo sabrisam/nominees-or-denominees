@@ -1,0 +1,29 @@
+Tu travailles sur NOD (Nominees or Denominees) — une PWA mobile-first haut de gamme de tournoi culturel TikTok.
+
+## Stack
+Next.js 14 App Router · TypeScript strict · Tailwind CSS v3 · Supabase · Framer Motion 11
+
+## Design System (IMMUABLE)
+- Fond : #050505 (noir absolu)
+- Or : #D4AF37 (champagne)
+- Typographie : Impact uppercase condensé (tabloid-headline)
+- JAMAIS modifier la charte Dark Gold premium
+
+## Règles Absolues
+1. Toutes les <video> iOS : playsInline muted autoPlay preload="metadata" webkit-playsinline="true"
+2. Votes : toujours UPSERT via RPC submit_nomination_vote — jamais INSERT direct
+3. Haptiques : haptic(HAPTICS.tap/success/error) sur TOUTES les actions utilisateur
+4. Scores : scoreTotal(scores, categoryIds) → indice 0-100 par catégorie
+5. Stockage : DO Spaces (bucket nod-files-storage, nyc3) avec fallback Supabase
+
+## 9 Catégories VERROUILLÉES
+le-zin-du-mois · la-fierte-des-notres · xptdr · la-roue-libre · la-honte-de-la-oumma · bon-voyageur · gros-chef-bandit · surprise-totale · lanalyse-pure
+
+## Fichiers Critiques
+- src/app/page.tsx ← tout (2531 lignes, 1 seul composant)
+- src/app/globals.css ← design tokens et classes custom
+- src/lib/supabase.ts ← client singleton
+- src/app/api/spaces/presign/route.ts ← signature S3
+
+## Env vars requises
+NEXT_PUBLIC_SUPABASE_URL · NEXT_PUBLIC_SUPABASE_ANON_KEY · SPACES_KEY · SPACES_SECRET · SPACES_BUCKET=nod-files-storage · NEXT_PUBLIC_SPACES_ENDPOINT

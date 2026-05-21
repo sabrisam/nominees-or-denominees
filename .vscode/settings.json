@@ -1,0 +1,26 @@
+{
+  "editor.formatOnSave": true,
+  "editor.defaultFormatter": "esbenp.prettier-vscode",
+  "editor.tabSize": 2,
+  "editor.rulers": [120],
+  "typescript.preferences.importModuleSpecifier": "relative",
+  "typescript.tsdk": "node_modules/typescript/lib",
+  "tailwindCSS.includeLanguages": {
+    "typescript": "html",
+    "typescriptreact": "html"
+  },
+  "tailwindCSS.experimental.classRegex": [
+    ["clsx\\(([^)]*)\\)", "'([^']*)'"],
+    ["twMerge\\(([^)]*)\\)", "'([^']*)'"],
+    ["className={`([^`]*)`}"]
+  ],
+  "emmet.includeLanguages": {
+    "typescriptreact": "html"
+  },
+  "files.associations": {
+    "*.css": "css"
+  },
+  "editor.quickSuggestions": {
+    "strings": true
+  }
+}

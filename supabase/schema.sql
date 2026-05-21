@@ -60,7 +60,7 @@ create table if not exists public.ratings (
   gene_score integer not null default 0 check (gene_score between 0 and 5),
   fierte_score integer not null default 0 check (fierte_score between 0 and 5),
   interet_score integer not null default 0 check (interet_score between 0 and 5),
-  comment text not null check (char_length(comment) between 2 and 180),
+  comment text not null default '' check (char_length(comment) between 0 and 180),
   created_at timestamptz not null default now(),
   unique (nomination_id, voter_id)
 );
@@ -116,6 +116,8 @@ alter table public.ratings add column if not exists fierte_score integer not nul
 alter table public.ratings add column if not exists interet_score integer not null default 0;
 alter table public.ratings add column if not exists created_at timestamptz not null default now();
 
+alter table public.ratings drop constraint if exists ratings_comment_check;
+alter table public.ratings add constraint ratings_comment_check check (char_length(comment) between 0 and 180);
 alter table public.ratings drop constraint if exists ratings_rating_score_check;
 alter table public.ratings add constraint ratings_rating_score_check check (rating_score between 0 and 5);
 alter table public.ratings drop constraint if exists ratings_rating_points_check;
@@ -147,7 +149,7 @@ do $$ begin
 end $$;
 
 update public.nominations
-set category_ids = array[coalesce(category_id, 'le_zin_du_mois')]
+set category_ids = array[coalesce(category_id, 'le-zin-du-mois')]
 where category_ids is null or cardinality(category_ids) = 0;
 
 update public.ratings
@@ -179,16 +181,16 @@ declare
   i numeric := least(5, greatest(0, coalesce(interet, 0)));
   weighted numeric;
 begin
-  weighted := case coalesce(target_category_id, 'le_zin_du_mois')
-    when 'le_zin_du_mois' then (r * 0.18) + (s * 0.18) + ((5 - g) * 0.12) + (f * 0.32) + (i * 0.20)
-    when 'fierte_des_notres' then (r * 0.10) + (s * 0.14) + ((5 - g) * 0.22) + (f * 0.34) + (i * 0.20)
+  weighted := case coalesce(target_category_id, 'le-zin-du-mois')
+    when 'le-zin-du-mois' then (r * 0.18) + (s * 0.18) + ((5 - g) * 0.12) + (f * 0.32) + (i * 0.20)
+    when 'la-fierte-des-notres' then (r * 0.10) + (s * 0.14) + ((5 - g) * 0.22) + (f * 0.34) + (i * 0.20)
     when 'xptdr' then (r * 0.46) + (s * 0.20) + ((5 - g) * 0.18) + (f * 0.04) + (i * 0.12)
-    when 'roue_libre' then (r * 0.30) + (s * 0.34) + (g * 0.14) + (f * 0.04) + (i * 0.18)
-    when 'honte_de_la_oumma' then (r * 0.07) + (s * 0.10) + (g * 0.55) + ((5 - f) * 0.25) + (i * 0.03)
-    when 'bon_voyageur' then (r * 0.12) + (s * 0.28) + ((5 - g) * 0.10) + (f * 0.14) + (i * 0.36)
-    when 'gros_chef_bandit' then (r * 0.24) + (s * 0.18) + ((5 - g) * 0.16) + (f * 0.24) + (i * 0.18)
-    when 'surprise_totale' then (r * 0.14) + (s * 0.46) + ((5 - g) * 0.08) + (f * 0.10) + (i * 0.22)
-    when 'analyse_pure' then (r * 0.04) + (s * 0.12) + ((5 - g) * 0.18) + (f * 0.22) + (i * 0.44)
+    when 'la-roue-libre' then (r * 0.30) + (s * 0.34) + (g * 0.14) + (f * 0.04) + (i * 0.18)
+    when 'la-honte-de-la-oumma' then (r * 0.07) + (s * 0.10) + (g * 0.55) + ((5 - f) * 0.25) + (i * 0.03)
+    when 'bon-voyageur' then (r * 0.12) + (s * 0.28) + ((5 - g) * 0.10) + (f * 0.14) + (i * 0.36)
+    when 'gros-chef-bandit' then (r * 0.24) + (s * 0.18) + ((5 - g) * 0.16) + (f * 0.24) + (i * 0.18)
+    when 'surprise-totale' then (r * 0.14) + (s * 0.46) + ((5 - g) * 0.08) + (f * 0.10) + (i * 0.22)
+    when 'lanalyse-pure' then (r * 0.04) + (s * 0.12) + ((5 - g) * 0.18) + (f * 0.22) + (i * 0.44)
     else (r + s + g + f + i) / 5
   end;
 
@@ -259,15 +261,15 @@ from safe_category_shift
 where category.id = safe_category_shift.id;
 
 insert into public.categories (id, label, mood, sort_order) values
-  ('le_zin_du_mois', 'Le Zin du mois', 'positive', 1),
-  ('fierte_des_notres', 'La Fierté des Nôtres', 'positive', 2),
+  ('le-zin-du-mois', 'Le Zin du Mois', 'positive', 1),
+  ('la-fierte-des-notres', 'La Fierté des Nôtres', 'positive', 2),
   ('xptdr', 'Xptdr', 'fun', 3),
-  ('roue_libre', 'La Roue Libre', 'fun', 4),
-  ('honte_de_la_oumma', 'La Honte de la Oumma', 'critical', 5),
-  ('bon_voyageur', 'Bon Voyageur', 'surprise', 6),
-  ('gros_chef_bandit', 'Gros Chef Bandit', 'fun', 7),
-  ('surprise_totale', 'Surprise Totale', 'surprise', 8),
-  ('analyse_pure', 'L’Analyse Pure', 'positive', 9)
+  ('la-roue-libre', 'La Roue Libre', 'fun', 4),
+  ('la-honte-de-la-oumma', 'La Honte de la Oumma', 'critical', 5),
+  ('bon-voyageur', 'Bon Voyageur', 'surprise', 6),
+  ('gros-chef-bandit', 'Gros Chef Bandit', 'fun', 7),
+  ('surprise-totale', 'Surprise Totale', 'surprise', 8),
+  ('lanalyse-pure', 'L’Analyse Pure', 'positive', 9)
 on conflict (id) do update set
   label = excluded.label,
   mood = excluded.mood,
@@ -276,23 +278,39 @@ on conflict (id) do update set
 
 update public.nominations
 set category_id = case category_id
-  when 'honte_absolue' then 'honte_de_la_oumma'
-  when 'fierte' then 'fierte_des_notres'
-  when 'pepite_cachee' then 'le_zin_du_mois'
-  when 'roue' then 'roue_libre'
-  when 'viral' then 'surprise_totale'
+  when 'le_zin_du_mois' then 'le-zin-du-mois'
+  when 'fierte_des_notres' then 'la-fierte-des-notres'
+  when 'roue_libre' then 'la-roue-libre'
+  when 'honte_de_la_oumma' then 'la-honte-de-la-oumma'
+  when 'bon_voyageur' then 'bon-voyageur'
+  when 'gros_chef_bandit' then 'gros-chef-bandit'
+  when 'surprise_totale' then 'surprise-totale'
+  when 'analyse_pure' then 'lanalyse-pure'
+  when 'honte_absolue' then 'la-honte-de-la-oumma'
+  when 'fierte' then 'la-fierte-des-notres'
+  when 'pepite_cachee' then 'le-zin-du-mois'
+  when 'roue' then 'la-roue-libre'
+  when 'viral' then 'surprise-totale'
   else category_id
 end
-where category_id in ('honte_absolue', 'fierte', 'pepite_cachee', 'roue', 'viral');
+where category_id in ('le_zin_du_mois', 'fierte_des_notres', 'roue_libre', 'honte_de_la_oumma', 'bon_voyageur', 'gros_chef_bandit', 'surprise_totale', 'analyse_pure', 'honte_absolue', 'fierte', 'pepite_cachee', 'roue', 'viral');
 
 update public.nominations
 set category_ids = (
   select array_agg(distinct case category_list.category_id
-    when 'honte_absolue' then 'honte_de_la_oumma'
-    when 'fierte' then 'fierte_des_notres'
-    when 'pepite_cachee' then 'le_zin_du_mois'
-    when 'roue' then 'roue_libre'
-    when 'viral' then 'surprise_totale'
+    when 'le_zin_du_mois' then 'le-zin-du-mois'
+    when 'fierte_des_notres' then 'la-fierte-des-notres'
+    when 'roue_libre' then 'la-roue-libre'
+    when 'honte_de_la_oumma' then 'la-honte-de-la-oumma'
+    when 'bon_voyageur' then 'bon-voyageur'
+    when 'gros_chef_bandit' then 'gros-chef-bandit'
+    when 'surprise_totale' then 'surprise-totale'
+    when 'analyse_pure' then 'lanalyse-pure'
+    when 'honte_absolue' then 'la-honte-de-la-oumma'
+    when 'fierte' then 'la-fierte-des-notres'
+    when 'pepite_cachee' then 'le-zin-du-mois'
+    when 'roue' then 'la-roue-libre'
+    when 'viral' then 'surprise-totale'
     else category_list.category_id
   end)
   from unnest(category_ids) as category_list(category_id)
@@ -300,7 +318,7 @@ set category_ids = (
 where category_ids is not null;
 
 update public.nominations
-set category_ids = array[coalesce(category_id, 'le_zin_du_mois')]
+set category_ids = array[coalesce(category_id, 'le-zin-du-mois')]
 where category_ids is null or cardinality(category_ids) = 0;
 
 create or replace function public.recalculate_nomination_status(target_nomination_id uuid)
@@ -331,6 +349,23 @@ begin
   return next_status;
 end;
 $$;
+
+create or replace function public.recalculate_nomination_status_from_rating()
+returns trigger
+language plpgsql
+security definer
+set search_path = public
+as $$
+begin
+  perform public.recalculate_nomination_status(coalesce(new.nomination_id, old.nomination_id));
+  return coalesce(new, old);
+end;
+$$;
+
+drop trigger if exists ratings_recalculate_nomination_status on public.ratings;
+create trigger ratings_recalculate_nomination_status
+after insert or update or delete on public.ratings
+for each row execute function public.recalculate_nomination_status_from_rating();
 
 with vote_counts as (
   select
@@ -371,10 +406,7 @@ begin
     raise exception 'Note invalide';
   end if;
 
-  reaction_comment := btrim(coalesce(reaction_comment, ''));
-  if char_length(reaction_comment) < 2 or char_length(reaction_comment) > 180 then
-    raise exception 'Réaction invalide';
-  end if;
+  reaction_comment := left(btrim(coalesce(reaction_comment, '')), 180);
 
   insert into public.ratings (
     nomination_id,
@@ -464,10 +496,7 @@ begin
     raise exception 'Méta-jugement invalide';
   end if;
 
-  reaction_comment := btrim(coalesce(reaction_comment, ''));
-  if char_length(reaction_comment) < 2 or char_length(reaction_comment) > 180 then
-    raise exception 'Réaction invalide';
-  end if;
+  reaction_comment := left(btrim(coalesce(reaction_comment, '')), 180);
 
   computed_points := public.compute_rating_points_for_category(primary_category_id, rire, surprise, gene, fierte, interet);
   computed_score := round((computed_points::numeric / 20), 2);
@@ -813,7 +842,13 @@ create policy "NOD ratings read" on public.ratings
 for select to anon using (true);
 
 drop policy if exists "NOD ratings insert" on public.ratings;
+create policy "NOD ratings insert" on public.ratings
+for insert to anon with check (true);
+
 drop policy if exists "NOD ratings update" on public.ratings;
+create policy "NOD ratings update" on public.ratings
+for update to anon using (true) with check (true);
+
 drop policy if exists "NOD ratings delete" on public.ratings;
 
 drop policy if exists "NOD ceremonies read" on public.monthly_ceremonies;

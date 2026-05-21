@@ -317,15 +317,14 @@ video {
   }
 
   .ticker-track {
-    display: block;
-    width: 100%;
-    overflow: hidden;
+    display: inline-block;
+    white-space: nowrap;
     padding: 0.3rem 0.5rem;
     font-size: 0.52rem;
     font-weight: 900;
     text-transform: uppercase;
-    text-indent: 100%;
-    animation: ticker-move 18s linear infinite;
+    letter-spacing: 0.04em;
+    animation: ticker-move 22s linear infinite;
   }
 
   .bottom-tabloid {
@@ -373,10 +372,10 @@ video {
 
 @keyframes ticker-move {
   from {
-    text-indent: 100%;
+    transform: translateX(100%);
   }
   to {
-    text-indent: -220%;
+    transform: translateX(-100%);
   }
 }
 

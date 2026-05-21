@@ -57,6 +57,14 @@ type Rating = {
   created_at: string;
 };
 
+type PendingRatingPayload = {
+  nominationId: string;
+  voterId: string;
+  scores: DimensionScores;
+  comment: string;
+  createdAt: string;
+};
+
 type Nomination = {
   id: string;
   room_id: string;
@@ -144,6 +152,7 @@ const LEGACY_SESSION_ID_KEY = "nod_session_id";
 const USER_DEVICE_ID_KEY = "nod_user_device_id";
 const PSEUDO_KEY = "nod_pseudo";
 const ROOM_CODE_KEY = "nod_room_code";
+const PENDING_RATINGS_KEY = "nod_pending_ratings";
 const DEFAULT_ROOM_CODE = "NOD-CLUB";
 const MIN_PUBLIC_RATINGS = 2;
 const DIRECT_TITLE = "DIRECT";
@@ -170,26 +179,36 @@ const HAPTICS = {
 } as const;
 
 const CATEGORIES: CategoryMeta[] = [
-  { id: "le_zin_du_mois", label: "Le Zin du mois", mood: "positive", icon: Crown },
-  { id: "fierte_des_notres", label: "La Fierté des Nôtres", mood: "positive", icon: BadgeCheck },
+  { id: "le-zin-du-mois", label: "Le Zin du Mois", mood: "positive", icon: Crown },
+  { id: "la-fierte-des-notres", label: "La Fierté des Nôtres", mood: "positive", icon: BadgeCheck },
   { id: "xptdr", label: "Xptdr", mood: "fun", icon: Sparkles },
-  { id: "roue_libre", label: "La Roue Libre", mood: "fun", icon: Flame },
-  { id: "honte_de_la_oumma", label: "La Honte de la Oumma", mood: "critical", icon: ShieldAlert },
-  { id: "bon_voyageur", label: "Bon Voyageur", mood: "surprise", icon: Globe2 },
-  { id: "gros_chef_bandit", label: "Gros Chef Bandit", mood: "fun", icon: Zap },
-  { id: "surprise_totale", label: "Surprise Totale", mood: "surprise", icon: Camera },
-  { id: "analyse_pure", label: "L’Analyse Pure", mood: "positive", icon: Brain }
+  { id: "la-roue-libre", label: "La Roue Libre", mood: "fun", icon: Flame },
+  { id: "la-honte-de-la-oumma", label: "La Honte de la Oumma", mood: "critical", icon: ShieldAlert },
+  { id: "bon-voyageur", label: "Bon Voyageur", mood: "surprise", icon: Globe2 },
+  { id: "gros-chef-bandit", label: "Gros Chef Bandit", mood: "fun", icon: Zap },
+  { id: "surprise-totale", label: "Surprise Totale", mood: "surprise", icon: Camera },
+  { id: "lanalyse-pure", label: "L’Analyse Pure", mood: "positive", icon: Brain }
 ];
 
 const CATEGORY_BY_ID = Object.fromEntries(CATEGORIES.map((category) => [category.id, category])) as Record<string, CategoryMeta>;
 const CATEGORY_ID_ALIASES: Record<string, string> = {
-  honte_absolue: "honte_de_la_oumma",
-  fierte: "fierte_des_notres",
-  pepite_cachee: "le_zin_du_mois",
-  roue: "roue_libre",
-  viral: "surprise_totale"
+  le_zin_du_mois: "le-zin-du-mois",
+  fierte_des_notres: "la-fierte-des-notres",
+  roue_libre: "la-roue-libre",
+  honte_de_la_oumma: "la-honte-de-la-oumma",
+  bon_voyageur: "bon-voyageur",
+  gros_chef_bandit: "gros-chef-bandit",
+  surprise_totale: "surprise-totale",
+  analyse_pure: "lanalyse-pure",
+  "analyse-pure": "lanalyse-pure",
+  "l-analyse-pure": "lanalyse-pure",
+  honte_absolue: "la-honte-de-la-oumma",
+  fierte: "la-fierte-des-notres",
+  pepite_cachee: "le-zin-du-mois",
+  roue: "la-roue-libre",
+  viral: "surprise-totale"
 };
-const FEATURED_CATEGORY_IDS = ["le_zin_du_mois", "fierte_des_notres", "xptdr", "roue_libre", "honte_de_la_oumma", "bon_voyageur", "gros_chef_bandit", "surprise_totale", "analyse_pure"] as const;
+const FEATURED_CATEGORY_IDS = ["le-zin-du-mois", "la-fierte-des-notres", "xptdr", "la-roue-libre", "la-honte-de-la-oumma", "bon-voyageur", "gros-chef-bandit", "surprise-totale", "lanalyse-pure"] as const;
 const RATING_DIMENSIONS: Array<{ key: RatingDimensionKey; label: string; shortLabel: string; emoji: string; color: string }> = [
   { key: "rire", label: "Rire", shortLabel: "RIR", emoji: "😂", color: "#facc15" },
   { key: "surprise", label: "Surprise", shortLabel: "SUR", emoji: "🤯", color: "#38bdf8" },
@@ -199,22 +218,22 @@ const RATING_DIMENSIONS: Array<{ key: RatingDimensionKey; label: string; shortLa
 ];
 const DEFAULT_DIMENSION_SCORES: DimensionScores = { rire: 3, surprise: 3, gene: 1, fierte: 2, interet: 3 };
 const CATEGORY_SCORING: Record<string, { weights: DimensionScores; lowIsStrong?: Partial<Record<RatingDimensionKey, boolean>> }> = {
-  le_zin_du_mois: { weights: { rire: 0.18, surprise: 0.18, gene: 0.12, fierte: 0.32, interet: 0.2 }, lowIsStrong: { gene: true } },
-  fierte_des_notres: { weights: { rire: 0.1, surprise: 0.14, gene: 0.22, fierte: 0.34, interet: 0.2 }, lowIsStrong: { gene: true } },
+  "le-zin-du-mois": { weights: { rire: 0.18, surprise: 0.18, gene: 0.12, fierte: 0.32, interet: 0.2 }, lowIsStrong: { gene: true } },
+  "la-fierte-des-notres": { weights: { rire: 0.1, surprise: 0.14, gene: 0.22, fierte: 0.34, interet: 0.2 }, lowIsStrong: { gene: true } },
   xptdr: { weights: { rire: 0.46, surprise: 0.2, gene: 0.18, fierte: 0.04, interet: 0.12 }, lowIsStrong: { gene: true } },
-  roue_libre: { weights: { rire: 0.3, surprise: 0.34, gene: 0.14, fierte: 0.04, interet: 0.18 } },
-  honte_de_la_oumma: { weights: { rire: 0.07, surprise: 0.1, gene: 0.55, fierte: 0.25, interet: 0.03 }, lowIsStrong: { fierte: true } },
-  bon_voyageur: { weights: { rire: 0.12, surprise: 0.28, gene: 0.1, fierte: 0.14, interet: 0.36 }, lowIsStrong: { gene: true } },
-  gros_chef_bandit: { weights: { rire: 0.24, surprise: 0.18, gene: 0.16, fierte: 0.24, interet: 0.18 }, lowIsStrong: { gene: true } },
-  surprise_totale: { weights: { rire: 0.14, surprise: 0.46, gene: 0.08, fierte: 0.1, interet: 0.22 }, lowIsStrong: { gene: true } },
-  analyse_pure: { weights: { rire: 0.04, surprise: 0.12, gene: 0.18, fierte: 0.22, interet: 0.44 }, lowIsStrong: { gene: true } }
+  "la-roue-libre": { weights: { rire: 0.3, surprise: 0.34, gene: 0.14, fierte: 0.04, interet: 0.18 } },
+  "la-honte-de-la-oumma": { weights: { rire: 0.07, surprise: 0.1, gene: 0.55, fierte: 0.25, interet: 0.03 }, lowIsStrong: { fierte: true } },
+  "bon-voyageur": { weights: { rire: 0.12, surprise: 0.28, gene: 0.1, fierte: 0.14, interet: 0.36 }, lowIsStrong: { gene: true } },
+  "gros-chef-bandit": { weights: { rire: 0.24, surprise: 0.18, gene: 0.16, fierte: 0.24, interet: 0.18 }, lowIsStrong: { gene: true } },
+  "surprise-totale": { weights: { rire: 0.14, surprise: 0.46, gene: 0.08, fierte: 0.1, interet: 0.22 }, lowIsStrong: { gene: true } },
+  "lanalyse-pure": { weights: { rire: 0.04, surprise: 0.12, gene: 0.18, fierte: 0.22, interet: 0.44 }, lowIsStrong: { gene: true } }
 };
 const SCORE_PRESETS: Array<{ id: string; label: string; hint: string; scores: DimensionScores }> = [
   { id: "xptdr", label: "XPTDR", hint: "rire fort", scores: { rire: 5, surprise: 3, gene: 1, fierte: 1, interet: 3 } },
   { id: "malaise", label: "Malaise", hint: "gêne max", scores: { rire: 1, surprise: 2, gene: 5, fierte: 0, interet: 2 } },
   { id: "masterclass", label: "Masterclass", hint: "niveau haut", scores: { rire: 2, surprise: 4, gene: 0, fierte: 5, interet: 4 } },
   { id: "choc", label: "Choc", hint: "surprise", scores: { rire: 2, surprise: 5, gene: 2, fierte: 2, interet: 5 } },
-  { id: "roue_libre", label: "Roue libre", hint: "chaos", scores: { rire: 4, surprise: 4, gene: 3, fierte: 1, interet: 3 } }
+  { id: "la-roue-libre", label: "Roue libre", hint: "chaos", scores: { rire: 4, surprise: 4, gene: 3, fierte: 1, interet: 3 } }
 ];
 const TAB_ITEMS: Array<{ id: Tab; label: string; icon: LucideIcon }> = [
   { id: "direct", label: "Direct", icon: Sparkles },
@@ -410,8 +429,8 @@ function averageImpact(nomination: Nomination, categoryIds = nomination.category
 
 function countdownToNextCeremony() {
   const now = new Date();
-  const next = new Date(now.getFullYear(), now.getMonth() + 1, 1);
-  const diffMs = Math.max(0, next.getTime() - now.getTime());
+  const next = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth() + 1, 1));
+  const diffMs = Math.max(0, next.getTime() - Date.now());
   const days = Math.floor(diffMs / 86400000);
   const hours = Math.floor((diffMs % 86400000) / 3600000);
   const mins = Math.floor((diffMs % 3600000) / 60000);
@@ -447,6 +466,45 @@ function parseRating(row: Record<string, unknown>): Rating {
     comment: toText(row.comment),
     created_at: toText(row.created_at, new Date().toISOString())
   };
+}
+
+function makeRatingFromDraft(nominationId: string, voterId: string, scores: DimensionScores, comment: string, categoryIds?: string[]): Rating {
+  const safeScores = cloneScores(scores);
+  const points = scoreTotal(safeScores, categoryIds);
+  const ratingScore = Math.round((points / 20) * 100) / 100;
+
+  return {
+    id: `${nominationId}-${voterId}`,
+    nomination_id: nominationId,
+    voter_id: voterId,
+    rating_stars: clampRating(Math.round(ratingScore)),
+    rating_score: ratingScore,
+    rating_points: points,
+    scores: safeScores,
+    comment,
+    created_at: new Date().toISOString()
+  };
+}
+
+function readPendingRatings(): PendingRatingPayload[] {
+  if (typeof localStorage === "undefined") return [];
+  try {
+    const parsed = JSON.parse(localStorage.getItem(PENDING_RATINGS_KEY) || "[]") as unknown;
+    if (!Array.isArray(parsed)) return [];
+    return parsed.filter((item): item is PendingRatingPayload => isRecord(item) && typeof item.nominationId === "string" && typeof item.voterId === "string" && isRecord(item.scores));
+  } catch {
+    return [];
+  }
+}
+
+function writePendingRatings(items: PendingRatingPayload[]) {
+  if (typeof localStorage === "undefined") return;
+  localStorage.setItem(PENDING_RATINGS_KEY, JSON.stringify(items.slice(-80)));
+}
+
+function queuePendingRating(payload: PendingRatingPayload) {
+  const rest = readPendingRatings().filter((item) => !(item.nominationId === payload.nominationId && item.voterId === payload.voterId));
+  writePendingRatings([...rest, payload]);
 }
 
 function parseNomination(row: Record<string, unknown>): Nomination {
@@ -597,6 +655,20 @@ function sanitizeStorageFileName(value: string) {
   return cleaned || "media";
 }
 
+function inferBrowserContentType(file: File) {
+  const extension = file.name.split(".").pop()?.toLowerCase() ?? "";
+  const currentType = file.type.toLowerCase();
+
+  if (extension === "mp4" || currentType.includes("mp4")) return "video/mp4";
+  if (extension === "mov" || extension === "qt" || currentType.includes("quicktime")) return "video/quicktime";
+  if (extension === "webm" || currentType.includes("webm")) return "video/webm";
+  if (extension === "webp" || currentType.includes("webp")) return "image/webp";
+  if (extension === "jpg" || extension === "jpeg" || currentType.includes("jpeg")) return "image/jpeg";
+  if (extension === "png" || currentType.includes("png")) return "image/png";
+
+  return file.type || "application/octet-stream";
+}
+
 function mediaMonthKey(date = new Date()) {
   const year = date.getUTCFullYear();
   const month = String(date.getUTCMonth() + 1).padStart(2, "0");
@@ -608,17 +680,18 @@ function storageKey(file: File, folder: "videos" | "miniatures") {
 }
 
 function isLegacyDemoMedia(url: string) {
-  return url.includes(LEGACY_FLOWER_VIDEO_URL);
+  return url === LEGACY_FLOWER_VIDEO_URL;
 }
 
 async function uploadFileToSpaces(file: File, folder: "videos" | "miniatures") {
+  const contentType = inferBrowserContentType(file);
   try {
     const signResponse = await fetch("/api/spaces/presign", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
         fileName: file.name,
-        contentType: file.type || "application/octet-stream",
+        contentType,
         folder
       })
     });
@@ -630,7 +703,7 @@ async function uploadFileToSpaces(file: File, folder: "videos" | "miniatures") {
 
     const uploadResponse = await fetch(payload.uploadUrl, {
       method: "PUT",
-      headers: { "Content-Type": file.type || "application/octet-stream" },
+      headers: { "Content-Type": contentType },
       body: file
     });
 
@@ -647,9 +720,10 @@ async function uploadFileToSpaces(file: File, folder: "videos" | "miniatures") {
 
 async function uploadFileToSupabaseStorage(supabase: SupabaseClient, file: File, folder: "videos" | "miniatures") {
   const key = storageKey(file, folder);
+  const contentType = inferBrowserContentType(file);
   const { error } = await supabase.storage.from(SUPABASE_STORAGE_BUCKET).upload(key, file, {
     cacheControl: "31536000",
-    contentType: file.type || "application/octet-stream",
+    contentType,
     upsert: false
   });
 
@@ -961,8 +1035,8 @@ function DimensionScoreGrid({
         const activeScore = clampDimension(value[dimension.key]);
 
         return (
-          <div key={dimension.key} className="grid grid-cols-[4.15rem_1fr] items-center gap-1">
-            <p className="truncate text-[9px] font-black uppercase leading-none tracking-tighter text-zinc-300">
+          <div key={dimension.key} className="grid grid-cols-[3.9rem_1fr] items-center gap-1 py-0.5">
+            <p className="truncate text-[8px] font-black uppercase leading-none tracking-tighter text-zinc-300">
               <span className="mr-1">{dimension.emoji}</span>
               {dimension.label}
             </p>
@@ -975,7 +1049,7 @@ function DimensionScoreGrid({
                   transition={TAP_TRANSITION}
                   onClick={() => setDimension(dimension.key, score)}
                   aria-pressed={activeScore === score}
-                  className={`h-5 rounded-[7px] border text-[9px] font-black leading-none transition ${activeScore === score ? "border-[#d4af37]/80 bg-[#d4af37]/20 text-[#f0d889]" : "border-white/10 bg-white/[0.035] text-zinc-500"}`}
+                  className={`h-4 rounded-[7px] border text-[8px] font-black leading-none transition ${activeScore === score ? "border-[#d4af37]/80 bg-[#d4af37]/20 text-[#f0d889]" : "border-white/10 bg-white/[0.035] text-zinc-500"}`}
                   aria-label={`${dimension.label} ${score} sur 5`}
                 >
                   {score}
@@ -1021,11 +1095,16 @@ function MediaFrame({
   if (nomination.media_kind === "video") {
     return (
       <div className={`${height} relative w-full overflow-hidden bg-black`}>
-        {resolving && <div className="media-shimmer absolute inset-0 z-10" aria-hidden="true" />}
+        {resolving && (
+          <div className="media-shimmer absolute inset-0 z-10 flex items-center justify-center" aria-hidden="true">
+            <Loader2 className="h-5 w-5 animate-spin text-[#d4af37]" />
+          </div>
+        )}
         <video
           src={nomination.media_url}
           poster={nomination.thumbnail_url ?? undefined}
-          controls
+          autoPlay
+          controls={false}
           loop
           muted
           playsInline
@@ -1033,9 +1112,10 @@ function MediaFrame({
           {...({ "webkit-playsinline": "true" } as Record<string, string>)}
           onLoadedMetadata={() => setResolving(false)}
           onCanPlay={() => setResolving(false)}
-          onClick={() => {
+          onClick={(event) => {
             haptic(HAPTICS.media);
             setEngaged(true);
+            void event.currentTarget.play().catch(() => undefined);
           }}
           onTouchStart={() => setEngaged(true)}
           onError={() => {
@@ -1051,7 +1131,11 @@ function MediaFrame({
 
   return (
     <div className={`${height} relative w-full overflow-hidden bg-black`}>
-      {resolving && <div className="media-shimmer absolute inset-0 z-10" aria-hidden="true" />}
+      {resolving && (
+        <div className="media-shimmer absolute inset-0 z-10 flex items-center justify-center" aria-hidden="true">
+          <Loader2 className="h-5 w-5 animate-spin text-[#d4af37]" />
+        </div>
+      )}
       <img
         src={nomination.media_url || nomination.thumbnail_url || FALLBACK_IMAGE_URL}
         alt=""
@@ -1133,12 +1217,18 @@ function NominationTile({
   );
 }
 
-function PalmaresList({ rows }: { rows: PalmaresRow[] }) {
+function PalmaresList({ rows, onOpenStudio }: { rows: PalmaresRow[]; onOpenStudio?: () => void }) {
   if (rows.length === 0) {
     return (
       <BrutalCard className="p-3 text-center">
         <Trophy className="mx-auto mb-2 h-8 w-8 text-[#d4af37]" />
         <p className="tabloid-headline text-2xl leading-none">Aucun classement.</p>
+        <p className="mx-auto mt-1 max-w-[15rem] text-[10px] font-semibold uppercase tracking-tighter text-zinc-500">Le palmarès commence dès le premier dossier noté.</p>
+        {onOpenStudio ? (
+          <motion.button type="button" whileTap={TAP_REBOUND} transition={TAP_TRANSITION} onClick={onOpenStudio} className="brutal-action mt-3 bg-[#d4af37] px-4 text-black">
+            Inviter les Zins à voter
+          </motion.button>
+        ) : null}
       </BrutalCard>
     );
   }
@@ -1527,9 +1617,6 @@ export default function Home() {
         }
         void fetchNominations(true);
       })
-      .on("postgres_changes", { event: "*", schema: "public", table: "ratings" }, () => {
-        void fetchNominations(true);
-      })
       .on("broadcast", { event: "nomination" }, () => {
         void fetchNominations(true);
       })
@@ -1564,7 +1651,7 @@ export default function Home() {
         if (directFilter === "elite") return nomination.status !== "pending" && averageImpact(nomination) >= 80;
         return true;
       })
-      .slice(0, 10);
+      .slice(0, 30);
   }, [directFilter, nominations, participant]);
   const directFilterCounts = useMemo<Record<DirectFilter, number>>(
     () => ({
@@ -1591,6 +1678,111 @@ export default function Home() {
     ? comment.trim().length >= 3 && cleanTiktokerName.length >= 2 && cleanCategoryIds.length > 0
     : Boolean(preparedFile && thumbnailFile && comment.trim().length >= 3 && cleanTiktokerName.length >= 2 && cleanCategoryIds.length > 0 && !isPreparingMedia);
   const ownsNomination = useCallback((nomination: Nomination) => Boolean(participant && nomination.submitted_by === participant.id), [participant]);
+
+  const patchRatingLocally = useCallback((nominationId: string, rating: Rating) => {
+    setNominations((current) =>
+      current.map((nomination) => {
+        if (nomination.id !== nominationId) return nomination;
+        const nextRatings = [...nomination.ratings.filter((item) => item.voter_id !== rating.voter_id), rating].sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime());
+        return { ...nomination, ratings: nextRatings, status: statusFromRatings(nextRatings) };
+      })
+    );
+  }, []);
+
+  const submitRatingSafely = useCallback(
+    async (nomination: Nomination, scores: DimensionScores, review: string) => {
+      if (!participant || !supabase) return false;
+
+      const safeScores = cloneScores(scores);
+      const safeReview = review.trim();
+      const averageScore = scoreAverage(safeScores, nomination.category_ids);
+      const impactPoints = scoreTotal(safeScores, nomination.category_ids);
+
+      const rpcPayload = {
+        target_nomination_id: nomination.id,
+        voter_id: participant.id,
+        rire: safeScores.rire,
+        surprise: safeScores.surprise,
+        gene: safeScores.gene,
+        fierte: safeScores.fierte,
+        interet: safeScores.interet,
+        reaction_comment: safeReview
+      };
+
+      const rpcResult = await supabase.rpc("submit_nomination_vote", rpcPayload);
+      if (!rpcResult.error) return true;
+
+      const legacyResult = await supabase.rpc("submit_nomination_vote", {
+        target_nomination_id: nomination.id,
+        voter_id: participant.id,
+        stars: Math.max(0, Math.round(averageScore)),
+        reaction_comment: safeReview
+      });
+      if (!legacyResult.error) return true;
+
+      const upsertResult = await supabase.from("ratings").upsert(
+        {
+          nomination_id: nomination.id,
+          voter_id: participant.id,
+          rating_stars: Math.max(0, Math.round(averageScore)),
+          rating_score: averageScore,
+          rating_points: impactPoints,
+          rire_score: safeScores.rire,
+          surprise_score: safeScores.surprise,
+          gene_score: safeScores.gene,
+          fierte_score: safeScores.fierte,
+          interet_score: safeScores.interet,
+          comment: safeReview
+        },
+        { onConflict: "nomination_id,voter_id" }
+      );
+
+      return !upsertResult.error;
+    },
+    [participant, supabase]
+  );
+
+  useEffect(() => {
+    if (!participant || !supabase || nominations.length === 0) return;
+
+    let cancelled = false;
+
+    const flush = async () => {
+      const pending = readPendingRatings();
+      const mine = pending.filter((item) => item.voterId === participant.id);
+      if (mine.length === 0) return;
+
+      const stillPending: PendingRatingPayload[] = [];
+
+      for (const payload of mine) {
+        const nomination = nominations.find((item) => item.id === payload.nominationId);
+        if (!nomination) continue;
+
+        try {
+          const ok = await submitRatingSafely(nomination, cloneScores(payload.scores), payload.comment);
+          if (!ok) stillPending.push(payload);
+        } catch {
+          stillPending.push(payload);
+        }
+      }
+
+      if (cancelled) return;
+
+      const others = pending.filter((item) => item.voterId !== participant.id);
+      writePendingRatings([...others, ...stillPending]);
+      if (stillPending.length < mine.length) void fetchNominations(true);
+    };
+
+    void flush();
+    const timer = window.setInterval(() => {
+      void flush();
+    }, 30000);
+
+    return () => {
+      cancelled = true;
+      window.clearInterval(timer);
+    };
+  }, [fetchNominations, nominations, participant, submitRatingSafely, supabase]);
 
   const revealContainer = reduceMotion
     ? {}
@@ -1764,7 +1956,7 @@ export default function Home() {
       await channelRef.current?.send({ type: "broadcast", event: "nomination", payload: { id: editingNomination.id } });
       void fetchNominations(true);
     } catch (err) {
-      const message = err instanceof Error ? err.message : "Modification refusée.";
+      const message = err instanceof Error ? err.message : "Modification impossible.";
       showToast("error", message);
     } finally {
       setMutationBusyId(null);
@@ -1796,7 +1988,7 @@ export default function Home() {
       await channelRef.current?.send({ type: "broadcast", event: "nomination", payload: { id: nomination.id } });
       void fetchNominations(true);
     } catch (err) {
-      const message = err instanceof Error ? err.message : "Retrait refusé.";
+      const message = err instanceof Error ? err.message : "Retrait impossible.";
       showToast("error", message);
     } finally {
       setMutationBusyId(null);
@@ -1868,28 +2060,34 @@ export default function Home() {
       const nominationId = toText(insertedNomination?.id);
       if (!nominationId) throw new Error("Dossier non créé.");
 
-      let { error: ratingError } = await supabase.rpc("submit_nomination_vote", {
-        target_nomination_id: nominationId,
-        voter_id: participant.id,
-        rire: initialScores.rire,
-        surprise: initialScores.surprise,
-        gene: initialScores.gene,
-        fierte: initialScores.fierte,
-        interet: initialScores.interet,
-        reaction_comment: cleanedComment
-      });
+      const initialNomination: Nomination = {
+        id: nominationId,
+        room_id: activeRoomId,
+        category_id: primaryCategoryId(cleanCategoryIds),
+        category_ids: cleanCategoryIds,
+        tiktoker_name: cleanTiktokerName,
+        media_url: mediaUpload.publicUrl,
+        video_storage_path: mediaKind === "video" ? mediaUpload.key : null,
+        thumbnail_url: thumbnailUpload.publicUrl,
+        thumbnail_storage_path: thumbnailUpload.key,
+        media_kind: mediaKind,
+        comment: cleanedComment,
+        submitted_by: participant.id,
+        status: "pending",
+        created_at: new Date().toISOString(),
+        ratings: []
+      };
+      const initialRatingSaved = await submitRatingSafely(initialNomination, initialScores, cleanedComment);
 
-      if (ratingError && /function .*submit_nomination_vote|Could not find/i.test(ratingError.message)) {
-        const legacy = await supabase.rpc("submit_nomination_vote", {
-          target_nomination_id: nominationId,
-          voter_id: participant.id,
-          stars: Math.max(1, Math.round(scoreAverage(initialScores))),
-          reaction_comment: cleanedComment
+      if (!initialRatingSaved) {
+        queuePendingRating({
+          nominationId,
+          voterId: participant.id,
+          scores: initialScores,
+          comment: cleanedComment,
+          createdAt: new Date().toISOString()
         });
-        ratingError = legacy.error;
       }
-
-      if (ratingError) throw ratingError;
 
       setMediaProgress(1);
       haptic(HAPTICS.success);
@@ -1904,6 +2102,7 @@ export default function Home() {
       showToast("error", message);
     } finally {
       setUploadLoading(false);
+      setMediaProgress(0);
     }
   };
 
@@ -1914,44 +2113,27 @@ export default function Home() {
     if (!nomination) return;
 
     const cleanedReview = (reviewDraftById[id] ?? "").trim();
-    if (cleanedReview.length < 2) {
-      showToast("error", "Ajoute ta réaction.");
-      return;
-    }
-
     const draftScores = cloneScores(scoreDraftById[id] ?? DEFAULT_DIMENSION_SCORES);
     const impactPoints = scoreTotal(draftScores, nomination.category_ids);
-    const averageScore = scoreAverage(draftScores, nomination.category_ids);
+    const localRating = makeRatingFromDraft(id, participant.id, draftScores, cleanedReview, nomination.category_ids);
 
     haptic(impactPoints >= 80 ? HAPTICS.success : HAPTICS.option);
     setVoteBusyId(id);
     setShakeId(id);
     window.setTimeout(() => setShakeId(null), 520);
+    patchRatingLocally(id, localRating);
 
     try {
-      let { error } = await supabase.rpc("submit_nomination_vote", {
-        target_nomination_id: id,
-        voter_id: participant.id,
-        rire: draftScores.rire,
-        surprise: draftScores.surprise,
-        gene: draftScores.gene,
-        fierte: draftScores.fierte,
-        interet: draftScores.interet,
-        reaction_comment: cleanedReview
-      });
-
-      if (error && /function .*submit_nomination_vote|Could not find/i.test(error.message)) {
-        const legacy = await supabase.rpc("submit_nomination_vote", {
-          target_nomination_id: id,
-          voter_id: participant.id,
-          stars: Math.max(1, Math.round(averageScore)),
-          reaction_comment: cleanedReview
+      const remoteSaved = await submitRatingSafely(nomination, draftScores, cleanedReview);
+      if (!remoteSaved) {
+        queuePendingRating({
+          nominationId: id,
+          voterId: participant.id,
+          scores: draftScores,
+          comment: cleanedReview,
+          createdAt: localRating.created_at
         });
-        error = legacy.error;
       }
-
-      if (error) throw error;
-
       setScoreDraftById((prev) => {
         const copy = { ...prev };
         delete copy[id];
@@ -1964,12 +2146,21 @@ export default function Home() {
       });
 
       voteBurst(impactPoints);
-      showToast("success", `Note enregistrée · ${impactPoints}/100.`);
-      await channelRef.current?.send({ type: "broadcast", event: "rating", payload: { id } });
-      void fetchNominations(true);
-    } catch (err) {
-      const message = err instanceof Error ? err.message : "Note refusée.";
-      showToast("error", message);
+      showToast("success", remoteSaved ? `Note enregistrée · ${impactPoints}/100.` : `Note gardée · ${impactPoints}/100.`);
+      if (remoteSaved) {
+        await channelRef.current?.send({ type: "broadcast", event: "rating", payload: { id } });
+        void fetchNominations(true);
+      }
+    } catch {
+      queuePendingRating({
+        nominationId: id,
+        voterId: participant.id,
+        scores: draftScores,
+        comment: cleanedReview,
+        createdAt: localRating.created_at
+      });
+      voteBurst(impactPoints);
+      showToast("success", `Note gardée · ${impactPoints}/100.`);
     } finally {
       setVoteBusyId(null);
     }
@@ -2267,7 +2458,7 @@ export default function Home() {
                 <p className="mb-1 text-[8px] font-black uppercase tracking-[0.2em] text-[#d4af37]">Classement</p>
                 <h2 className="tabloid-headline text-[clamp(1.55rem,7.8vw,2.7rem)] leading-[0.84]">{PALMARES_TITLE}</h2>
               </BrutalCard>
-              <PalmaresList rows={palmaresRows} />
+              <PalmaresList rows={palmaresRows} onOpenStudio={() => switchTab("studio")} />
             </motion.section>
           )}
 

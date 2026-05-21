@@ -64,6 +64,21 @@ function sanitizeFileName(value: string) {
   return cleaned || "media";
 }
 
+function inferContentType(fileName: string, incomingType: string) {
+  const extension = fileName.split(".").pop()?.toLowerCase() ?? "";
+  const explicitType = incomingType.toLowerCase();
+
+  if (extension === "mp4" || explicitType.includes("mp4")) return "video/mp4";
+  if (extension === "mov" || extension === "qt" || explicitType.includes("quicktime")) return "video/quicktime";
+  if (extension === "webm" || explicitType.includes("webm")) return "video/webm";
+  if (extension === "webp" || explicitType.includes("webp")) return "image/webp";
+  if (extension === "jpg" || extension === "jpeg" || explicitType.includes("jpeg")) return "image/jpeg";
+  if (extension === "png" || explicitType.includes("png")) return "image/png";
+  if (explicitType.startsWith("video/") || explicitType.startsWith("image/")) return explicitType;
+
+  return "application/octet-stream";
+}
+
 function monthKey(date = new Date()) {
   const year = date.getUTCFullYear();
   const month = String(date.getUTCMonth() + 1).padStart(2, "0");
@@ -79,7 +94,8 @@ export async function POST(request: Request) {
     };
 
     const fileName = typeof body.fileName === "string" ? body.fileName : "media";
-    const contentType = typeof body.contentType === "string" ? body.contentType : "application/octet-stream";
+    const rawContentType = typeof body.contentType === "string" ? body.contentType : "application/octet-stream";
+    const contentType = inferContentType(fileName, rawContentType);
     const folder = typeof body.folder === "string" ? body.folder : "";
 
     if (!ALLOWED_FOLDERS.has(folder)) {
@@ -87,7 +103,7 @@ export async function POST(request: Request) {
     }
 
     if (!contentType.startsWith("video/") && !contentType.startsWith("image/")) {
-      return NextResponse.json({ ok: false, error: "Type de média refusé." }, { status: 400 });
+      return NextResponse.json({ ok: false, error: "Type de média incompatible." }, { status: 400 });
     }
 
     const configuredBucket = process.env.SPACES_BUCKET;
