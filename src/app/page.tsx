@@ -24,7 +24,6 @@ import {
   Star,
   Trophy,
   UploadCloud,
-  Video,
   Zap
 } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
@@ -91,23 +90,23 @@ const STAR_VALUES = [1, 2, 3, 4, 5] as const;
 const HIGH_SCORE_TITLE = "LA FIERTÉ DES NÔTRES : LES ZINS DU MOIS";
 const LOW_SCORE_TITLE = "LA HONTE DU MOIS : LES DOSSIERS BANNIS";
 const ZINE_TITLE = "LE ZINE DU MOIS : DERNIÈRES COMPRESSIONS MOBILES";
+const TAP_REBOUND = { scale: 0.95, rotate: -0.5 };
+const TAP_TRANSITION = { type: "spring", stiffness: 620, damping: 24 } as const;
 
 const CATEGORIES: CategoryMeta[] = [
-  { id: "moment_marquant", label: "Moment marquant", mood: "positive", icon: Sparkles },
-  { id: "pepite_cachee", label: "Pépite cachée", mood: "positive", icon: Crown },
-  { id: "style_remarquable", label: "Style remarquable", mood: "positive", icon: Trophy },
-  { id: "replique_culte", label: "Réplique culte", mood: "positive", icon: BadgeCheck },
-  { id: "elan_creatif", label: "Élan créatif", mood: "positive", icon: Zap },
-  { id: "malaise_public", label: "Malaise public", mood: "critical", icon: ShieldAlert },
-  { id: "signal_alerte", label: "Signal d'alerte", mood: "critical", icon: ShieldAlert },
-  { id: "derapage_leger", label: "Dérapage léger", mood: "critical", icon: Flame },
-  { id: "choix_discutable", label: "Choix discutable", mood: "critical", icon: Archive },
-  { id: "silence_genant", label: "Silence gênant", mood: "critical", icon: Clock3 },
-  { id: "fou_rire", label: "Fou rire du mois", mood: "fun", icon: Sparkles },
-  { id: "scene_improbable", label: "Scène improbable", mood: "fun", icon: Video },
+  { id: "moment_marquant", label: "Le Zin du mois", mood: "positive", icon: Crown },
+  { id: "pepite_cachee", label: "La fierté des nôtres", mood: "positive", icon: BadgeCheck },
+  { id: "style_remarquable", label: "La honte du mois", mood: "critical", icon: ShieldAlert },
   { id: "roue_libre", label: "Roue libre", mood: "fun", icon: Flame },
-  { id: "performance_surprise", label: "Performance surprise", mood: "fun", icon: Trophy },
-  { id: "voyage_express", label: "Voyage express", mood: "fun", icon: Camera }
+  { id: "malaise_public", label: "Trop gênant", mood: "critical", icon: ShieldAlert },
+  { id: "fou_rire", label: "Xptdr", mood: "fun", icon: Sparkles },
+  { id: "replique_culte", label: "Masterclass", mood: "positive", icon: Trophy },
+  { id: "derapage_leger", label: "Dérape sec", mood: "critical", icon: Flame },
+  { id: "choix_discutable", label: "Dossier lourd", mood: "critical", icon: Archive },
+  { id: "signal_alerte", label: "Mythomane", mood: "critical", icon: ShieldAlert },
+  { id: "elan_creatif", label: "Frappe chirurgicale", mood: "positive", icon: Zap },
+  { id: "silence_genant", label: "Silence assourdissant", mood: "critical", icon: Clock3 },
+  { id: "performance_surprise", label: "Performance surprise", mood: "positive", icon: Camera }
 ];
 
 const CATEGORY_BY_ID = Object.fromEntries(CATEGORIES.map((category) => [category.id, category])) as Record<string, CategoryMeta>;
@@ -249,12 +248,6 @@ function statusClass(status: NominationStatus) {
   return "border-black bg-yellow-300 text-black";
 }
 
-function formatBytes(bytes: number) {
-  if (bytes < 1024 * 1024) return `${Math.max(1, Math.round(bytes / 1024))} Ko`;
-  if (bytes < 1024 * 1024 * 1024) return `${(bytes / 1024 / 1024).toFixed(1)} Mo`;
-  return `${(bytes / 1024 / 1024 / 1024).toFixed(2)} Go`;
-}
-
 function parseNomination(row: Record<string, unknown>): Nomination {
   const votes = parseVotes(row.votes);
   return {
@@ -306,7 +299,7 @@ function canvasToBlob(canvas: HTMLCanvasElement, mimeType: string, quality: numb
     canvas.toBlob(
       (blob) => {
         if (blob) resolve(blob);
-        else reject(new Error("Export canvas impossible."));
+        else reject(new Error("Aperçu impossible."));
       },
       mimeType,
       quality
@@ -332,7 +325,7 @@ async function compressImageToWebp(file: File) {
     canvas.width = size.width;
     canvas.height = size.height;
     const context = canvas.getContext("2d", { alpha: false });
-    if (!context) throw new Error("Canvas indisponible.");
+    if (!context) throw new Error("Aperçu impossible sur ce téléphone.");
 
     context.drawImage(bitmap, 0, 0, size.width, size.height);
     const blob = await canvasToBlob(canvas, "image/webp", 0.84);
@@ -370,7 +363,7 @@ async function extractVideoThumbnail(file: File) {
     canvas.width = size.width;
     canvas.height = size.height;
     const context = canvas.getContext("2d", { alpha: false });
-    if (!context) throw new Error("Canvas indisponible.");
+    if (!context) throw new Error("Aperçu impossible sur ce téléphone.");
 
     context.drawImage(video, 0, 0, size.width, size.height);
     const blob = await canvasToBlob(canvas, "image/jpeg", 0.86);
@@ -397,7 +390,7 @@ async function uploadFileToSpaces(file: File, folder: "videos" | "miniatures") {
 
   const payload = (await signResponse.json()) as Partial<SpacesUploadResult> & { error?: string };
   if (!signResponse.ok || !payload.uploadUrl || !payload.publicUrl || !payload.key) {
-    throw new Error(payload.error || "Signature d'archive impossible.");
+    throw new Error("Connexion au serveur de stockage en cours...");
   }
 
   const uploadResponse = await fetch(payload.uploadUrl, {
@@ -407,7 +400,7 @@ async function uploadFileToSpaces(file: File, folder: "videos" | "miniatures") {
   });
 
   if (!uploadResponse.ok) {
-    throw new Error("Envoi vers l'archive refusé.");
+    throw new Error("Connexion au serveur de stockage en cours...");
   }
 
   return {
@@ -507,10 +500,12 @@ function StarInput({
       {STAR_VALUES.map((star) => {
         const active = star <= (hover || value);
         return (
-          <button
+          <motion.button
             key={star}
             type="button"
             disabled={readonly}
+            whileTap={TAP_REBOUND}
+            transition={TAP_TRANSITION}
             onMouseEnter={() => !readonly && setHover(star)}
             onMouseLeave={() => !readonly && setHover(0)}
             onClick={() => onChange?.(star)}
@@ -520,7 +515,7 @@ function StarInput({
             aria-label={`${star} étoiles`}
           >
             <Star className={`${iconSizeClass} ${active ? "fill-black" : ""}`} strokeWidth={2} />
-          </button>
+          </motion.button>
         );
       })}
     </div>
@@ -536,6 +531,23 @@ function MediaFrame({
   height?: string;
   controls?: boolean;
 }) {
+  const [mediaFailed, setMediaFailed] = useState(false);
+
+  useEffect(() => {
+    setMediaFailed(false);
+  }, [nomination.image_url, nomination.video_url]);
+
+  if (mediaFailed) {
+    return (
+      <div className={`${height} relative flex w-full items-center justify-center bg-black`}>
+        {nomination.image_url ? <img src={nomination.image_url} alt="" className="absolute inset-0 h-full w-full object-cover opacity-55" /> : null}
+        <div className="relative z-10 mx-3 border-4 border-black bg-yellow-300 px-2 py-1 text-center text-[11px] font-black uppercase leading-none text-black">
+          Connexion au serveur de stockage en cours...
+        </div>
+      </div>
+    );
+  }
+
   if (nomination.video_url) {
     return (
       <video
@@ -544,12 +556,13 @@ function MediaFrame({
         controls={controls}
         playsInline
         preload="metadata"
+        onError={() => setMediaFailed(true)}
         className={`${height} block w-full bg-black object-cover`}
       />
     );
   }
 
-  return <img src={nomination.image_url} alt="" className={`${height} block w-full bg-black object-cover`} />;
+  return <img src={nomination.image_url} alt="" onError={() => setMediaFailed(true)} className={`${height} block w-full bg-black object-cover`} />;
 }
 
 function NominationTile({ nomination, index = 0 }: { nomination: Nomination; index?: number }) {
@@ -595,20 +608,17 @@ export default function Home() {
   const [nominations, setNominations] = useState<Nomination[]>([]);
   const [loadingList, setLoadingList] = useState(false);
   const [syncing, setSyncing] = useState(false);
-  const [lastSyncAt, setLastSyncAt] = useState<Date | null>(null);
 
   const [toast, setToast] = useState<ToastState>(null);
   const toastTimeoutRef = useRef<number | null>(null);
   const [countdown, setCountdown] = useState(countdownToNextMonth);
 
-  const [sourceFileName, setSourceFileName] = useState("");
   const [preparedFile, setPreparedFile] = useState<File | null>(null);
   const [thumbnailFile, setThumbnailFile] = useState<File | null>(null);
   const [mediaKind, setMediaKind] = useState<MediaKind | null>(null);
   const [previewUrl, setPreviewUrlState] = useState<string | null>(null);
   const [thumbnailPreviewUrl, setThumbnailPreviewUrlState] = useState<string | null>(null);
   const [mediaProgress, setMediaProgress] = useState(0);
-  const [mediaNote, setMediaNote] = useState("");
   const [isPreparingMedia, setIsPreparingMedia] = useState(false);
   const [catId, setCatId] = useState(CATEGORIES[0].id);
   const [comment, setComment] = useState("");
@@ -684,9 +694,7 @@ export default function Home() {
     setPreparedFile(null);
     setThumbnailFile(null);
     setMediaKind(null);
-    setSourceFileName("");
     setMediaProgress(0);
-    setMediaNote("");
     setUrl(setPreviewUrlState, previewUrl, null);
     setUrl(setThumbnailPreviewUrlState, thumbnailPreviewUrl, null);
   }, [previewUrl, thumbnailPreviewUrl]);
@@ -726,10 +734,9 @@ export default function Home() {
 
         const rows = ((data ?? []) as Record<string, unknown>[]).map(parseNomination);
         setNominations(rows);
-        setLastSyncAt(new Date());
       } catch (err) {
         if (!silent) {
-          const message = err instanceof Error ? err.message : "Synchronisation impossible.";
+          const message = err instanceof Error ? err.message : "Le flux refuse de répondre.";
           showToast("error", message);
         }
       } finally {
@@ -822,7 +829,6 @@ export default function Home() {
     }
     return Array.from(byCategory.values()).slice(0, 4);
   }, [nominations]);
-  const lastSyncLabel = lastSyncAt ? lastSyncAt.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }) : "--:--";
   const uploadReady = Boolean(preparedFile && thumbnailFile && comment.trim().length >= 3 && !isPreparingMedia);
 
   const revealContainer = reduceMotion
@@ -873,9 +879,7 @@ export default function Home() {
 
     setIsPreparingMedia(true);
     setMediaProgress(0);
-    setMediaNote("");
     clearPreparedMedia();
-    setSourceFileName(nextFile.name);
 
     try {
       if (nextFile.type.startsWith("image/")) {
@@ -886,8 +890,7 @@ export default function Home() {
         setUrl(setPreviewUrlState, null, compressed);
         setUrl(setThumbnailPreviewUrlState, null, compressed);
         setMediaProgress(1);
-        setMediaNote(`Image WebP: ${formatBytes(nextFile.size)} -> ${formatBytes(compressed.size)}`);
-        showToast("success", "Image optimisée.");
+        showToast("success", "Image prête.");
         return;
       }
 
@@ -898,8 +901,7 @@ export default function Home() {
       setUrl(setPreviewUrlState, null, nextFile);
       setUrl(setThumbnailPreviewUrlState, null, thumbnail);
       setMediaProgress(1);
-      setMediaNote(`Vidéo originale gardée: ${formatBytes(nextFile.size)}. Aperçu JPEG: ${formatBytes(thumbnail.size)}.`);
-      showToast("success", "Miniature générée, vidéo conservée.");
+      showToast("success", "Aperçu prêt.");
     } catch (err) {
       clearPreparedMedia();
       const message = err instanceof Error ? err.message : "Média impossible à préparer.";
@@ -911,7 +913,7 @@ export default function Home() {
 
   const uploadNomination = async () => {
     if (!participant || !supabase) {
-      showToast("error", "Configure Supabase avant l'envoi.");
+      showToast("error", "Le studio n'est pas encore branché.");
       return;
     }
 
@@ -929,13 +931,11 @@ export default function Home() {
       const activeRoomId = roomId ?? (await ensureRoom());
       if (!activeRoomId) throw new Error("Flux introuvable.");
 
-      setMediaNote("Archivage de l'aperçu permanent...");
       const imageUpload = await uploadFileToSpaces(thumbnailFile, "miniatures");
       setMediaProgress(mediaKind === "video" ? 0.45 : 0.82);
 
       let videoUpload: { key: string; publicUrl: string } | null = null;
       if (mediaKind === "video") {
-        setMediaNote("Archivage de la vidéo originale...");
         videoUpload = await uploadFileToSpaces(preparedFile, "videos");
         setMediaProgress(0.82);
       }
@@ -1060,7 +1060,7 @@ export default function Home() {
   }
 
   return (
-    <div className="tabloid-app h-svh overflow-hidden" style={{ paddingBottom: "calc(env(safe-area-inset-bottom) + 94px)" }}>
+    <div className="tabloid-app flex min-h-screen flex-col justify-between bg-[#f0f0f0] pb-[calc(env(safe-area-inset-bottom)+70px)]">
       <PaperBackdrop />
 
       <AnimatePresence>
@@ -1085,7 +1085,7 @@ export default function Home() {
       </AnimatePresence>
 
       <main
-        className="relative z-10 mx-auto h-[calc(100svh-5.85rem)] w-full max-w-[30rem] overflow-y-auto overscroll-contain px-2 pb-4"
+        className="relative z-10 mx-auto min-h-0 w-full max-w-[30rem] flex-1 overflow-y-auto overscroll-contain px-2 pb-4"
         style={{ paddingTop: "calc(env(safe-area-inset-top) + 6px)" }}
       >
         <header className="sticky top-0 z-30 mb-2 bg-[#f0f0f0] py-1.5">
@@ -1096,14 +1096,14 @@ export default function Home() {
                 <p className="truncate text-[clamp(1.45rem,7vw,2.2rem)] font-black uppercase leading-none">Verdicts en direct</p>
               </div>
               <div className="flex items-center gap-2">
-                <button onClick={() => void fetchNominations()} disabled={syncing || !supabase} className="brutal-icon-button disabled:opacity-50" aria-label="Synchroniser">
+                <motion.button whileTap={TAP_REBOUND} transition={TAP_TRANSITION} onClick={() => void fetchNominations()} disabled={syncing || !supabase} className="brutal-icon-button disabled:opacity-50" aria-label="Rafraîchir le flux">
                   <RefreshCw className={`h-4 w-4 ${syncing ? "animate-spin" : ""}`} />
-                </button>
+                </motion.button>
               </div>
             </div>
             <div className="ticker mt-1.5 border-4 border-black bg-black text-white">
               <span className="ticker-track">
-                PROCHAINE CÉRÉMONIE {countdown.days}J {countdown.hours}H {countdown.mins}M / ÉDITION {lastSyncLabel} / À VOTER {pendingForMe.length} / ARCHIVE PERMANENTE / DUEL COLLECTIF
+                PROCHAINE CÉRÉMONIE {countdown.days}J {countdown.hours}H {countdown.mins}M / À VOTER {pendingForMe.length} / ARCHIVE PERMANENTE / DUEL COLLECTIF
               </span>
             </div>
           </div>
@@ -1139,9 +1139,9 @@ export default function Home() {
               <motion.div {...revealItem}>
                 <BrutalCard className="relative overflow-hidden p-2">
                   <h1 className="tabloid-headline text-[clamp(3.25rem,18vw,6rem)] leading-[0.78]">
-                    Nominees
-                    <span className="mx-2 inline-block -rotate-2 border-4 border-black bg-red-600 px-2 text-[clamp(1.4rem,7vw,2.3rem)] leading-none text-white">or</span>
-                    <span className="block text-red-600">Denominees</span>
+                    NOMINEES
+                    <span className="mx-2 inline-block -rotate-2 border-4 border-black bg-red-600 px-2 text-[clamp(1.4rem,7vw,2.3rem)] leading-none text-white">OR</span>
+                    <span className="block text-red-600">DENOMINEES</span>
                   </h1>
                   <div className="-mt-[2px] border-4 border-black bg-black px-2 py-1 text-white">
                     <p className="tabloid-headline text-[clamp(1.35rem,7.6vw,2.35rem)] leading-[0.85]">LE FLUX DE SCANDALES DU MOIS</p>
@@ -1162,9 +1162,9 @@ export default function Home() {
                       <p className="text-[10px] font-black uppercase leading-none text-red-600">{HIGH_SCORE_TITLE}</p>
                       <p className="line-clamp-2 text-[clamp(1.25rem,7vw,2rem)] font-black uppercase leading-[0.86]">{heroWinner ? heroWinner.comment : "Aucun dossier publié"}</p>
                     </div>
-                    <button onClick={() => switchTab("studio")} className="brutal-icon-button bg-yellow-300" aria-label="Uploader un dossier">
+                    <motion.button whileTap={TAP_REBOUND} transition={TAP_TRANSITION} onClick={() => switchTab("studio")} className="brutal-icon-button bg-yellow-300" aria-label="Uploader un dossier">
                       <UploadCloud className="h-5 w-5" />
-                    </button>
+                    </motion.button>
                   </div>
                 </BrutalCard>
               </motion.div>
@@ -1275,12 +1275,12 @@ export default function Home() {
                       <div className="space-y-2 p-2">
                         <StarInput value={draftRating} onChange={(value) => setRatingDraftById((prev) => ({ ...prev, [nomination.id]: value }))} size="lg" />
                         <div className="grid grid-cols-2 gap-2">
-                          <button onClick={() => void applyVote(nomination.id, "propel")} disabled={voteBusyId === nomination.id} className="brutal-action bg-yellow-300 text-black disabled:opacity-50">
+                          <motion.button whileTap={TAP_REBOUND} transition={TAP_TRANSITION} onClick={() => void applyVote(nomination.id, "propel")} disabled={voteBusyId === nomination.id} className="brutal-action bg-yellow-300 text-black disabled:opacity-50">
                             Propulser
-                          </button>
-                          <button onClick={() => void applyVote(nomination.id, "ban")} disabled={voteBusyId === nomination.id} className="brutal-action bg-red-600 text-white disabled:opacity-50">
+                          </motion.button>
+                          <motion.button whileTap={TAP_REBOUND} transition={TAP_TRANSITION} onClick={() => void applyVote(nomination.id, "ban")} disabled={voteBusyId === nomination.id} className="brutal-action bg-red-600 text-white disabled:opacity-50">
                             Bannir
-                          </button>
+                          </motion.button>
                         </div>
                       </div>
                     </motion.article>
@@ -1306,7 +1306,9 @@ export default function Home() {
               </BrutalCard>
 
               <BrutalCard className="p-1.5">
-                <button
+                <motion.button
+                  whileTap={TAP_REBOUND}
+                  transition={TAP_TRANSITION}
                   onClick={() => fileInputRef.current?.click()}
                   disabled={isPreparingMedia || uploadLoading}
                   className="relative flex min-h-[min(38svh,18rem)] w-full items-center justify-center overflow-hidden border-4 border-black bg-black text-left transition active:translate-x-1 active:translate-y-1 disabled:opacity-70"
@@ -1325,18 +1327,12 @@ export default function Home() {
                     </span>
                   )}
                   <input ref={fileInputRef} type="file" accept="video/*,image/*" onChange={(event) => void prepareMedia(event.target.files?.[0] ?? null)} className="hidden" />
-                </button>
+                </motion.button>
               </BrutalCard>
 
-              {(isPreparingMedia || mediaNote || uploadLoading) && (
+              {(isPreparingMedia || uploadLoading) && (
                 <BrutalCard tone="yellow" className="p-2">
-                  <div className="flex items-center justify-between gap-3">
-                    <div className="min-w-0">
-                      <p className="truncate text-sm font-black uppercase">{sourceFileName || "Média"}</p>
-                      <p className="mt-1 truncate text-xs font-black uppercase">{mediaNote || "Préparation du média..."}</p>
-                    </div>
-                    <p className="text-4xl font-black leading-none">{Math.round(mediaProgress * 100)}%</p>
-                  </div>
+                  <p className="tabloid-headline text-[clamp(1.6rem,8vw,2.45rem)] leading-[0.85]">{uploadLoading ? "CHARGEMENT DU DOSSIER..." : "PRÉPARATION DU DOSSIER..."}</p>
                   <div className="mt-2 h-5 border-4 border-black bg-[#f0f0f0]">
                     <motion.div className="h-full bg-red-600" animate={{ width: `${Math.round(mediaProgress * 100)}%` }} />
                   </div>
@@ -1365,9 +1361,9 @@ export default function Home() {
                 <p className="mt-2 border-t-4 border-black pt-2 text-center text-sm font-black uppercase">Vote initial : {verdictLabel(initialRating >= 3 ? "propel" : "ban")}</p>
               </BrutalCard>
 
-              <button onClick={() => void uploadNomination()} disabled={uploadLoading || !uploadReady} className="brutal-submit flex w-full items-center justify-center gap-2 disabled:opacity-50">
+              <motion.button whileTap={TAP_REBOUND} transition={TAP_TRANSITION} onClick={() => void uploadNomination()} disabled={uploadLoading || !uploadReady} className="brutal-submit flex w-full items-center justify-center gap-2 disabled:opacity-50">
                 {uploadLoading ? <Loader2 className="h-6 w-6 animate-spin" /> : "Uploader le dossier"}
-              </button>
+              </motion.button>
             </motion.section>
           )}
 
@@ -1465,6 +1461,8 @@ export default function Home() {
         <motion.button
           initial={reduceMotion ? { opacity: 1 } : { opacity: 0, scale: 0.96, y: 8 }}
           animate={{ opacity: 1, scale: 1, y: 0 }}
+          whileTap={TAP_REBOUND}
+          transition={TAP_TRANSITION}
           onClick={() => switchTab("studio")}
           className="brutal-fab fixed right-5 z-40 flex h-16 w-16 items-center justify-center"
           style={{ bottom: "calc(env(safe-area-inset-bottom) + 84px)" }}
@@ -1482,7 +1480,7 @@ export default function Home() {
             const badge = item.id === "vote" ? pendingForMe.length : 0;
 
             return (
-              <button key={item.id} onClick={() => switchTab(item.id)} className={`relative flex flex-col items-center justify-center gap-1 border-4 border-black px-1 py-2 transition active:translate-x-0.5 active:translate-y-0.5 ${active ? "bg-red-600 text-white" : "bg-[#f0f0f0] text-black"}`}>
+              <motion.button key={item.id} whileTap={TAP_REBOUND} transition={TAP_TRANSITION} onClick={() => switchTab(item.id)} className={`relative flex flex-col items-center justify-center gap-1 border-4 border-black px-1 py-2 transition active:translate-x-0.5 active:translate-y-0.5 ${active ? "bg-red-600 text-white" : "bg-[#f0f0f0] text-black"}`}>
                 <Icon className="relative z-10 h-5 w-5" strokeWidth={1.5} />
                 <span className="relative z-10 text-[9px] font-black uppercase">{item.label}</span>
                 {badge > 0 && (
@@ -1490,7 +1488,7 @@ export default function Home() {
                     {badge > 9 ? "9+" : badge}
                   </span>
                 )}
-              </button>
+              </motion.button>
             );
           })}
         </div>

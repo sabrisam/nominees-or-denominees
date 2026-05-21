@@ -70,21 +70,19 @@ before update on public.nominations
 for each row execute function public.set_updated_at();
 
 insert into public.categories (id, label, mood, sort_order) values
-  ('moment_marquant', 'Moment marquant', 'positive', 1),
-  ('pepite_cachee', 'Pépite cachée', 'positive', 2),
-  ('style_remarquable', 'Style remarquable', 'positive', 3),
-  ('replique_culte', 'Réplique culte', 'positive', 4),
-  ('elan_creatif', 'Élan créatif', 'positive', 5),
-  ('malaise_public', 'Malaise public', 'critical', 6),
-  ('signal_alerte', 'Signal d''alerte', 'critical', 7),
-  ('derapage_leger', 'Dérapage léger', 'critical', 8),
-  ('choix_discutable', 'Choix discutable', 'critical', 9),
-  ('silence_genant', 'Silence gênant', 'critical', 10),
-  ('fou_rire', 'Fou rire du mois', 'fun', 11),
-  ('scene_improbable', 'Scène improbable', 'fun', 12),
-  ('roue_libre', 'Roue libre', 'fun', 13),
-  ('performance_surprise', 'Performance surprise', 'fun', 14),
-  ('voyage_express', 'Voyage express', 'fun', 15)
+  ('moment_marquant', 'Le Zin du mois', 'positive', 1),
+  ('pepite_cachee', 'La fierté des nôtres', 'positive', 2),
+  ('style_remarquable', 'La honte du mois', 'critical', 3),
+  ('roue_libre', 'Roue libre', 'fun', 4),
+  ('malaise_public', 'Trop gênant', 'critical', 5),
+  ('fou_rire', 'Xptdr', 'fun', 6),
+  ('replique_culte', 'Masterclass', 'positive', 7),
+  ('derapage_leger', 'Dérape sec', 'critical', 8),
+  ('choix_discutable', 'Dossier lourd', 'critical', 9),
+  ('signal_alerte', 'Mythomane', 'critical', 10),
+  ('elan_creatif', 'Frappe chirurgicale', 'positive', 11),
+  ('silence_genant', 'Silence assourdissant', 'critical', 12),
+  ('performance_surprise', 'Performance surprise', 'positive', 13)
 on conflict (id) do update set
   label = excluded.label,
   mood = excluded.mood,

@@ -6,6 +6,7 @@ export const dynamic = "force-dynamic";
 export const runtime = "nodejs";
 
 const DEFAULT_BUCKET = "nod-media";
+const DEFAULT_REGION = "nyc3";
 const MAX_SINGLE_PUT_BYTES = 5 * 1024 * 1024 * 1024;
 const ALLOWED_FOLDERS = new Set(["videos", "miniatures"]);
 
@@ -27,10 +28,10 @@ function getRegion(endpoint: string, bucket: string) {
       return firstLabel;
     }
   } catch {
-    return "us-east-1";
+    return process.env.SPACES_REGION || DEFAULT_REGION;
   }
 
-  return "us-east-1";
+  return process.env.SPACES_REGION || DEFAULT_REGION;
 }
 
 function buildPublicUrl(endpoint: string, bucket: string, key: string) {
@@ -92,10 +93,10 @@ export async function POST(request: Request) {
       return NextResponse.json({ ok: false, error: "Type de média refusé." }, { status: 400 });
     }
 
-    const endpoint = getRequiredEnv("NEXT_PUBLIC_SPACES_ENDPOINT");
+    const bucket = process.env.SPACES_BUCKET || DEFAULT_BUCKET;
+    const endpoint = process.env.NEXT_PUBLIC_SPACES_ENDPOINT || `https://${process.env.SPACES_REGION || DEFAULT_REGION}.digitaloceanspaces.com`;
     const accessKeyId = getRequiredEnv("SPACES_KEY");
     const secretAccessKey = getRequiredEnv("SPACES_SECRET");
-    const bucket = process.env.SPACES_BUCKET || DEFAULT_BUCKET;
     const region = getRegion(endpoint, bucket);
     const key = `${folder}/${monthKey()}/${crypto.randomUUID()}-${sanitizeFileName(fileName)}`;
 

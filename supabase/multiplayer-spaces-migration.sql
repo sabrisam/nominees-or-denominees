@@ -19,6 +19,26 @@ alter table public.nominations
 
 drop table if exists public.trial_rounds;
 
+insert into public.categories (id, label, mood, sort_order) values
+  ('moment_marquant', 'Le Zin du mois', 'positive', 1),
+  ('pepite_cachee', 'La fierté des nôtres', 'positive', 2),
+  ('style_remarquable', 'La honte du mois', 'critical', 3),
+  ('roue_libre', 'Roue libre', 'fun', 4),
+  ('malaise_public', 'Trop gênant', 'critical', 5),
+  ('fou_rire', 'Xptdr', 'fun', 6),
+  ('replique_culte', 'Masterclass', 'positive', 7),
+  ('derapage_leger', 'Dérape sec', 'critical', 8),
+  ('choix_discutable', 'Dossier lourd', 'critical', 9),
+  ('signal_alerte', 'Mythomane', 'critical', 10),
+  ('elan_creatif', 'Frappe chirurgicale', 'positive', 11),
+  ('silence_genant', 'Silence assourdissant', 'critical', 12),
+  ('performance_surprise', 'Performance surprise', 'positive', 13)
+on conflict (id) do update set
+  label = excluded.label,
+  mood = excluded.mood,
+  sort_order = excluded.sort_order,
+  active = true;
+
 create or replace function public.nod_status_from_votes(next_votes jsonb)
 returns public.nomination_status
 language sql

@@ -18,16 +18,14 @@
 }
 
 html {
-  height: 100%;
   min-height: 100%;
   background: var(--paper);
   -webkit-tap-highlight-color: transparent;
   overscroll-behavior: none;
-  overflow: hidden;
+  overflow-x: hidden;
 }
 
 body {
-  height: 100%;
   min-height: 100%;
   margin: 0;
   background: var(--paper);
@@ -36,7 +34,7 @@ body {
   text-rendering: geometricPrecision;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
-  overflow: hidden;
+  overflow-x: hidden;
 }
 
 button,
@@ -70,12 +68,10 @@ video {
 @layer components {
   .tabloid-app {
     position: relative;
-    min-height: 100svh;
+    min-height: 100%;
     overflow-x: hidden;
-    background:
-      repeating-linear-gradient(0deg, rgba(0, 0, 0, 0.035) 0, rgba(0, 0, 0, 0.035) 1px, transparent 1px, transparent 5px),
-      repeating-linear-gradient(90deg, rgba(0, 0, 0, 0.024) 0, rgba(0, 0, 0, 0.024) 1px, transparent 1px, transparent 13px),
-      var(--paper);
+    background-color: var(--paper);
+    background-image: url("data:image/svg+xml,%3Csvg width='48' height='48' viewBox='0 0 48 48' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M0 0H48V48H0z' fill='%23f0f0f0'/%3E%3Cpath d='M0 12H48M0 24H48M0 36H48M12 0V48M24 0V48M36 0V48' stroke='%23000000' stroke-opacity='.055' stroke-width='1'/%3E%3C/svg%3E");
     color: var(--ink);
   }
 
@@ -92,10 +88,7 @@ video {
     content: "";
     position: absolute;
     inset: -20%;
-    background:
-      radial-gradient(circle at 20% 12%, rgba(220, 38, 38, 0.18), transparent 20rem),
-      radial-gradient(circle at 90% 28%, rgba(253, 224, 71, 0.2), transparent 18rem),
-      radial-gradient(circle at 20% 92%, rgba(0, 0, 0, 0.12), transparent 18rem);
+    background: transparent;
     animation: paper-drift 18s steps(3, end) infinite alternate;
   }
 
@@ -103,10 +96,7 @@ video {
     content: "";
     position: absolute;
     inset: 0;
-    background-image:
-      linear-gradient(rgba(0, 0, 0, 0.08) 1px, transparent 1px),
-      linear-gradient(90deg, rgba(0, 0, 0, 0.08) 1px, transparent 1px);
-    background-size: 44px 44px;
+    background-image: url("data:image/svg+xml,%3Csvg width='44' height='44' viewBox='0 0 44 44' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M0 0H44V44H0z' fill='none'/%3E%3Cpath d='M0 0H44M0 22H44M0 44H44M0 0V44M22 0V44M44 0V44' stroke='%23000000' stroke-opacity='.18' stroke-width='1'/%3E%3C/svg%3E");
     mix-blend-mode: multiply;
     opacity: 0.18;
   }
@@ -149,6 +139,8 @@ video {
     font-family: Impact, Haettenschweiler, "Franklin Gothic Heavy", "Avenir Next Condensed", sans-serif;
     font-weight: 900;
     text-transform: uppercase;
+    letter-spacing: -0.05em;
+    line-height: 0.85;
   }
 
   .brutal-card {
@@ -163,8 +155,7 @@ video {
     content: "";
     position: absolute;
     inset: 0;
-    background:
-      repeating-linear-gradient(135deg, rgba(0, 0, 0, 0.05) 0, rgba(0, 0, 0, 0.05) 1px, transparent 1px, transparent 8px);
+    background-image: url("data:image/svg+xml,%3Csvg width='8' height='8' viewBox='0 0 8 8' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M0 8L8 0' stroke='%23000000' stroke-opacity='.08' stroke-width='1'/%3E%3C/svg%3E");
     opacity: 0.28;
     mix-blend-mode: multiply;
   }
@@ -268,8 +259,7 @@ video {
     content: "";
     position: absolute;
     inset: 0;
-    background:
-      repeating-linear-gradient(0deg, rgba(255, 255, 255, 0.08) 0, rgba(255, 255, 255, 0.08) 1px, transparent 1px, transparent 4px);
+    background-image: url("data:image/svg+xml,%3Csvg width='4' height='4' viewBox='0 0 4 4' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M0 1H4' stroke='%23ffffff' stroke-opacity='.22' stroke-width='1'/%3E%3C/svg%3E");
     opacity: 0.22;
   }
 
