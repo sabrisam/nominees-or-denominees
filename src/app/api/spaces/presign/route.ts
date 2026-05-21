@@ -7,7 +7,7 @@ export const runtime = "nodejs";
 
 const DEFAULT_BUCKET = "nod-media";
 const DEFAULT_REGION = "nyc3";
-const MAX_SINGLE_PUT_BYTES = 5 * 1024 * 1024 * 1024;
+const MAX_SINGLE_PUT_BYTES = 250 * 1024 * 1024;
 const ALLOWED_FOLDERS = new Set(["videos", "miniatures"]);
 
 function isPlaceholder(value: string) {
@@ -90,7 +90,7 @@ export async function POST(request: Request) {
     }
 
     if (size <= 0 || size > MAX_SINGLE_PUT_BYTES) {
-      return NextResponse.json({ ok: false, error: "Taille de fichier invalide pour l'envoi direct." }, { status: 400 });
+      return NextResponse.json({ ok: false, error: "Rec trop lourd pour l'envoi direct." }, { status: 400 });
     }
 
     if (!contentType.startsWith("video/") && !contentType.startsWith("image/")) {

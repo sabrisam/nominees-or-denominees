@@ -1,7 +1,13 @@
--- Nominees or Denominees - tournoi multijoueur relationnel
--- Run this file in Supabase SQL Editor before starting the PWA.
+-- NOD: Nominees or Denominees - schema V2 tournoi mensuel
+-- Exécuter dans Supabase SQL Editor.
 
 create extension if not exists pgcrypto;
+
+do $$ begin
+  create type public.nomination_status as enum ('pending', 'accepted', 'rejected');
+exception
+  when duplicate_object then null;
+end $$;
 
 create table if not exists public.rooms (
   id uuid primary key default gen_random_uuid(),
@@ -13,56 +19,113 @@ create table if not exists public.rooms (
 create table if not exists public.categories (
   id text primary key,
   label text not null,
-  mood text not null check (mood in ('positive', 'critical', 'fun')),
+  mood text not null check (mood in ('positive', 'critical', 'fun', 'surprise')),
   sort_order integer not null unique,
   active boolean not null default true,
   created_at timestamptz not null default now()
 );
 
-create table if not exists public.tiktokeurs (
-  id uuid primary key default gen_random_uuid(),
-  name text not null unique check (char_length(name) between 2 and 48),
-  avatar_emoji text not null default '🎥' check (char_length(avatar_emoji) between 1 and 12),
-  created_at timestamptz not null default now(),
-  updated_at timestamptz not null default now()
-);
+alter table public.categories drop constraint if exists categories_mood_check;
+alter table public.categories
+  add constraint categories_mood_check
+  check (mood in ('positive', 'critical', 'fun', 'surprise'));
 
-create table if not exists public.dossiers (
+create table if not exists public.nominations (
   id uuid primary key default gen_random_uuid(),
-  submitted_by text not null check (char_length(submitted_by) between 8 and 96),
-  tiktokeur_id uuid not null references public.tiktokeurs(id) on delete restrict,
+  room_id uuid not null references public.rooms(id) on delete cascade,
   category_id text not null references public.categories(id),
+  tiktoker_name text not null check (char_length(tiktoker_name) between 2 and 48),
   media_url text not null,
-  media_storage_path text,
+  video_storage_path text,
   thumbnail_url text,
   thumbnail_storage_path text,
   media_kind text not null default 'image' check (media_kind in ('video', 'image')),
   comment text not null check (char_length(comment) between 3 and 240),
+  submitted_by text not null check (char_length(submitted_by) between 8 and 96),
+  status public.nomination_status not null default 'pending',
   created_at timestamptz not null default now(),
   updated_at timestamptz not null default now()
 );
 
 create table if not exists public.ratings (
   id uuid primary key default gen_random_uuid(),
-  dossier_id uuid not null references public.dossiers(id) on delete cascade,
+  nomination_id uuid references public.nominations(id) on delete cascade,
   voter_id text not null check (char_length(voter_id) between 8 and 96),
-  stars_count integer not null check (stars_count between 1 and 5),
+  rating_stars integer check (rating_stars between 1 and 5),
   comment text not null check (char_length(comment) between 2 and 180),
-  voted_at timestamptz not null default now(),
-  unique (dossier_id, voter_id)
+  created_at timestamptz not null default now(),
+  unique (nomination_id, voter_id)
 );
 
-drop table if exists public.trial_rounds;
+create table if not exists public.monthly_ceremonies (
+  season_month date primary key,
+  payload jsonb not null,
+  frozen_at timestamptz not null default now()
+);
+
+-- Compatibilité douce avec les anciens essais de schéma.
+alter table public.nominations add column if not exists room_id uuid references public.rooms(id) on delete cascade;
+alter table public.nominations add column if not exists category_id text references public.categories(id);
+alter table public.nominations add column if not exists tiktoker_name text;
+alter table public.nominations add column if not exists media_url text;
+alter table public.nominations add column if not exists video_storage_path text;
+alter table public.nominations add column if not exists thumbnail_url text;
+alter table public.nominations add column if not exists thumbnail_storage_path text;
+alter table public.nominations add column if not exists media_kind text not null default 'image';
+alter table public.nominations add column if not exists comment text;
+alter table public.nominations add column if not exists submitted_by text;
+alter table public.nominations add column if not exists status public.nomination_status not null default 'pending';
+alter table public.nominations add column if not exists updated_at timestamptz not null default now();
+
+alter table public.nominations drop constraint if exists nominations_media_kind_check;
+alter table public.nominations
+  add constraint nominations_media_kind_check
+  check (media_kind in ('video', 'image'));
+
+do $$ begin
+  if exists (select 1 from information_schema.columns where table_schema = 'public' and table_name = 'nominations' and column_name = 'image_url') then
+    alter table public.nominations alter column image_url drop not null;
+  end if;
+
+  if exists (select 1 from information_schema.columns where table_schema = 'public' and table_name = 'nominations' and column_name = 'video_url') then
+    execute 'update public.nominations set media_url = coalesce(media_url, video_url, image_url) where media_url is null';
+  elsif exists (select 1 from information_schema.columns where table_schema = 'public' and table_name = 'nominations' and column_name = 'image_url') then
+    execute 'update public.nominations set media_url = coalesce(media_url, image_url) where media_url is null';
+  end if;
+end $$;
+
+alter table public.ratings add column if not exists nomination_id uuid references public.nominations(id) on delete cascade;
+alter table public.ratings add column if not exists rating_stars integer check (rating_stars between 1 and 5);
+alter table public.ratings add column if not exists created_at timestamptz not null default now();
+
+do $$ begin
+  if exists (select 1 from information_schema.columns where table_schema = 'public' and table_name = 'ratings' and column_name = 'dossier_id') then
+    alter table public.ratings alter column dossier_id drop not null;
+  end if;
+
+  if exists (select 1 from information_schema.columns where table_schema = 'public' and table_name = 'ratings' and column_name = 'stars_count') then
+    alter table public.ratings alter column stars_count drop not null;
+    execute 'update public.ratings set rating_stars = coalesce(rating_stars, stars_count) where rating_stars is null';
+  end if;
+
+  if exists (select 1 from information_schema.columns where table_schema = 'public' and table_name = 'ratings' and column_name = 'voted_at') then
+    execute 'update public.ratings set created_at = coalesce(created_at, voted_at) where created_at is null';
+  end if;
+end $$;
 
 create index if not exists rooms_code_idx on public.rooms(code);
 create index if not exists categories_active_sort_idx on public.categories(active, sort_order);
-create index if not exists tiktokeurs_name_idx on public.tiktokeurs(name);
-create index if not exists dossiers_created_idx on public.dossiers(created_at desc);
-create index if not exists dossiers_owner_idx on public.dossiers(submitted_by);
-create index if not exists dossiers_tiktokeur_idx on public.dossiers(tiktokeur_id);
-create index if not exists dossiers_category_idx on public.dossiers(category_id);
-create index if not exists ratings_dossier_idx on public.ratings(dossier_id, voted_at desc);
+create index if not exists nominations_room_created_idx on public.nominations(room_id, created_at desc);
+create index if not exists nominations_room_status_idx on public.nominations(room_id, status);
+create index if not exists nominations_owner_idx on public.nominations(submitted_by);
+create index if not exists nominations_tiktoker_idx on public.nominations(tiktoker_name);
+create index if not exists nominations_category_idx on public.nominations(category_id);
+create index if not exists ratings_nomination_created_idx on public.ratings(nomination_id, created_at desc);
 create index if not exists ratings_voter_idx on public.ratings(voter_id);
+
+drop index if exists public.ratings_nomination_voter_idx;
+create unique index ratings_nomination_voter_idx
+on public.ratings(nomination_id, voter_id);
 
 create or replace function public.set_updated_at()
 returns trigger
@@ -79,48 +142,16 @@ create trigger rooms_set_updated_at
 before update on public.rooms
 for each row execute function public.set_updated_at();
 
-drop trigger if exists tiktokeurs_set_updated_at on public.tiktokeurs;
-create trigger tiktokeurs_set_updated_at
-before update on public.tiktokeurs
+drop trigger if exists nominations_set_updated_at on public.nominations;
+create trigger nominations_set_updated_at
+before update on public.nominations
 for each row execute function public.set_updated_at();
-
-drop trigger if exists dossiers_set_updated_at on public.dossiers;
-create trigger dossiers_set_updated_at
-before update on public.dossiers
-for each row execute function public.set_updated_at();
-
-update public.categories
-set sort_order = sort_order + 1000
-where id not in (
-  'zin_du_mois',
-  'fierte_des_notres',
-  'honte_oumma',
-  'roue_libre',
-  'trop_genant',
-  'xptdr',
-  'masterclass',
-  'derape_sec',
-  'dossier_lourd',
-  'mythomane',
-  'frappe_chirurgicale',
-  'silence_assourdissant',
-  'performance_surprise'
-);
 
 insert into public.categories (id, label, mood, sort_order) values
-  ('zin_du_mois', 'Le Zin du mois', 'positive', 1),
-  ('fierte_des_notres', 'La fierté des nôtres', 'positive', 2),
-  ('honte_oumma', 'La honte de la Oumma', 'critical', 3),
-  ('roue_libre', 'Roue libre', 'fun', 4),
-  ('trop_genant', 'Trop gênant', 'critical', 5),
-  ('xptdr', 'Xptdr', 'fun', 6),
-  ('masterclass', 'Masterclass', 'positive', 7),
-  ('derape_sec', 'Dérape sec', 'critical', 8),
-  ('dossier_lourd', 'Dossier lourd', 'critical', 9),
-  ('mythomane', 'Mythomane', 'critical', 10),
-  ('frappe_chirurgicale', 'Frappe chirurgicale', 'positive', 11),
-  ('silence_assourdissant', 'Silence assourdissant', 'critical', 12),
-  ('performance_surprise', 'Performance surprise', 'positive', 13)
+  ('fierte_des_notres', 'La Fierté des Nôtres', 'positive', 1),
+  ('roue_libre', 'Roue Libre', 'fun', 2),
+  ('honte_absolue', 'Honte Absolue', 'critical', 3),
+  ('surprise_totale', 'Surprise Totale', 'surprise', 4)
 on conflict (id) do update set
   label = excluded.label,
   mood = excluded.mood,
@@ -129,41 +160,60 @@ on conflict (id) do update set
 
 update public.categories
 set active = false
-where id not in (
-  'zin_du_mois',
-  'fierte_des_notres',
-  'honte_oumma',
-  'roue_libre',
-  'trop_genant',
-  'xptdr',
-  'masterclass',
-  'derape_sec',
-  'dossier_lourd',
-  'mythomane',
-  'frappe_chirurgicale',
-  'silence_assourdissant',
-  'performance_surprise'
-);
+where id not in ('fierte_des_notres', 'roue_libre', 'honte_absolue', 'surprise_totale');
 
-create or replace function public.submit_dossier_rating(
-  target_dossier_id uuid,
-  voter_id text,
-  stars integer,
-  reaction_comment text
-)
-returns public.ratings
+create or replace function public.recalculate_nomination_status(target_nomination_id uuid)
+returns public.nomination_status
 language plpgsql
 security definer
 set search_path = public
 as $$
 declare
-  updated_rating public.ratings;
+  vote_count integer;
+  average_score numeric;
+  next_status public.nomination_status;
+begin
+  select count(*), avg(rating_stars)::numeric
+  into vote_count, average_score
+  from public.ratings
+  where nomination_id = target_nomination_id
+    and rating_stars between 1 and 5;
+
+  if coalesce(vote_count, 0) < 2 then
+    next_status := 'pending';
+  elsif coalesce(average_score, 0) >= 3 then
+    next_status := 'accepted';
+  else
+    next_status := 'rejected';
+  end if;
+
+  update public.nominations
+  set status = next_status
+  where id = target_nomination_id;
+
+  return next_status;
+end;
+$$;
+
+create or replace function public.submit_nomination_vote(
+  target_nomination_id uuid,
+  voter_id text,
+  stars integer,
+  reaction_comment text
+)
+returns public.nominations
+language plpgsql
+security definer
+set search_path = public
+as $$
+declare
+  updated_nomination public.nominations;
 begin
   if voter_id is null or char_length(voter_id) < 8 or char_length(voter_id) > 96 then
     raise exception 'Identifiant de votant invalide';
   end if;
 
-  if not exists (select 1 from public.dossiers where id = target_dossier_id) then
+  if not exists (select 1 from public.nominations where id = target_nomination_id) then
     raise exception 'Dossier introuvable';
   end if;
 
@@ -176,69 +226,77 @@ begin
     raise exception 'Réaction invalide';
   end if;
 
-  insert into public.ratings (dossier_id, voter_id, stars_count, comment)
-  values (target_dossier_id, voter_id, stars, reaction_comment)
-  on conflict (dossier_id, voter_id) do update set
-    stars_count = excluded.stars_count,
+  insert into public.ratings (nomination_id, voter_id, rating_stars, comment)
+  values (target_nomination_id, voter_id, stars, reaction_comment)
+  on conflict (nomination_id, voter_id) do update set
+    rating_stars = excluded.rating_stars,
     comment = excluded.comment,
-    voted_at = now()
-  returning * into updated_rating;
+    created_at = now();
 
-  return updated_rating;
+  perform public.recalculate_nomination_status(target_nomination_id);
+
+  select *
+  into updated_nomination
+  from public.nominations
+  where id = target_nomination_id;
+
+  return updated_nomination;
 end;
 $$;
 
-create or replace function public.update_own_dossier(
-  target_dossier_id uuid,
+create or replace function public.update_own_nomination(
+  target_nomination_id uuid,
   editor_id text,
   next_comment text,
   next_category_id text,
-  next_tiktokeur_id uuid
+  next_tiktoker_name text
 )
-returns public.dossiers
+returns public.nominations
 language plpgsql
 security definer
 set search_path = public
 as $$
 declare
-  updated_dossier public.dossiers;
+  updated_nomination public.nominations;
 begin
   if editor_id is null or char_length(editor_id) < 8 or char_length(editor_id) > 96 then
     raise exception 'Identifiant propriétaire invalide';
   end if;
 
   next_comment := btrim(coalesce(next_comment, ''));
+  next_tiktoker_name := btrim(coalesce(next_tiktoker_name, ''));
+
   if char_length(next_comment) < 3 or char_length(next_comment) > 240 then
     raise exception 'Contexte invalide';
+  end if;
+
+  if char_length(next_tiktoker_name) < 2 or char_length(next_tiktoker_name) > 48 then
+    raise exception 'TikToker invalide';
   end if;
 
   if not exists (select 1 from public.categories where id = next_category_id and active = true) then
     raise exception 'Catégorie invalide';
   end if;
 
-  if not exists (select 1 from public.tiktokeurs where id = next_tiktokeur_id) then
-    raise exception 'Profil TikTok introuvable';
-  end if;
-
-  update public.dossiers
+  update public.nominations
   set
     comment = next_comment,
     category_id = next_category_id,
-    tiktokeur_id = next_tiktokeur_id
-  where id = target_dossier_id
+    tiktoker_name = next_tiktoker_name
+  where id = target_nomination_id
     and submitted_by = editor_id
-  returning * into updated_dossier;
+  returning * into updated_nomination;
 
-  if updated_dossier.id is null then
+  if updated_nomination.id is null then
     raise exception 'Modification verrouillée';
   end if;
 
-  return updated_dossier;
+  return updated_nomination;
 end;
 $$;
 
-create or replace function public.delete_own_dossier(
-  target_dossier_id uuid,
+create or replace function public.delete_own_nomination(
+  target_nomination_id uuid,
   editor_id text
 )
 returns boolean
@@ -253,8 +311,8 @@ begin
     raise exception 'Identifiant propriétaire invalide';
   end if;
 
-  delete from public.dossiers
-  where id = target_dossier_id
+  delete from public.nominations
+  where id = target_nomination_id
     and submitted_by = editor_id
   returning id into deleted_id;
 
@@ -266,15 +324,106 @@ begin
 end;
 $$;
 
-grant execute on function public.submit_dossier_rating(uuid, text, integer, text) to anon;
-grant execute on function public.update_own_dossier(uuid, text, text, text, uuid) to anon;
-grant execute on function public.delete_own_dossier(uuid, text) to anon;
+create or replace function public.build_monthly_ceremony(
+  season_month date default date_trunc('month', current_date - interval '1 month')::date
+)
+returns jsonb
+language sql
+stable
+as $$
+  with accepted_nomination_scores as (
+    select
+      n.id,
+      n.category_id,
+      n.tiktoker_name,
+      n.submitted_by,
+      sum(r.rating_stars)::integer as points,
+      avg(r.rating_stars)::numeric as average_rating
+    from public.nominations n
+    join public.ratings r on r.nomination_id = n.id
+    where n.status = 'accepted'
+      and n.created_at >= season_month
+      and n.created_at < (season_month + interval '1 month')
+    group by n.id, n.category_id, n.tiktoker_name, n.submitted_by
+  ),
+  category_scores as (
+    select
+      category_id,
+      tiktoker_name,
+      sum(points)::integer as points,
+      row_number() over (partition by category_id order by sum(points) desc, tiktoker_name asc) as rank
+    from accepted_nomination_scores
+    group by category_id, tiktoker_name
+  ),
+  global_scores as (
+    select
+      tiktoker_name,
+      sum(points)::integer as points,
+      row_number() over (order by sum(points) desc, tiktoker_name asc) as rank
+    from accepted_nomination_scores
+    group by tiktoker_name
+  ),
+  paparazzi_scores as (
+    select
+      submitted_by,
+      id as nomination_id,
+      points,
+      row_number() over (order by points desc, average_rating desc, id asc) as rank
+    from accepted_nomination_scores
+  )
+  select jsonb_build_object(
+    'season_month', season_month,
+    'category_winners', coalesce((
+      select jsonb_agg(jsonb_build_object('category_id', category_id, 'tiktoker_name', tiktoker_name, 'points', points) order by category_id)
+      from category_scores
+      where rank = 1
+    ), '[]'::jsonb),
+    'ultimate_tiktoker', (
+      select jsonb_build_object('tiktoker_name', tiktoker_name, 'points', points)
+      from global_scores
+      where rank = 1
+    ),
+    'paparazzi_or', (
+      select jsonb_build_object('submitted_by', submitted_by, 'nomination_id', nomination_id, 'points', points)
+      from paparazzi_scores
+      where rank = 1
+    )
+  );
+$$;
+
+create or replace function public.freeze_monthly_ceremony(
+  season_month date default date_trunc('month', current_date - interval '1 month')::date
+)
+returns public.monthly_ceremonies
+language plpgsql
+security definer
+set search_path = public
+as $$
+declare
+  frozen public.monthly_ceremonies;
+begin
+  insert into public.monthly_ceremonies (season_month, payload)
+  values (season_month, public.build_monthly_ceremony(season_month))
+  on conflict (season_month) do update set
+    payload = excluded.payload,
+    frozen_at = now()
+  returning * into frozen;
+
+  return frozen;
+end;
+$$;
+
+grant execute on function public.submit_nomination_vote(uuid, text, integer, text) to anon;
+grant execute on function public.update_own_nomination(uuid, text, text, text, text) to anon;
+grant execute on function public.delete_own_nomination(uuid, text) to anon;
+grant execute on function public.build_monthly_ceremony(date) to anon;
+grant execute on function public.freeze_monthly_ceremony(date) to anon;
 
 alter table public.rooms enable row level security;
 alter table public.categories enable row level security;
-alter table public.tiktokeurs enable row level security;
-alter table public.dossiers enable row level security;
+alter table public.nominations enable row level security;
 alter table public.ratings enable row level security;
+alter table public.monthly_ceremonies enable row level security;
 
 drop policy if exists "NOD rooms read" on public.rooms;
 create policy "NOD rooms read" on public.rooms
@@ -288,28 +437,16 @@ drop policy if exists "NOD categories read" on public.categories;
 create policy "NOD categories read" on public.categories
 for select to anon using (active = true);
 
-drop policy if exists "NOD tiktokeurs read" on public.tiktokeurs;
-create policy "NOD tiktokeurs read" on public.tiktokeurs
+drop policy if exists "NOD nominations read" on public.nominations;
+create policy "NOD nominations read" on public.nominations
 for select to anon using (true);
 
-drop policy if exists "NOD tiktokeurs write" on public.tiktokeurs;
-create policy "NOD tiktokeurs write" on public.tiktokeurs
+drop policy if exists "NOD nominations insert" on public.nominations;
+create policy "NOD nominations insert" on public.nominations
 for insert to anon with check (true);
 
-drop policy if exists "NOD tiktokeurs update avatar" on public.tiktokeurs;
-create policy "NOD tiktokeurs update avatar" on public.tiktokeurs
-for update to anon using (true) with check (true);
-
-drop policy if exists "NOD dossiers read" on public.dossiers;
-create policy "NOD dossiers read" on public.dossiers
-for select to anon using (true);
-
-drop policy if exists "NOD dossiers insert" on public.dossiers;
-create policy "NOD dossiers insert" on public.dossiers
-for insert to anon with check (true);
-
-drop policy if exists "NOD dossiers update" on public.dossiers;
-drop policy if exists "NOD dossiers delete" on public.dossiers;
+drop policy if exists "NOD nominations update" on public.nominations;
+drop policy if exists "NOD nominations delete" on public.nominations;
 
 drop policy if exists "NOD ratings read" on public.ratings;
 create policy "NOD ratings read" on public.ratings
@@ -318,3 +455,21 @@ for select to anon using (true);
 drop policy if exists "NOD ratings insert" on public.ratings;
 drop policy if exists "NOD ratings update" on public.ratings;
 drop policy if exists "NOD ratings delete" on public.ratings;
+
+drop policy if exists "NOD ceremonies read" on public.monthly_ceremonies;
+create policy "NOD ceremonies read" on public.monthly_ceremonies
+for select to anon using (true);
+
+do $$ begin
+  alter publication supabase_realtime add table public.nominations;
+exception
+  when duplicate_object then null;
+  when undefined_object then null;
+end $$;
+
+do $$ begin
+  alter publication supabase_realtime add table public.ratings;
+exception
+  when duplicate_object then null;
+  when undefined_object then null;
+end $$;
