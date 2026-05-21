@@ -17,9 +17,23 @@ alter table public.nominations
   alter column submitted_by type text using submitted_by::text,
   drop column if exists arguments;
 
+alter table public.nominations
+  add column if not exists title text,
+  add column if not exists category text,
+  add column if not exists user_device_id text,
+  add column if not exists votes_count integer not null default 0;
+
+update public.nominations
+set
+  title = coalesce(nullif(title, ''), comment),
+  category = coalesce(nullif(category, ''), category_id),
+  user_device_id = coalesce(nullif(user_device_id, ''), submitted_by),
+  votes_count = jsonb_object_length(coalesce(votes, '{}'::jsonb));
+
 drop table if exists public.trial_rounds;
 
 create index if not exists nominations_owner_idx on public.nominations(submitted_by);
+create index if not exists nominations_user_device_idx on public.nominations(user_device_id);
 
 update public.categories
 set sort_order = sort_order + 1000
@@ -123,7 +137,8 @@ begin
   update public.nominations
   set
     votes = jsonb_set(coalesce(votes, '{}'::jsonb), array[voter_id], vote_payload, true),
-    status = public.nod_status_from_votes(jsonb_set(coalesce(votes, '{}'::jsonb), array[voter_id], vote_payload, true))
+    status = public.nod_status_from_votes(jsonb_set(coalesce(votes, '{}'::jsonb), array[voter_id], vote_payload, true)),
+    votes_count = jsonb_object_length(jsonb_set(coalesce(votes, '{}'::jsonb), array[voter_id], vote_payload, true))
   where id = target_nomination_id
   returning * into updated_nomination;
 
@@ -167,7 +182,9 @@ begin
   update public.nominations
   set
     comment = next_comment,
-    category_id = next_category_id
+    title = next_comment,
+    category_id = next_category_id,
+    category = next_category_id
   where id = target_nomination_id
     and submitted_by = editor_id
   returning * into updated_nomination;

@@ -33,6 +33,10 @@ create table if not exists public.nominations (
   image_storage_path text,
   video_url text,
   video_storage_path text,
+  title text,
+  category text,
+  user_device_id text,
+  votes_count integer not null default 0 check (votes_count >= 0),
   comment text not null check (char_length(comment) between 3 and 240),
   submitted_by text not null check (char_length(submitted_by) between 8 and 96),
   status public.nomination_status not null default 'pending',
@@ -43,10 +47,24 @@ create table if not exists public.nominations (
 
 drop table if exists public.trial_rounds;
 
+alter table public.nominations
+  add column if not exists title text,
+  add column if not exists category text,
+  add column if not exists user_device_id text,
+  add column if not exists votes_count integer not null default 0;
+
+update public.nominations
+set
+  title = coalesce(nullif(title, ''), comment),
+  category = coalesce(nullif(category, ''), category_id),
+  user_device_id = coalesce(nullif(user_device_id, ''), submitted_by),
+  votes_count = jsonb_object_length(coalesce(votes, '{}'::jsonb));
+
 create index if not exists rooms_code_idx on public.rooms(code);
 create index if not exists nominations_room_created_idx on public.nominations(room_id, created_at desc);
 create index if not exists nominations_room_status_idx on public.nominations(room_id, status);
 create index if not exists nominations_owner_idx on public.nominations(submitted_by);
+create index if not exists nominations_user_device_idx on public.nominations(user_device_id);
 create index if not exists nominations_video_path_idx on public.nominations(video_storage_path)
   where video_storage_path is not null;
 
@@ -172,7 +190,8 @@ begin
   update public.nominations
   set
     votes = jsonb_set(coalesce(votes, '{}'::jsonb), array[voter_id], vote_payload, true),
-    status = public.nod_status_from_votes(jsonb_set(coalesce(votes, '{}'::jsonb), array[voter_id], vote_payload, true))
+    status = public.nod_status_from_votes(jsonb_set(coalesce(votes, '{}'::jsonb), array[voter_id], vote_payload, true)),
+    votes_count = jsonb_object_length(jsonb_set(coalesce(votes, '{}'::jsonb), array[voter_id], vote_payload, true))
   where id = target_nomination_id
   returning * into updated_nomination;
 
@@ -216,7 +235,9 @@ begin
   update public.nominations
   set
     comment = next_comment,
-    category_id = next_category_id
+    title = next_comment,
+    category_id = next_category_id,
+    category = next_category_id
   where id = target_nomination_id
     and submitted_by = editor_id
   returning * into updated_nomination;
