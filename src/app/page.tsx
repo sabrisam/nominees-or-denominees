@@ -108,6 +108,25 @@ type PalmaresRow = {
   categoryCounts: Record<string, number>;
 };
 
+type CategoryRaceRow = {
+  tiktokerName: string;
+  avatarUrl: string;
+  points: number;
+  votes: number;
+  average: number;
+  totalDossiers: number;
+  acceptedDossiers: number;
+  pendingDossiers: number;
+  rejectedDossiers: number;
+  successRate: number;
+};
+
+type CategoryRace = {
+  category: CategoryMeta;
+  totalDossiers: number;
+  rows: CategoryRaceRow[];
+};
+
 const LEGACY_SESSION_ID_KEY = "nod_session_id";
 const USER_DEVICE_ID_KEY = "nod_user_device_id";
 const PSEUDO_KEY = "nod_pseudo";
@@ -587,6 +606,50 @@ function buildPalmaresRows(nominations: Nomination[]) {
   return Array.from(rows.values()).sort((a, b) => b.points - a.points || b.successRate - a.successRate || b.average - a.average || a.tiktokerName.localeCompare(b.tiktokerName));
 }
 
+function buildCategoryRaces(nominations: Nomination[]): CategoryRace[] {
+  const monthly = nominations.filter((nomination) => isCurrentMonth(nomination.created_at));
+
+  return CATEGORIES.map((category) => {
+    const inCategory = monthly.filter((nomination) => nomination.category_id === category.id);
+    const rows = new Map<string, CategoryRaceRow>();
+
+    for (const nomination of inCategory) {
+      const current = rows.get(nomination.tiktoker_name) ?? {
+        tiktokerName: nomination.tiktoker_name,
+        avatarUrl: nomination.thumbnail_url || nomination.media_url || FALLBACK_IMAGE_URL,
+        points: 0,
+        votes: 0,
+        average: 0,
+        totalDossiers: 0,
+        acceptedDossiers: 0,
+        pendingDossiers: 0,
+        rejectedDossiers: 0,
+        successRate: 0
+      };
+
+      current.totalDossiers += 1;
+      if (nomination.status === "accepted") current.acceptedDossiers += 1;
+      if (nomination.status === "pending") current.pendingDossiers += 1;
+      if (nomination.status === "rejected") current.rejectedDossiers += 1;
+
+      for (const rating of nomination.ratings) {
+        current.points += rating.rating_stars;
+        current.votes += 1;
+      }
+
+      current.average = current.votes > 0 ? current.points / current.votes : 0;
+      current.successRate = current.totalDossiers > 0 ? Math.round((current.acceptedDossiers / current.totalDossiers) * 100) : 0;
+      rows.set(nomination.tiktoker_name, current);
+    }
+
+    return {
+      category,
+      totalDossiers: inCategory.length,
+      rows: Array.from(rows.values()).sort((a, b) => b.points - a.points || b.successRate - a.successRate || b.average - a.average || a.tiktokerName.localeCompare(b.tiktokerName))
+    };
+  });
+}
+
 function initialsFor(name: string) {
   return name
     .split(/\s+/)
@@ -865,6 +928,83 @@ function PalmaresList({ rows }: { rows: PalmaresRow[] }) {
   );
 }
 
+function CategoryRaceBoard({ races }: { races: CategoryRace[] }) {
+  return (
+    <div className="space-y-3">
+      {races.map(({ category, rows, totalDossiers }) => {
+        const Icon = category.icon;
+        const leader = rows[0];
+
+        return (
+          <BrutalCard key={category.id} className="p-3">
+            <div className="flex items-start justify-between gap-3">
+              <div className="min-w-0">
+                <p className="flex items-center gap-2 text-[10px] font-bold uppercase tracking-[0.18em] text-[#d4af37]">
+                  <Icon className="h-3.5 w-3.5 shrink-0" /> {category.label}
+                </p>
+                <p className="tabloid-headline mt-1 truncate text-[clamp(1.55rem,7.5vw,2.5rem)] leading-[0.94] text-white">{leader ? leader.tiktokerName : "En attente"}</p>
+              </div>
+              <span className="gold-pill shrink-0">{totalDossiers} dossiers</span>
+            </div>
+
+            <div className="mt-3 space-y-2">
+              {rows.length === 0 ? (
+                <div className="rounded-2xl border border-white/10 bg-white/[0.035] p-4 text-center text-sm font-semibold text-zinc-500">Aucun nommé pour l&apos;instant.</div>
+              ) : (
+                rows.map((row, index) => (
+                  <motion.div
+                    key={`${category.id}-${row.tiktokerName}`}
+                    initial={{ opacity: 0, y: 12 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    transition={{ delay: index * 0.045, type: "spring", stiffness: 220, damping: 25 }}
+                    className="rounded-2xl border border-white/10 bg-black/30 p-2"
+                  >
+                    <div className="grid grid-cols-[1.5rem_2.75rem_1fr_auto] items-center gap-2">
+                      <p className="text-sm font-black text-[#d4af37]">{index + 1}</p>
+                      <div className="h-11 w-11 overflow-hidden rounded-full border border-[#d4af37]/45 bg-[#d4af37]/10">
+                        {row.avatarUrl ? <img src={row.avatarUrl} alt="" className="h-full w-full object-cover" /> : <span className="flex h-full w-full items-center justify-center text-xs font-black text-[#f0d889]">{initialsFor(row.tiktokerName)}</span>}
+                      </div>
+                      <div className="min-w-0">
+                        <p className="truncate text-sm font-extrabold text-white">@{row.tiktokerName}</p>
+                        <p className="text-[10px] font-semibold uppercase tracking-[0.12em] text-zinc-500">
+                          {row.acceptedDossiers} validés / {row.totalDossiers} dossiers
+                        </p>
+                      </div>
+                      <span className="gold-pill shrink-0">{row.points} pts</span>
+                    </div>
+
+                    <div className="mt-2 grid grid-cols-[1fr_auto] items-center gap-2">
+                      <div className="stat-bar">
+                        <motion.div className="stat-bar-fill" initial={{ width: 0 }} animate={{ width: `${row.successRate}%` }} transition={{ delay: index * 0.04 + 0.1, duration: 0.5 }} />
+                      </div>
+                      <p className="text-xs font-bold text-[#f0d889]">{row.successRate}%</p>
+                    </div>
+
+                    <div className="mt-2 grid grid-cols-3 gap-1 text-center">
+                      <div className="rounded-xl bg-white/[0.04] px-2 py-1">
+                        <p className="text-[9px] uppercase tracking-[0.12em] text-zinc-500">Moyenne</p>
+                        <p className="text-sm font-black text-white">{row.average ? row.average.toFixed(1) : "-"}</p>
+                      </div>
+                      <div className="rounded-xl bg-white/[0.04] px-2 py-1">
+                        <p className="text-[9px] uppercase tracking-[0.12em] text-zinc-500">Notes</p>
+                        <p className="text-sm font-black text-white">{row.votes}</p>
+                      </div>
+                      <div className="rounded-xl bg-white/[0.04] px-2 py-1">
+                        <p className="text-[9px] uppercase tracking-[0.12em] text-zinc-500">En jeu</p>
+                        <p className="text-sm font-black text-white">{row.pendingDossiers}</p>
+                      </div>
+                    </div>
+                  </motion.div>
+                ))
+              )}
+            </div>
+          </BrutalCard>
+        );
+      })}
+    </div>
+  );
+}
+
 function PaperBackdrop() {
   return (
     <div className="paper-backdrop" aria-hidden="true">
@@ -1094,12 +1234,7 @@ export default function Home() {
   const ultimateWinner = useMemo(() => buildScoreBoard(nominations)[0] ?? null, [nominations]);
   const paparazziOr = useMemo(() => bestSubmission(nominations), [nominations]);
   const palmaresRows = useMemo(() => buildPalmaresRows(nominations), [nominations]);
-  const categoryWinners = useMemo(() => {
-    return CATEGORIES.map((category) => {
-      const winner = buildScoreBoard(nominations, category.id)[0];
-      return winner ? { category, winner } : null;
-    }).filter(Boolean) as Array<{ category: CategoryMeta; winner: ScoreBoard }>;
-  }, [nominations]);
+  const categoryRaces = useMemo(() => buildCategoryRaces(nominations), [nominations]);
 
   const editingNomination = useMemo(() => nominations.find((nomination) => nomination.id === editingNominationId) ?? null, [nominations, editingNominationId]);
   const isEditingStudio = Boolean(editingNomination);
@@ -1688,25 +1823,12 @@ export default function Home() {
                 </BrutalCard>
               )}
 
-              {categoryWinners.length === 0 ? (
-                <BrutalCard className="p-5 text-center">
-                  <Trophy className="mx-auto mb-3 h-10 w-10 text-[#d4af37]" />
-                  <p className="tabloid-headline text-3xl leading-none">Aucun winner.</p>
-                </BrutalCard>
-              ) : (
-                categoryWinners.map(({ category, winner }, index) => {
-                  const Icon = category.icon;
-                  return (
-                    <BrutalCard key={category.id} tone={index % 2 === 0 ? "paper" : "yellow"} className="p-4">
-                      <p className="flex items-center gap-1 text-[10px] font-bold uppercase tracking-[0.16em] text-[#d4af37]">
-                        <Icon className="h-3.5 w-3.5" /> {category.label}
-                      </p>
-                      <p className="tabloid-headline mt-2 text-[clamp(1.75rem,9vw,2.8rem)] leading-[0.95] text-white">{winner.tiktokerName}</p>
-                      <span className="gold-pill mt-3">{winner.points} points / {winner.votes} notes</span>
-                    </BrutalCard>
-                  );
-                })
-              )}
+              <BrutalCard tone="black" className="p-3">
+                <p className="text-[10px] font-bold uppercase tracking-[0.28em] text-[#d4af37]">Course aux trophées</p>
+                <h3 className="tabloid-headline mt-1 text-[clamp(1.8rem,9vw,3.1rem)] leading-[0.92] text-white">Toutes les catégories</h3>
+              </BrutalCard>
+
+              <CategoryRaceBoard races={categoryRaces} />
             </motion.section>
           )}
         </AnimatePresence>
