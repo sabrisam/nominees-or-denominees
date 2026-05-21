@@ -203,7 +203,7 @@ const CATEGORY_SCORING: Record<string, { weights: DimensionScores; lowIsStrong?:
   fierte_des_notres: { weights: { rire: 0.1, surprise: 0.14, gene: 0.22, fierte: 0.34, interet: 0.2 }, lowIsStrong: { gene: true } },
   xptdr: { weights: { rire: 0.46, surprise: 0.2, gene: 0.18, fierte: 0.04, interet: 0.12 }, lowIsStrong: { gene: true } },
   roue_libre: { weights: { rire: 0.3, surprise: 0.34, gene: 0.14, fierte: 0.04, interet: 0.18 } },
-  honte_de_la_oumma: { weights: { rire: 0.08, surprise: 0.12, gene: 0.48, fierte: 0.2, interet: 0.12 }, lowIsStrong: { rire: true, fierte: true } },
+  honte_de_la_oumma: { weights: { rire: 0.07, surprise: 0.1, gene: 0.55, fierte: 0.25, interet: 0.03 }, lowIsStrong: { fierte: true } },
   bon_voyageur: { weights: { rire: 0.12, surprise: 0.28, gene: 0.1, fierte: 0.14, interet: 0.36 }, lowIsStrong: { gene: true } },
   gros_chef_bandit: { weights: { rire: 0.24, surprise: 0.18, gene: 0.16, fierte: 0.24, interet: 0.18 }, lowIsStrong: { gene: true } },
   surprise_totale: { weights: { rire: 0.14, surprise: 0.46, gene: 0.08, fierte: 0.1, interet: 0.22 }, lowIsStrong: { gene: true } },
@@ -228,8 +228,8 @@ const TAB_ORDER: Tab[] = TAB_ITEMS.map((item) => item.id);
 const DIRECT_FILTERS: Array<{ id: DirectFilter; label: string }> = [
   { id: "all", label: "Tout" },
   { id: "pending", label: "À voter" },
-  { id: "qualified", label: "En lice" },
-  { id: "elite", label: "Top 80+" },
+  { id: "qualified", label: "Nominés" },
+  { id: "elite", label: "Favoris" },
   { id: "mine", label: "Moi" }
 ];
 
@@ -383,8 +383,8 @@ function statusFromRatings(ratings: Rating[]) {
 }
 
 function statusLabel(status: NominationStatus) {
-  if (status === "accepted") return "EN LICE";
-  if (status === "rejected") return "CLASSÉ";
+  if (status === "accepted") return "NOMINÉ";
+  if (status === "rejected") return "ARCHIVÉ";
   return "À VOTER";
 }
 
@@ -1162,7 +1162,7 @@ function PalmaresList({ rows }: { rows: PalmaresRow[] }) {
             <div className="min-w-0">
               <p className="truncate text-xs font-black leading-none tracking-tighter text-white">@{row.tiktokerName}</p>
               <p className="mt-0.5 truncate text-[9px] font-semibold uppercase leading-none tracking-tighter text-zinc-500">
-                {row.acceptedDossiers}/{row.totalDossiers} en lice · {row.votes} notes · {row.average ? row.average.toFixed(1) : "-"}★
+                {row.acceptedDossiers}/{row.totalDossiers} nominés · {row.votes} notes · {row.average ? row.average.toFixed(1) : "-"}★
               </p>
             </div>
             <span className="gold-pill shrink-0">{row.points} pts</span>
@@ -1220,7 +1220,7 @@ function CategoryRaceBoard({ races }: { races: CategoryRace[] }) {
                       <div className="min-w-0">
                         <p className="truncate text-xs font-black leading-none tracking-tighter text-white">@{row.tiktokerName}</p>
                         <p className="mt-0.5 truncate text-[9px] font-semibold uppercase leading-none tracking-tighter text-zinc-500">
-                          {row.acceptedDossiers}/{row.totalDossiers} en lice · {row.votes} notes · {row.average ? row.average.toFixed(1) : "-"}★
+                          {row.acceptedDossiers}/{row.totalDossiers} nominés · {row.votes} notes · {row.average ? row.average.toFixed(1) : "-"}★
                         </p>
                       </div>
                       <span className="gold-pill shrink-0">{row.points} pts</span>
@@ -1241,6 +1241,77 @@ function CategoryRaceBoard({ races }: { races: CategoryRace[] }) {
         );
       })}
     </div>
+  );
+}
+
+function CeremonyBulletin({
+  pendingCount,
+  nextPending,
+  leader,
+  bestDossier,
+  onOpenVote,
+  onOpenStudio,
+  onOpenPalmares
+}: {
+  pendingCount: number;
+  nextPending?: Nomination;
+  leader: ScoreBoard | null;
+  bestDossier?: Nomination;
+  onOpenVote: () => void;
+  onOpenStudio: () => void;
+  onOpenPalmares: () => void;
+}) {
+  const hasPending = Boolean(nextPending);
+  const spotlight = bestDossier ? `${bestDossier.tiktoker_name} · ${averageImpact(bestDossier)} indice` : null;
+
+  if (hasPending && nextPending) {
+    const category = getCategoryMeta(nextPending.category_id);
+    return (
+      <BrutalCard tone="yellow" className="mb-2 p-2">
+        <div className="grid grid-cols-[minmax(0,1fr)_auto] items-center gap-2">
+          <div className="min-w-0">
+            <Sticker tone="yellow">{pendingCount > 1 ? `${pendingCount} dossiers à juger` : "Dossier à juger"}</Sticker>
+            <p className="tabloid-headline mt-1 text-[clamp(1.05rem,5.5vw,1.8rem)] leading-[0.84] text-white">{nextPending.tiktoker_name}</p>
+            <p className="mt-0.5 truncate text-[9px] font-black uppercase tracking-tighter text-[#d4af37]">{category.label} · ta note peut le nominer</p>
+          </div>
+          <motion.button type="button" whileTap={TAP_REBOUND} transition={TAP_TRANSITION} onClick={onOpenVote} className="brutal-action bg-[#d4af37] px-3 text-black">
+            Juger
+          </motion.button>
+        </div>
+      </BrutalCard>
+    );
+  }
+
+  if (leader) {
+    return (
+      <BrutalCard className="mb-2 p-2">
+        <div className="grid grid-cols-[minmax(0,1fr)_auto] items-center gap-2">
+          <div className="min-w-0">
+            <Sticker tone="paper">Favori du mois</Sticker>
+            <p className="tabloid-headline mt-1 text-[clamp(1.05rem,5.5vw,1.8rem)] leading-[0.84] text-white">{leader.tiktokerName}</p>
+            <p className="mt-0.5 truncate text-[9px] font-black uppercase tracking-tighter text-[#d4af37]">{leader.points} points de saison{spotlight ? ` · ${spotlight}` : ""}</p>
+          </div>
+          <motion.button type="button" whileTap={TAP_REBOUND} transition={TAP_TRANSITION} onClick={onOpenPalmares} className="brutal-action bg-white/10 px-3 text-white">
+            Classement
+          </motion.button>
+        </div>
+      </BrutalCard>
+    );
+  }
+
+  return (
+    <BrutalCard className="mb-2 p-2">
+      <div className="grid grid-cols-[minmax(0,1fr)_auto] items-center gap-2">
+        <div className="min-w-0">
+          <Sticker tone="paper">Saison ouverte</Sticker>
+          <p className="tabloid-headline mt-1 text-[clamp(1.05rem,5.5vw,1.8rem)] leading-[0.84] text-white">Premier rec attendu</p>
+          <p className="mt-0.5 truncate text-[9px] font-black uppercase tracking-tighter text-[#d4af37]">Le trophée commence au premier dossier</p>
+        </div>
+        <motion.button type="button" whileTap={TAP_REBOUND} transition={TAP_TRANSITION} onClick={onOpenStudio} className="brutal-action bg-[#d4af37] px-3 text-black">
+          Studio
+        </motion.button>
+      </div>
+    </BrutalCard>
   );
 }
 
@@ -1508,6 +1579,7 @@ export default function Home() {
   const monthlyNominations = useMemo(() => nominations.filter((nomination) => isCurrentMonth(nomination.created_at)), [nominations]);
   const ultimateWinner = useMemo(() => buildScoreBoard(nominations)[0] ?? null, [nominations]);
   const paparazziOr = useMemo(() => bestSubmission(nominations), [nominations]);
+  const nextPendingForMe = pendingForMe[0];
   const palmaresRows = useMemo(() => buildPalmaresRows(nominations), [nominations]);
   const categoryRaces = useMemo(() => buildCategoryRaces(nominations), [nominations]);
 
@@ -1963,20 +2035,15 @@ export default function Home() {
           </motion.button>
         </header>
 
-        <section className="mb-2 grid grid-cols-3 gap-1.5">
-          <BrutalCard tone="yellow" className="p-1.5">
-            <p className="text-[8px] font-black uppercase tracking-[0.1em] leading-none text-[#d4af37]">À voter</p>
-            <p className="tabloid-headline text-[clamp(1.35rem,7.2vw,2.1rem)] leading-none">{pendingForMe.length}</p>
-          </BrutalCard>
-          <BrutalCard tone="red" className="p-1.5">
-            <p className="text-[8px] font-black uppercase tracking-[0.1em] leading-none text-[#d4af37]">En lice</p>
-            <p className="tabloid-headline text-[clamp(1.35rem,7.2vw,2.1rem)] leading-none">{qualified.length}</p>
-          </BrutalCard>
-          <BrutalCard tone="black" className="p-1.5">
-            <p className="text-[8px] font-black uppercase tracking-[0.1em] leading-none text-zinc-500">Top 80+</p>
-            <p className="tabloid-headline text-[clamp(1.35rem,7.2vw,2.1rem)] leading-none">{eliteDossiers.length}</p>
-          </BrutalCard>
-        </section>
+        <CeremonyBulletin
+          pendingCount={pendingForMe.length}
+          nextPending={nextPendingForMe}
+          leader={ultimateWinner}
+          bestDossier={paparazziOr}
+          onOpenVote={() => switchTab("vote")}
+          onOpenStudio={() => switchTab("studio")}
+          onOpenPalmares={() => switchTab("palmares")}
+        />
 
         <AnimatePresence mode="wait">
           {tab === "direct" && (

@@ -184,7 +184,7 @@ begin
     when 'fierte_des_notres' then (r * 0.10) + (s * 0.14) + ((5 - g) * 0.22) + (f * 0.34) + (i * 0.20)
     when 'xptdr' then (r * 0.46) + (s * 0.20) + ((5 - g) * 0.18) + (f * 0.04) + (i * 0.12)
     when 'roue_libre' then (r * 0.30) + (s * 0.34) + (g * 0.14) + (f * 0.04) + (i * 0.18)
-    when 'honte_de_la_oumma' then ((5 - r) * 0.08) + (s * 0.12) + (g * 0.48) + ((5 - f) * 0.20) + (i * 0.12)
+    when 'honte_de_la_oumma' then (r * 0.07) + (s * 0.10) + (g * 0.55) + ((5 - f) * 0.25) + (i * 0.03)
     when 'bon_voyageur' then (r * 0.12) + (s * 0.28) + ((5 - g) * 0.10) + (f * 0.14) + (i * 0.36)
     when 'gros_chef_bandit' then (r * 0.24) + (s * 0.18) + ((5 - g) * 0.16) + (f * 0.24) + (i * 0.18)
     when 'surprise_totale' then (r * 0.14) + (s * 0.46) + ((5 - g) * 0.08) + (f * 0.10) + (i * 0.22)
