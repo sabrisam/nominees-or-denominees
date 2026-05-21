@@ -1387,9 +1387,9 @@ export default function Home() {
             >
               <motion.div {...revealItem}>
                 <BrutalCard className="relative overflow-hidden p-2">
-                  <h1 className="masthead-title text-[clamp(3.25rem,18vw,6rem)] leading-[0.78]">
+                  <h1 className="tabloid-headline text-[clamp(3rem,16vw,5.35rem)] leading-[0.78]">
                     NOMINEES
-                    <span className="mx-2 inline-block -rotate-3 border-4 border-black bg-[#e11d48] px-2 py-0.5 text-[clamp(1.4rem,7vw,2.3rem)] font-bold leading-none text-white">OR</span>
+                    <span className="mx-2 inline-block -rotate-3 border-4 border-black bg-[#e11d48] px-2 py-0.5 text-[clamp(1.35rem,6.5vw,2.15rem)] font-black leading-none text-white">OR</span>
                     <span className="block text-[#e11d48]">DENOMINEES</span>
                   </h1>
                   <div className="paper-tear -mt-[4px]" />

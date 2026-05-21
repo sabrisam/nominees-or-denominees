@@ -148,11 +148,11 @@ video {
   }
 
   .masthead-title {
-    font-family: "Rockwell Extra Bold", Rockwell, Clarendon, Impact, Haettenschweiler, "Franklin Gothic Heavy", serif;
+    font-family: Impact, Haettenschweiler, "Franklin Gothic Heavy", "Avenir Next Condensed", sans-serif;
     font-weight: 900;
     text-transform: uppercase;
-    letter-spacing: -0.07em;
-    line-height: 0.78;
+    letter-spacing: -0.05em;
+    line-height: 0.8;
   }
 
   .paper-tear {
