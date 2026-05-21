@@ -8,11 +8,13 @@ import { getSupabaseBrowserClient } from "@/lib/supabase";
 import { AnimatePresence, motion, type PanInfo, useReducedMotion } from "framer-motion";
 import {
   BadgeCheck,
+  Brain,
   Camera,
   Check,
   Clock3,
   Crown,
   Flame,
+  Globe2,
   Loader2,
   Lock,
   Pencil,
@@ -20,7 +22,6 @@ import {
   RefreshCw,
   ShieldAlert,
   Sparkles,
-  Star,
   Trophy,
   UploadCloud,
   Zap
@@ -34,6 +35,8 @@ type VerdictChoice = "propel" | "ban";
 type ToastTone = "success" | "error" | "info";
 type CategoryMood = "positive" | "critical" | "fun" | "surprise";
 type MediaKind = "video" | "image";
+type RatingDimensionKey = "rire" | "surprise" | "gene" | "fierte" | "interet";
+type DimensionScores = Record<RatingDimensionKey, number>;
 
 type ToastState = { tone: ToastTone; message: string } | null;
 
@@ -47,6 +50,9 @@ type Rating = {
   nomination_id: string;
   voter_id: string;
   rating_stars: number;
+  rating_score: number;
+  rating_points: number;
+  scores: DimensionScores;
   comment: string;
   created_at: string;
 };
@@ -55,6 +61,7 @@ type Nomination = {
   id: string;
   room_id: string;
   category_id: string;
+  category_ids: string[];
   tiktoker_name: string;
   media_url: string;
   video_storage_path: string | null;
@@ -109,6 +116,7 @@ type PalmaresRow = {
   successRate: number;
   categoryCounts: Record<string, number>;
   starDistribution: StarDistribution;
+  dimensionTotals: DimensionScores;
 };
 
 type CategoryRaceRow = {
@@ -123,6 +131,7 @@ type CategoryRaceRow = {
   rejectedDossiers: number;
   successRate: number;
   starDistribution: StarDistribution;
+  dimensionTotals: DimensionScores;
 };
 
 type CategoryRace = {
@@ -137,7 +146,6 @@ const PSEUDO_KEY = "nod_pseudo";
 const ROOM_CODE_KEY = "nod_room_code";
 const DEFAULT_ROOM_CODE = "NOD-CLUB";
 const MIN_PUBLIC_RATINGS = 2;
-const STAR_VALUES = [1, 2, 3, 4, 5] as const;
 const DIRECT_TITLE = "DIRECT";
 const VOTE_TITLE = "À VOTER";
 const STUDIO_TITLE = "STUDIO";
@@ -156,12 +164,31 @@ const CATEGORIES: CategoryMeta[] = [
   { id: "le_zin_du_mois", label: "Le Zin du mois", mood: "positive", icon: Crown },
   { id: "fierte_des_notres", label: "La Fierté des Nôtres", mood: "positive", icon: BadgeCheck },
   { id: "xptdr", label: "Xptdr", mood: "fun", icon: Sparkles },
-  { id: "honte_absolue", label: "Honte Absolue", mood: "critical", icon: ShieldAlert }
+  { id: "roue_libre", label: "La Roue Libre", mood: "fun", icon: Flame },
+  { id: "honte_de_la_oumma", label: "La Honte de la Oumma", mood: "critical", icon: ShieldAlert },
+  { id: "bon_voyageur", label: "Bon Voyageur", mood: "surprise", icon: Globe2 },
+  { id: "gros_chef_bandit", label: "Gros Chef Bandit", mood: "fun", icon: Zap },
+  { id: "surprise_totale", label: "Surprise Totale", mood: "surprise", icon: Camera },
+  { id: "analyse_pure", label: "L’Analyse Pure", mood: "positive", icon: Brain }
 ];
 
 const CATEGORY_BY_ID = Object.fromEntries(CATEGORIES.map((category) => [category.id, category])) as Record<string, CategoryMeta>;
-const FEATURED_CATEGORY_IDS = ["le_zin_du_mois", "fierte_des_notres", "xptdr", "honte_absolue"] as const;
-
+const CATEGORY_ID_ALIASES: Record<string, string> = {
+  honte_absolue: "honte_de_la_oumma",
+  fierte: "fierte_des_notres",
+  pepite_cachee: "le_zin_du_mois",
+  roue: "roue_libre",
+  viral: "surprise_totale"
+};
+const FEATURED_CATEGORY_IDS = ["le_zin_du_mois", "fierte_des_notres", "xptdr", "roue_libre", "honte_de_la_oumma", "bon_voyageur", "gros_chef_bandit", "surprise_totale", "analyse_pure"] as const;
+const RATING_DIMENSIONS: Array<{ key: RatingDimensionKey; label: string; shortLabel: string; emoji: string; color: string }> = [
+  { key: "rire", label: "Rire", shortLabel: "RIR", emoji: "😂", color: "#facc15" },
+  { key: "surprise", label: "Surprise", shortLabel: "SUR", emoji: "🤯", color: "#38bdf8" },
+  { key: "gene", label: "Gêne", shortLabel: "GÊN", emoji: "🤦", color: "#f43f5e" },
+  { key: "fierte", label: "Fierté", shortLabel: "FIE", emoji: "✊", color: "#d4af37" },
+  { key: "interet", label: "Intérêt", shortLabel: "INT", emoji: "🤔", color: "#a78bfa" }
+];
+const DEFAULT_DIMENSION_SCORES: DimensionScores = { rire: 3, surprise: 3, gene: 1, fierte: 2, interet: 3 };
 const TAB_ITEMS: Array<{ id: Tab; label: string; icon: LucideIcon }> = [
   { id: "direct", label: "Direct", icon: Sparkles },
   { id: "vote", label: "À voter", icon: Zap },
@@ -184,13 +211,37 @@ function toNumber(value: unknown, fallback = 0) {
   return typeof value === "number" && Number.isFinite(value) ? value : fallback;
 }
 
-function normalizeStatus(value: unknown): NominationStatus {
-  if (value === "accepted" || value === "rejected" || value === "pending") return value;
-  return "pending";
+function clampDimension(value: number) {
+  return Math.min(5, Math.max(0, Math.round(value)));
 }
 
 function clampRating(value: number) {
-  return Math.min(5, Math.max(1, Math.round(value)));
+  return clampDimension(value);
+}
+
+function cloneScores(scores: DimensionScores = DEFAULT_DIMENSION_SCORES): DimensionScores {
+  return {
+    rire: clampDimension(scores.rire),
+    surprise: clampDimension(scores.surprise),
+    gene: clampDimension(scores.gene),
+    fierte: clampDimension(scores.fierte),
+    interet: clampDimension(scores.interet)
+  };
+}
+
+function scoreAverage(scores: DimensionScores) {
+  const total = RATING_DIMENSIONS.reduce((sum, dimension) => sum + clampDimension(scores[dimension.key]), 0);
+  return Math.round((total / RATING_DIMENSIONS.length) * 100) / 100;
+}
+
+function scoreTotal(scores: DimensionScores) {
+  return RATING_DIMENSIONS.reduce((sum, dimension) => sum + clampDimension(scores[dimension.key]), 0);
+}
+
+function addScores(target: DimensionScores, source: DimensionScores) {
+  for (const dimension of RATING_DIMENSIONS) {
+    target[dimension.key] += clampDimension(source[dimension.key]);
+  }
 }
 
 function createStarDistribution(): StarDistribution {
@@ -198,11 +249,8 @@ function createStarDistribution(): StarDistribution {
 }
 
 function addToStarDistribution(distribution: StarDistribution, value: number) {
-  distribution[clampRating(value) - 1] += 1;
-}
-
-function maxStarDistribution(distribution: StarDistribution) {
-  return Math.max(1, ...distribution);
+  const rounded = Math.max(1, clampRating(value));
+  distribution[rounded - 1] += 1;
 }
 
 function haptic(pattern: number | number[]) {
@@ -244,7 +292,20 @@ function sanitizeTiktokerName(value: string) {
 }
 
 function getCategoryMeta(value: string) {
-  return CATEGORY_BY_ID[value] ?? { id: "custom", label: value || "Sans catégorie", mood: "fun", icon: Camera };
+  const resolved = CATEGORY_ID_ALIASES[value] ?? value;
+  return CATEGORY_BY_ID[resolved] ?? { id: "custom", label: value || "Sans catégorie", mood: "fun", icon: Camera };
+}
+
+function normalizeCategoryIds(value: unknown, fallback: string) {
+  const rawIds = Array.isArray(value) ? value.filter((item): item is string => typeof item === "string") : [];
+  const validIds = rawIds.map((id) => CATEGORY_ID_ALIASES[id] ?? id).filter((id) => CATEGORY_BY_ID[id]);
+  const resolvedFallback = CATEGORY_ID_ALIASES[fallback] ?? fallback;
+  const fallbackId = CATEGORY_BY_ID[resolvedFallback] ? resolvedFallback : CATEGORIES[0].id;
+  return Array.from(new Set(validIds.length > 0 ? validIds : [fallbackId]));
+}
+
+function primaryCategoryId(ids: string[]) {
+  return ids.map((id) => CATEGORY_ID_ALIASES[id] ?? id).find((id) => CATEGORY_BY_ID[id]) ?? CATEGORIES[0].id;
 }
 
 function statusFromRatings(ratings: Rating[]) {
@@ -266,11 +327,11 @@ function statusClass(status: NominationStatus) {
 
 function averageRating(ratings: Rating[]) {
   if (ratings.length === 0) return 0;
-  return ratings.reduce((sum, rating) => sum + rating.rating_stars, 0) / ratings.length;
+  return ratings.reduce((sum, rating) => sum + rating.rating_score, 0) / ratings.length;
 }
 
 function totalPoints(ratings: Rating[]) {
-  return ratings.reduce((sum, rating) => sum + rating.rating_stars, 0);
+  return ratings.reduce((sum, rating) => sum + rating.rating_points, 0);
 }
 
 function countdownToNextCeremony() {
@@ -290,11 +351,25 @@ function isCurrentMonth(dateValue: string) {
 }
 
 function parseRating(row: Record<string, unknown>): Rating {
+  const legacyRating = clampRating(toNumber(row.rating_stars, 0));
+  const scores = cloneScores({
+    rire: clampDimension(toNumber(row.rire_score, legacyRating)),
+    surprise: clampDimension(toNumber(row.surprise_score, legacyRating)),
+    gene: clampDimension(toNumber(row.gene_score, legacyRating)),
+    fierte: clampDimension(toNumber(row.fierte_score, legacyRating)),
+    interet: clampDimension(toNumber(row.interet_score, legacyRating))
+  });
+  const computedScore = scoreAverage(scores);
+  const computedPoints = scoreTotal(scores);
+
   return {
     id: toText(row.id, `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`),
     nomination_id: toText(row.nomination_id),
     voter_id: toText(row.voter_id),
-    rating_stars: clampRating(toNumber(row.rating_stars, 1)),
+    rating_stars: clampRating(toNumber(row.rating_stars, Math.round(computedScore))),
+    rating_score: Math.min(5, Math.max(0, toNumber(row.rating_score, computedScore))),
+    rating_points: Math.min(25, Math.max(0, toNumber(row.rating_points, computedPoints))),
+    scores,
     comment: toText(row.comment),
     created_at: toText(row.created_at, new Date().toISOString())
   };
@@ -303,12 +378,15 @@ function parseRating(row: Record<string, unknown>): Rating {
 function parseNomination(row: Record<string, unknown>): Nomination {
   const ratings = Array.isArray(row.ratings) ? row.ratings.filter(isRecord).map(parseRating) : [];
   const rawMediaKind = toText(row.media_kind, "image");
+  const fallbackCategory = toText(row.category_id, CATEGORIES[0].id);
+  const categoryIds = normalizeCategoryIds(row.category_ids, fallbackCategory);
   const computedStatus = statusFromRatings(ratings);
 
   return {
     id: toText(row.id, `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`),
     room_id: toText(row.room_id),
-    category_id: toText(row.category_id, CATEGORIES[0].id),
+    category_id: primaryCategoryId(categoryIds),
+    category_ids: categoryIds,
     tiktoker_name: sanitizeTiktokerName(toText(row.tiktoker_name, "TikToker mystère")) || "TikToker mystère",
     media_url: toText(row.media_url, FALLBACK_IMAGE_URL),
     video_storage_path: toText(row.video_storage_path) || null,
@@ -317,7 +395,7 @@ function parseNomination(row: Record<string, unknown>): Nomination {
     media_kind: rawMediaKind === "video" ? "video" : "image",
     comment: toText(row.comment),
     submitted_by: toText(row.submitted_by, "session-inconnue"),
-    status: normalizeStatus(row.status) === computedStatus ? computedStatus : normalizeStatus(row.status),
+    status: computedStatus,
     created_at: toText(row.created_at, new Date().toISOString()),
     ratings
   };
@@ -554,11 +632,11 @@ function setUrl(urlSetter: (value: string | null) => void, currentUrl: string | 
 }
 
 function buildScoreBoard(nominations: Nomination[], categoryId?: string) {
-  const monthlyAccepted = nominations.filter((nomination) => nomination.status === "accepted" && isCurrentMonth(nomination.created_at) && (!categoryId || nomination.category_id === categoryId));
+  const monthlyAccepted = nominations.filter((nomination) => nomination.status === "accepted" && isCurrentMonth(nomination.created_at) && (!categoryId || nomination.category_ids.includes(categoryId)));
   const byTarget = new Map<string, ScoreBoard>();
 
   for (const nomination of monthlyAccepted) {
-    const category = getCategoryMeta(nomination.category_id);
+    const category = getCategoryMeta(categoryId ?? nomination.category_id);
     const existing = byTarget.get(nomination.tiktoker_name) ?? {
       tiktokerName: nomination.tiktoker_name,
       category: categoryId ? category : undefined,
@@ -570,10 +648,10 @@ function buildScoreBoard(nominations: Nomination[], categoryId?: string) {
 
     existing.nominations += 1;
     for (const rating of nomination.ratings) {
-      existing.points += rating.rating_stars;
+      existing.points += rating.rating_points;
       existing.votes += 1;
     }
-    existing.average = existing.votes > 0 ? existing.points / existing.votes : 0;
+    existing.average = existing.votes > 0 ? existing.points / existing.votes / RATING_DIMENSIONS.length : 0;
     byTarget.set(nomination.tiktoker_name, existing);
   }
 
@@ -601,22 +679,26 @@ function buildPalmaresRows(nominations: Nomination[]) {
       acceptedDossiers: 0,
       successRate: 0,
       categoryCounts: Object.fromEntries(FEATURED_CATEGORY_IDS.map((id) => [id, 0])) as Record<string, number>,
-      starDistribution: createStarDistribution()
+      starDistribution: createStarDistribution(),
+      dimensionTotals: cloneScores({ rire: 0, surprise: 0, gene: 0, fierte: 0, interet: 0 })
     };
 
     current.totalDossiers += 1;
     if (nomination.status === "accepted") current.acceptedDossiers += 1;
-    if (FEATURED_CATEGORY_IDS.includes(nomination.category_id as (typeof FEATURED_CATEGORY_IDS)[number])) {
-      current.categoryCounts[nomination.category_id] = (current.categoryCounts[nomination.category_id] ?? 0) + 1;
+    for (const categoryId of nomination.category_ids) {
+      if (FEATURED_CATEGORY_IDS.includes(categoryId as (typeof FEATURED_CATEGORY_IDS)[number])) {
+        current.categoryCounts[categoryId] = (current.categoryCounts[categoryId] ?? 0) + 1;
+      }
     }
 
     for (const rating of nomination.ratings) {
-      current.points += rating.rating_stars;
+      current.points += rating.rating_points;
       current.votes += 1;
-      addToStarDistribution(current.starDistribution, rating.rating_stars);
+      addToStarDistribution(current.starDistribution, rating.rating_score);
+      addScores(current.dimensionTotals, rating.scores);
     }
 
-    current.average = current.votes > 0 ? current.points / current.votes : 0;
+    current.average = current.votes > 0 ? current.points / current.votes / RATING_DIMENSIONS.length : 0;
     current.successRate = current.totalDossiers > 0 ? Math.round((current.acceptedDossiers / current.totalDossiers) * 100) : 0;
     rows.set(nomination.tiktoker_name, current);
   }
@@ -628,7 +710,7 @@ function buildCategoryRaces(nominations: Nomination[]): CategoryRace[] {
   const monthly = nominations.filter((nomination) => isCurrentMonth(nomination.created_at));
 
   return CATEGORIES.map((category) => {
-    const inCategory = monthly.filter((nomination) => nomination.category_id === category.id);
+    const inCategory = monthly.filter((nomination) => nomination.category_ids.includes(category.id));
     const rows = new Map<string, CategoryRaceRow>();
 
     for (const nomination of inCategory) {
@@ -643,7 +725,8 @@ function buildCategoryRaces(nominations: Nomination[]): CategoryRace[] {
         pendingDossiers: 0,
         rejectedDossiers: 0,
         successRate: 0,
-        starDistribution: createStarDistribution()
+        starDistribution: createStarDistribution(),
+        dimensionTotals: cloneScores({ rire: 0, surprise: 0, gene: 0, fierte: 0, interet: 0 })
       };
 
       current.totalDossiers += 1;
@@ -652,12 +735,13 @@ function buildCategoryRaces(nominations: Nomination[]): CategoryRace[] {
       if (nomination.status === "rejected") current.rejectedDossiers += 1;
 
       for (const rating of nomination.ratings) {
-        current.points += rating.rating_stars;
+        current.points += rating.rating_points;
         current.votes += 1;
-        addToStarDistribution(current.starDistribution, rating.rating_stars);
+        addToStarDistribution(current.starDistribution, rating.rating_score);
+        addScores(current.dimensionTotals, rating.scores);
       }
 
-      current.average = current.votes > 0 ? current.points / current.votes : 0;
+      current.average = current.votes > 0 ? current.points / current.votes / RATING_DIMENSIONS.length : 0;
       current.successRate = current.totalDossiers > 0 ? Math.round((current.acceptedDossiers / current.totalDossiers) * 100) : 0;
       rows.set(nomination.tiktoker_name, current);
     }
@@ -709,14 +793,23 @@ function SectionTitle({ children, tone = "black" }: { children: ReactNode; tone?
   );
 }
 
-function MicroHistogram({ distribution, compact = false }: { distribution: StarDistribution; compact?: boolean }) {
-  const max = maxStarDistribution(distribution);
+function MicroDimensionBars({ scores }: { scores: DimensionScores }) {
+  const max = Math.max(1, ...RATING_DIMENSIONS.map((dimension) => scores[dimension.key]));
 
   return (
-    <div className={`grid ${compact ? "h-4" : "h-5"} grid-cols-5 items-end gap-0.5`} aria-label="Répartition des étoiles">
-      {distribution.map((count, index) => {
-        const height = count === 0 ? 2 : Math.max(3, Math.round((count / max) * (compact ? 16 : 20)));
-        return <span key={`${index}-${count}`} className="block rounded-t-[2px] bg-[#d4af37]/85" style={{ height }} title={`${index + 1} étoile${index > 0 ? "s" : ""}: ${count}`} />;
+    <div className="grid grid-cols-5 gap-1" aria-label="Télémétrie émotionnelle">
+      {RATING_DIMENSIONS.map((dimension) => {
+        const value = clampDimension(scores[dimension.key]);
+        const width = Math.max(6, Math.round((value / max) * 100));
+
+        return (
+          <div key={dimension.key} className="min-w-0" title={`${dimension.label}: ${value}`}>
+            <div className="h-[3px] overflow-hidden rounded-full bg-white/10">
+              <span className="block h-full rounded-full" style={{ width: `${width}%`, backgroundColor: dimension.color }} />
+            </div>
+            <p className="mt-0.5 truncate text-[7px] font-black uppercase leading-none tracking-tighter text-zinc-500">{dimension.shortLabel}</p>
+          </div>
+        );
       })}
     </div>
   );
@@ -740,44 +833,47 @@ function BrutalCard({
   );
 }
 
-function StarInput({
+function DimensionScoreGrid({
   value,
   onChange,
-  readonly = false,
-  size = "md"
+  compact = false
 }: {
-  value: number;
-  onChange?: (value: number) => void;
-  readonly?: boolean;
-  size?: "sm" | "md" | "lg";
+  value: DimensionScores;
+  onChange: (next: DimensionScores) => void;
+  compact?: boolean;
 }) {
-  const [hover, setHover] = useState(0);
-  const iconSizeClass = size === "sm" ? "h-3.5 w-3.5" : size === "lg" ? "h-6 w-6" : "h-[1.125rem] w-[1.125rem]";
+  const setDimension = (key: RatingDimensionKey, score: number) => {
+    haptic(10);
+    onChange({ ...value, [key]: clampDimension(score) });
+  };
 
   return (
-    <div className="grid grid-cols-5 gap-1.5">
-      {STAR_VALUES.map((star) => {
-        const active = star <= (hover || value);
+    <div className={compact ? "space-y-1" : "space-y-1.5"}>
+      {RATING_DIMENSIONS.map((dimension) => {
+        const activeScore = clampDimension(value[dimension.key]);
+
         return (
-          <motion.button
-            key={star}
-            type="button"
-            disabled={readonly}
-            whileTap={TAP_REBOUND}
-            transition={TAP_TRANSITION}
-            onMouseEnter={() => !readonly && setHover(star)}
-            onMouseLeave={() => !readonly && setHover(0)}
-            onClick={() => {
-              haptic(10);
-              onChange?.(star);
-            }}
-            className={`flex aspect-square items-center justify-center rounded-[10px] border transition disabled:cursor-default ${
-              active ? "border-[#d4af37]/80 bg-[#d4af37]/20 text-[#f0d889]" : "border-white/10 bg-white/[0.04] text-zinc-600"
-            }`}
-            aria-label={`${star} étoiles`}
-          >
-            <Star className={`${iconSizeClass} ${active ? "fill-black" : ""}`} strokeWidth={2} />
-          </motion.button>
+          <div key={dimension.key} className="grid grid-cols-[4.6rem_1fr] items-center gap-1.5">
+            <p className="truncate text-[10px] font-black uppercase leading-none tracking-tighter text-zinc-300">
+              <span className="mr-1">{dimension.emoji}</span>
+              {dimension.label}
+            </p>
+            <div className="grid grid-cols-6 gap-1">
+              {[0, 1, 2, 3, 4, 5].map((score) => (
+                <motion.button
+                  key={`${dimension.key}-${score}`}
+                  type="button"
+                  whileTap={TAP_REBOUND}
+                  transition={TAP_TRANSITION}
+                  onClick={() => setDimension(dimension.key, score)}
+                  className={`h-6 rounded-[8px] border text-[10px] font-black leading-none ${activeScore === score ? "border-[#d4af37]/80 bg-[#d4af37]/20 text-[#f0d889]" : "border-white/10 bg-white/[0.035] text-zinc-500"}`}
+                  aria-label={`${dimension.label} ${score} sur 5`}
+                >
+                  {score}
+                </motion.button>
+              ))}
+            </div>
+          </div>
         );
       })}
     </div>
@@ -786,8 +882,7 @@ function StarInput({
 
 function MediaFrame({
   nomination,
-  height = "h-72",
-  controls = true
+  height = "h-72"
 }: {
   nomination: Nomination;
   height?: string;
@@ -795,10 +890,12 @@ function MediaFrame({
 }) {
   const [mediaFailed, setMediaFailed] = useState(false);
   const [engaged, setEngaged] = useState(false);
+  const [resolving, setResolving] = useState(true);
 
   useEffect(() => {
     setMediaFailed(false);
     setEngaged(false);
+    setResolving(true);
   }, [nomination.media_url, nomination.thumbnail_url]);
 
   if (mediaFailed || isLegacyDemoMedia(nomination.media_url)) {
@@ -814,27 +911,50 @@ function MediaFrame({
 
   if (nomination.media_kind === "video") {
     return (
-      <video
-        src={nomination.media_url}
-        poster={nomination.thumbnail_url ?? undefined}
-        controls={controls || engaged}
-        loop
-        muted
-        playsInline
-        preload="metadata"
-        {...({ "webkit-playsinline": "true" } as Record<string, string>)}
-        onClick={() => {
-          haptic(15);
-          setEngaged(true);
-        }}
-        onTouchStart={() => setEngaged(true)}
-        onError={() => setMediaFailed(true)}
-        className={`${height} prestige-media block w-full bg-black object-cover`}
-      />
+      <div className={`${height} relative w-full overflow-hidden bg-black`}>
+        {resolving && <div className="media-shimmer absolute inset-0 z-10" aria-hidden="true" />}
+        <video
+          src={nomination.media_url}
+          poster={nomination.thumbnail_url ?? undefined}
+          controls
+          loop
+          muted
+          playsInline
+          preload="metadata"
+          {...({ "webkit-playsinline": "true" } as Record<string, string>)}
+          onLoadedMetadata={() => setResolving(false)}
+          onCanPlay={() => setResolving(false)}
+          onClick={() => {
+            haptic(15);
+            setEngaged(true);
+          }}
+          onTouchStart={() => setEngaged(true)}
+          onError={() => {
+            setResolving(false);
+            setMediaFailed(true);
+          }}
+          className="prestige-media block h-full w-full bg-black object-cover"
+        />
+        {engaged ? null : <span className="pointer-events-none absolute bottom-2 left-2 z-20 rounded-full border border-[#d4af37]/40 bg-black/60 px-2 py-1 text-[8px] font-black uppercase tracking-tighter text-[#f0d889]">Rec</span>}
+      </div>
     );
   }
 
-  return <img src={nomination.media_url || nomination.thumbnail_url || FALLBACK_IMAGE_URL} alt="" onError={() => setMediaFailed(true)} className={`${height} prestige-media block w-full bg-black object-cover`} />;
+  return (
+    <div className={`${height} relative w-full overflow-hidden bg-black`}>
+      {resolving && <div className="media-shimmer absolute inset-0 z-10" aria-hidden="true" />}
+      <img
+        src={nomination.media_url || nomination.thumbnail_url || FALLBACK_IMAGE_URL}
+        alt=""
+        onLoad={() => setResolving(false)}
+        onError={() => {
+          setResolving(false);
+          setMediaFailed(true);
+        }}
+        className="prestige-media block h-full w-full bg-black object-cover"
+      />
+    </div>
+  );
 }
 
 function OwnershipBadge({ owned, className = "" }: { owned: boolean; className?: string }) {
@@ -937,11 +1057,11 @@ function PalmaresList({ rows }: { rows: PalmaresRow[] }) {
             <span className="gold-pill shrink-0">{row.points} pts</span>
           </div>
 
-          <div className="mt-1 grid grid-cols-[minmax(0,1fr)_5.5rem_2.25rem] items-end gap-2 pl-[3.4rem]">
+          <div className="mt-1 grid grid-cols-[minmax(0,1fr)_7.25rem_2.25rem] items-end gap-2 pl-[3.4rem]">
             <div className="stat-bar">
               <motion.div className="stat-bar-fill" initial={{ width: 0 }} animate={{ width: `${row.successRate}%` }} transition={{ delay: index * 0.035 + 0.1, duration: 0.45 }} />
             </div>
-            <MicroHistogram distribution={row.starDistribution} compact />
+            <MicroDimensionBars scores={row.dimensionTotals} />
             <p className="text-right text-[10px] font-black leading-none tracking-tighter text-[#f0d889]">{row.successRate}%</p>
           </div>
         </motion.article>
@@ -995,11 +1115,11 @@ function CategoryRaceBoard({ races }: { races: CategoryRace[] }) {
                       <span className="gold-pill shrink-0">{row.points} pts</span>
                     </div>
 
-                    <div className="mt-1 grid grid-cols-[minmax(0,1fr)_5rem_2.25rem] items-end gap-2 pl-[3rem]">
+                    <div className="mt-1 grid grid-cols-[minmax(0,1fr)_7rem_2.25rem] items-end gap-2 pl-[3rem]">
                       <div className="stat-bar">
                         <motion.div className="stat-bar-fill" initial={{ width: 0 }} animate={{ width: `${row.successRate}%` }} transition={{ delay: index * 0.03 + 0.08, duration: 0.42 }} />
                       </div>
-                      <MicroHistogram distribution={row.starDistribution} compact />
+                      <MicroDimensionBars scores={row.dimensionTotals} />
                       <p className="text-right text-[10px] font-black leading-none tracking-tighter text-[#f0d889]">{row.successRate}%</p>
                     </div>
                   </motion.div>
@@ -1049,13 +1169,14 @@ export default function Home() {
   const [isPreparingMedia, setIsPreparingMedia] = useState(false);
   const [tiktokerName, setTiktokerName] = useState("");
   const [catId, setCatId] = useState(CATEGORIES[0].id);
+  const [selectedCategoryIds, setSelectedCategoryIds] = useState<string[]>([CATEGORIES[0].id]);
   const [comment, setComment] = useState("");
-  const [initialRating, setInitialRating] = useState(4);
+  const [initialScores, setInitialScores] = useState<DimensionScores>(cloneScores(DEFAULT_DIMENSION_SCORES));
   const [uploadLoading, setUploadLoading] = useState(false);
   const [editingNominationId, setEditingNominationId] = useState<string | null>(null);
   const [mutationBusyId, setMutationBusyId] = useState<string | null>(null);
 
-  const [ratingDraftById, setRatingDraftById] = useState<Record<string, number>>({});
+  const [scoreDraftById, setScoreDraftById] = useState<Record<string, DimensionScores>>({});
   const [reviewDraftById, setReviewDraftById] = useState<Record<string, string>>({});
   const [voteBusyId, setVoteBusyId] = useState<string | null>(null);
   const [shakeId, setShakeId] = useState<string | null>(null);
@@ -1153,11 +1274,24 @@ export default function Home() {
       setSyncing(true);
 
       try {
-        const { data, error } = await supabase
+        const nominationsResult = await supabase
           .from("nominations")
-          .select("id,room_id,category_id,tiktoker_name,media_url,video_storage_path,thumbnail_url,thumbnail_storage_path,media_kind,comment,submitted_by,status,created_at,ratings(id,nomination_id,voter_id,rating_stars,comment,created_at)")
+          .select("id,room_id,category_id,category_ids,tiktoker_name,media_url,video_storage_path,thumbnail_url,thumbnail_storage_path,media_kind,comment,submitted_by,status,created_at,ratings(id,nomination_id,voter_id,rating_stars,rating_score,rating_points,rire_score,surprise_score,gene_score,fierte_score,interet_score,comment,created_at)")
           .eq("room_id", activeRoomId)
           .order("created_at", { ascending: false });
+
+        let data = nominationsResult.data as Record<string, unknown>[] | null;
+        let error = nominationsResult.error;
+
+        if (error && /category_ids|rating_score|rating_points|rire_score|surprise_score|gene_score|fierte_score|interet_score/i.test(error.message)) {
+          const legacy = await supabase
+            .from("nominations")
+            .select("id,room_id,category_id,tiktoker_name,media_url,video_storage_path,thumbnail_url,thumbnail_storage_path,media_kind,comment,submitted_by,status,created_at,ratings(id,nomination_id,voter_id,rating_stars,comment,created_at)")
+            .eq("room_id", activeRoomId)
+            .order("created_at", { ascending: false });
+          data = legacy.data as Record<string, unknown>[] | null;
+          error = legacy.error;
+        }
 
         if (error) throw error;
 
@@ -1247,9 +1381,10 @@ export default function Home() {
   const editingNomination = useMemo(() => nominations.find((nomination) => nomination.id === editingNominationId) ?? null, [nominations, editingNominationId]);
   const isEditingStudio = Boolean(editingNomination);
   const cleanTiktokerName = sanitizeTiktokerName(tiktokerName);
+  const cleanCategoryIds = useMemo(() => normalizeCategoryIds(selectedCategoryIds, catId), [catId, selectedCategoryIds]);
   const uploadReady = isEditingStudio
-    ? comment.trim().length >= 3 && cleanTiktokerName.length >= 2
-    : Boolean(preparedFile && thumbnailFile && comment.trim().length >= 3 && cleanTiktokerName.length >= 2 && !isPreparingMedia);
+    ? comment.trim().length >= 3 && cleanTiktokerName.length >= 2 && cleanCategoryIds.length > 0
+    : Boolean(preparedFile && thumbnailFile && comment.trim().length >= 3 && cleanTiktokerName.length >= 2 && cleanCategoryIds.length > 0 && !isPreparingMedia);
   const ownsNomination = useCallback((nomination: Nomination) => Boolean(participant && nomination.submitted_by === participant.id), [participant]);
 
   const revealContainer = reduceMotion
@@ -1291,9 +1426,24 @@ export default function Home() {
     clearPreparedMedia();
     setTiktokerName("");
     setComment("");
-    setInitialRating(4);
+    setInitialScores(cloneScores(DEFAULT_DIMENSION_SCORES));
+    setSelectedCategoryIds([CATEGORIES[0].id]);
     setCatId(CATEGORIES[0].id);
   }, [clearPreparedMedia]);
+
+  const toggleCategory = useCallback(
+    (categoryId: string) => {
+      haptic(10);
+      setSelectedCategoryIds((current) => {
+        const exists = current.includes(categoryId);
+        const next = exists ? current.filter((id) => id !== categoryId) : [...current, categoryId];
+        const safeNext = next.length > 0 ? next : [categoryId];
+        setCatId(primaryCategoryId(safeNext));
+        return safeNext;
+      });
+    },
+    []
+  );
 
   const startEditNomination = useCallback(
     (nomination: Nomination) => {
@@ -1307,7 +1457,8 @@ export default function Home() {
       setEditingNominationId(nomination.id);
       setTiktokerName(nomination.tiktoker_name);
       setComment(nomination.comment);
-      setCatId(nomination.category_id);
+      setSelectedCategoryIds(nomination.category_ids);
+      setCatId(primaryCategoryId(nomination.category_ids));
       setStudioNotice("MODE MODIF : auteur seulement.");
       switchTab("studio");
     },
@@ -1376,13 +1527,25 @@ export default function Home() {
     setMutationBusyId(editingNomination.id);
 
     try {
-      const { error } = await supabase.rpc("update_own_nomination", {
+      let { error } = await supabase.rpc("update_own_nomination", {
         target_nomination_id: editingNomination.id,
         editor_id: participant.id,
         next_comment: cleanedComment,
-        next_category_id: catId,
-        next_tiktoker_name: cleanTiktokerName
+        next_category_id: primaryCategoryId(cleanCategoryIds),
+        next_tiktoker_name: cleanTiktokerName,
+        next_category_ids: cleanCategoryIds
       });
+
+      if (error && /function .*update_own_nomination|Could not find/i.test(error.message)) {
+        const legacy = await supabase.rpc("update_own_nomination", {
+          target_nomination_id: editingNomination.id,
+          editor_id: participant.id,
+          next_comment: cleanedComment,
+          next_category_id: primaryCategoryId(cleanCategoryIds),
+          next_tiktoker_name: cleanTiktokerName
+        });
+        error = legacy.error;
+      }
 
       if (error) throw error;
 
@@ -1465,34 +1628,59 @@ export default function Home() {
       const mediaUpload = mediaKind === "video" ? await uploadFileOrFallback(supabase, preparedFile, "videos") : thumbnailUpload;
       setMediaProgress(0.82);
 
-      const { data: insertedNomination, error: insertError } = await supabase
+      const nominationInsert = {
+        room_id: activeRoomId,
+        category_id: primaryCategoryId(cleanCategoryIds),
+        category_ids: cleanCategoryIds,
+        tiktoker_name: cleanTiktokerName,
+        media_url: mediaUpload.publicUrl,
+        video_storage_path: mediaKind === "video" ? mediaUpload.key : null,
+        thumbnail_url: thumbnailUpload.publicUrl,
+        thumbnail_storage_path: thumbnailUpload.key,
+        media_kind: mediaKind,
+        comment: cleanedComment,
+        submitted_by: participant.id,
+        status: "pending"
+      };
+
+      let { data: insertedNomination, error: insertError } = await supabase
         .from("nominations")
-        .insert({
-          room_id: activeRoomId,
-          category_id: catId,
-          tiktoker_name: cleanTiktokerName,
-          media_url: mediaUpload.publicUrl,
-          video_storage_path: mediaKind === "video" ? mediaUpload.key : null,
-          thumbnail_url: thumbnailUpload.publicUrl,
-          thumbnail_storage_path: thumbnailUpload.key,
-          media_kind: mediaKind,
-          comment: cleanedComment,
-          submitted_by: participant.id,
-          status: "pending"
-        })
+        .insert(nominationInsert)
         .select("id")
         .single();
+
+      if (insertError && /category_ids/i.test(insertError.message)) {
+        const legacyInsert: Partial<typeof nominationInsert> = { ...nominationInsert };
+        delete legacyInsert.category_ids;
+        const legacy = await supabase.from("nominations").insert(legacyInsert).select("id").single();
+        insertedNomination = legacy.data;
+        insertError = legacy.error;
+      }
 
       if (insertError) throw insertError;
       const nominationId = toText(insertedNomination?.id);
       if (!nominationId) throw new Error("Dossier non créé.");
 
-      const { error: ratingError } = await supabase.rpc("submit_nomination_vote", {
+      let { error: ratingError } = await supabase.rpc("submit_nomination_vote", {
         target_nomination_id: nominationId,
         voter_id: participant.id,
-        stars: clampRating(initialRating),
+        rire: initialScores.rire,
+        surprise: initialScores.surprise,
+        gene: initialScores.gene,
+        fierte: initialScores.fierte,
+        interet: initialScores.interet,
         reaction_comment: cleanedComment
       });
+
+      if (ratingError && /function .*submit_nomination_vote|Could not find/i.test(ratingError.message)) {
+        const legacy = await supabase.rpc("submit_nomination_vote", {
+          target_nomination_id: nominationId,
+          voter_id: participant.id,
+          stars: Math.max(1, Math.round(scoreAverage(initialScores))),
+          reaction_comment: cleanedComment
+        });
+        ratingError = legacy.error;
+      }
 
       if (ratingError) throw ratingError;
 
@@ -1512,7 +1700,7 @@ export default function Home() {
     }
   };
 
-  const applyRating = async (id: string, choice: VerdictChoice) => {
+  const applyRating = async (id: string) => {
     if (!participant || !supabase || voteBusyId) return;
 
     const nomination = nominations.find((item) => item.id === id);
@@ -1524,8 +1712,9 @@ export default function Home() {
       return;
     }
 
-    const draft = clampRating(ratingDraftById[id] ?? 4);
-    const stars = choice === "propel" ? Math.max(3, draft) : Math.min(2, draft);
+    const draftScores = cloneScores(scoreDraftById[id] ?? DEFAULT_DIMENSION_SCORES);
+    const averageScore = scoreAverage(draftScores);
+    const choice: VerdictChoice = averageScore >= 3 ? "propel" : "ban";
 
     haptic([15, 30, 10]);
     setVoteBusyId(id);
@@ -1533,16 +1722,30 @@ export default function Home() {
     window.setTimeout(() => setShakeId(null), 520);
 
     try {
-      const { error } = await supabase.rpc("submit_nomination_vote", {
+      let { error } = await supabase.rpc("submit_nomination_vote", {
         target_nomination_id: id,
         voter_id: participant.id,
-        stars,
+        rire: draftScores.rire,
+        surprise: draftScores.surprise,
+        gene: draftScores.gene,
+        fierte: draftScores.fierte,
+        interet: draftScores.interet,
         reaction_comment: cleanedReview
       });
 
+      if (error && /function .*submit_nomination_vote|Could not find/i.test(error.message)) {
+        const legacy = await supabase.rpc("submit_nomination_vote", {
+          target_nomination_id: id,
+          voter_id: participant.id,
+          stars: Math.max(1, Math.round(averageScore)),
+          reaction_comment: cleanedReview
+        });
+        error = legacy.error;
+      }
+
       if (error) throw error;
 
-      setRatingDraftById((prev) => {
+      setScoreDraftById((prev) => {
         const copy = { ...prev };
         delete copy[id];
         return copy;
@@ -1678,7 +1881,7 @@ export default function Home() {
                 pendingForMe.map((nomination) => {
                   const category = getCategoryMeta(nomination.category_id);
                   const Icon = category.icon;
-                  const draftRating = clampRating(ratingDraftById[nomination.id] ?? 4);
+                  const draftScores = cloneScores(scoreDraftById[nomination.id] ?? DEFAULT_DIMENSION_SCORES);
 
                   return (
                     <motion.article key={nomination.id} animate={shakeId === nomination.id ? { x: [0, -8, 8, -5, 5, 0], scale: [1, 0.99, 1.01, 1] } : { x: 0, scale: 1 }} transition={{ duration: 0.42 }} className="brutal-card overflow-hidden">
@@ -1697,16 +1900,11 @@ export default function Home() {
                       </div>
                       <div className="space-y-1.5 p-2">
                         <p className="rounded-[10px] border border-white/10 bg-white/[0.04] p-2 text-xs font-medium leading-tight text-zinc-200">&quot;{nomination.comment}&quot;</p>
-                        <StarInput value={draftRating} onChange={(value) => setRatingDraftById((prev) => ({ ...prev, [nomination.id]: value }))} size="lg" />
+                        <DimensionScoreGrid value={draftScores} onChange={(value) => setScoreDraftById((prev) => ({ ...prev, [nomination.id]: value }))} compact />
                         <textarea value={reviewDraftById[nomination.id] ?? ""} onChange={(event) => setReviewDraftById((prev) => ({ ...prev, [nomination.id]: event.target.value }))} placeholder="Ta réaction sur ce dossier ?" rows={2} maxLength={180} className="brutal-input w-full resize-none p-2 text-sm font-black uppercase" />
-                        <div className="grid grid-cols-2 gap-1.5">
-                          <motion.button whileTap={TAP_REBOUND} transition={TAP_TRANSITION} onClick={() => void applyRating(nomination.id, "propel")} disabled={voteBusyId === nomination.id} className="brutal-action bg-[#d4af37] text-black disabled:opacity-50">
-                            Propulser
-                          </motion.button>
-                          <motion.button whileTap={TAP_REBOUND} transition={TAP_TRANSITION} onClick={() => void applyRating(nomination.id, "ban")} disabled={voteBusyId === nomination.id} className="brutal-action bg-red-950/70 text-red-100 disabled:opacity-50">
-                            Bannir
-                          </motion.button>
-                        </div>
+                        <motion.button whileTap={TAP_REBOUND} transition={TAP_TRANSITION} onClick={() => void applyRating(nomination.id)} disabled={voteBusyId === nomination.id} className="brutal-action w-full bg-[#d4af37] text-black disabled:opacity-50">
+                          Valider le jugement · {scoreTotal(draftScores)} pts
+                        </motion.button>
                       </div>
                     </motion.article>
                   );
@@ -1764,20 +1962,32 @@ export default function Home() {
 
               <input value={tiktokerName} onChange={(event) => setTiktokerName(event.target.value)} placeholder="TikToker visé" maxLength={48} className="brutal-input w-full px-2.5 py-2.5 text-sm font-black uppercase" />
 
-              <select value={catId} onChange={(event) => setCatId(event.target.value)} className="brutal-input w-full appearance-none px-2.5 py-2.5 text-sm font-black uppercase">
-                {CATEGORIES.map((category) => (
-                  <option key={category.id} value={category.id}>
-                    {category.label}
-                  </option>
-                ))}
-              </select>
+              <div className="grid grid-cols-3 gap-1">
+                {CATEGORIES.map((category) => {
+                  const Icon = category.icon;
+                  const active = cleanCategoryIds.includes(category.id);
+                  return (
+                    <motion.button
+                      key={category.id}
+                      type="button"
+                      whileTap={TAP_REBOUND}
+                      transition={TAP_TRANSITION}
+                      onClick={() => toggleCategory(category.id)}
+                      className={`min-h-10 rounded-[10px] border px-1.5 py-1 text-left ${active ? "border-[#d4af37]/75 bg-[#d4af37]/18 text-[#f0d889]" : "border-white/10 bg-white/[0.035] text-zinc-500"}`}
+                    >
+                      <Icon className="mb-1 h-3 w-3" />
+                      <span className="line-clamp-2 text-[8px] font-black uppercase leading-none tracking-tighter">{category.label}</span>
+                    </motion.button>
+                  );
+                })}
+              </div>
 
               <textarea value={comment} onChange={(event) => setComment(event.target.value)} placeholder="Pourquoi ce dossier mérite le club ?" rows={3} maxLength={240} className="brutal-input w-full resize-none p-2.5 text-sm font-black uppercase" />
 
               {!isEditingStudio && (
                 <BrutalCard tone="yellow" className="p-2">
-                  <StarInput value={initialRating} onChange={setInitialRating} size="lg" />
-                  <p className="mt-2 border-t border-[#d4af37]/20 pt-2 text-center text-[10px] font-black uppercase tracking-[0.12em] text-[#d4af37]">Note initiale : {initialRating} / 5</p>
+                  <DimensionScoreGrid value={initialScores} onChange={setInitialScores} />
+                  <p className="mt-2 border-t border-[#d4af37]/20 pt-2 text-center text-[10px] font-black uppercase tracking-[0.12em] text-[#d4af37]">Score initial : {scoreTotal(initialScores)} / 25</p>
                 </BrutalCard>
               )}
 

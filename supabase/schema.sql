@@ -34,6 +34,7 @@ create table if not exists public.nominations (
   id uuid primary key default gen_random_uuid(),
   room_id uuid not null references public.rooms(id) on delete cascade,
   category_id text not null references public.categories(id),
+  category_ids text[] not null default '{}'::text[],
   tiktoker_name text not null check (char_length(tiktoker_name) between 2 and 48),
   media_url text not null,
   video_storage_path text,
@@ -51,7 +52,14 @@ create table if not exists public.ratings (
   id uuid primary key default gen_random_uuid(),
   nomination_id uuid references public.nominations(id) on delete cascade,
   voter_id text not null check (char_length(voter_id) between 8 and 96),
-  rating_stars integer check (rating_stars between 1 and 5),
+  rating_stars integer check (rating_stars between 0 and 5),
+  rating_score numeric(4,2) not null default 0 check (rating_score between 0 and 5),
+  rating_points integer not null default 0 check (rating_points between 0 and 25),
+  rire_score integer not null default 0 check (rire_score between 0 and 5),
+  surprise_score integer not null default 0 check (surprise_score between 0 and 5),
+  gene_score integer not null default 0 check (gene_score between 0 and 5),
+  fierte_score integer not null default 0 check (fierte_score between 0 and 5),
+  interet_score integer not null default 0 check (interet_score between 0 and 5),
   comment text not null check (char_length(comment) between 2 and 180),
   created_at timestamptz not null default now(),
   unique (nomination_id, voter_id)
@@ -66,6 +74,7 @@ create table if not exists public.monthly_ceremonies (
 -- Compatibilité douce avec les anciens essais de schéma.
 alter table public.nominations add column if not exists room_id uuid references public.rooms(id) on delete cascade;
 alter table public.nominations add column if not exists category_id text references public.categories(id);
+alter table public.nominations add column if not exists category_ids text[] not null default '{}'::text[];
 alter table public.nominations add column if not exists tiktoker_name text;
 alter table public.nominations add column if not exists media_url text;
 alter table public.nominations add column if not exists video_storage_path text;
@@ -95,8 +104,32 @@ do $$ begin
 end $$;
 
 alter table public.ratings add column if not exists nomination_id uuid references public.nominations(id) on delete cascade;
-alter table public.ratings add column if not exists rating_stars integer check (rating_stars between 1 and 5);
+alter table public.ratings drop constraint if exists ratings_rating_stars_check;
+alter table public.ratings add column if not exists rating_stars integer;
+alter table public.ratings add constraint ratings_rating_stars_check check (rating_stars between 0 and 5);
+alter table public.ratings add column if not exists rating_score numeric(4,2) not null default 0;
+alter table public.ratings add column if not exists rating_points integer not null default 0;
+alter table public.ratings add column if not exists rire_score integer not null default 0;
+alter table public.ratings add column if not exists surprise_score integer not null default 0;
+alter table public.ratings add column if not exists gene_score integer not null default 0;
+alter table public.ratings add column if not exists fierte_score integer not null default 0;
+alter table public.ratings add column if not exists interet_score integer not null default 0;
 alter table public.ratings add column if not exists created_at timestamptz not null default now();
+
+alter table public.ratings drop constraint if exists ratings_rating_score_check;
+alter table public.ratings add constraint ratings_rating_score_check check (rating_score between 0 and 5);
+alter table public.ratings drop constraint if exists ratings_rating_points_check;
+alter table public.ratings add constraint ratings_rating_points_check check (rating_points between 0 and 25);
+alter table public.ratings drop constraint if exists ratings_rire_score_check;
+alter table public.ratings add constraint ratings_rire_score_check check (rire_score between 0 and 5);
+alter table public.ratings drop constraint if exists ratings_surprise_score_check;
+alter table public.ratings add constraint ratings_surprise_score_check check (surprise_score between 0 and 5);
+alter table public.ratings drop constraint if exists ratings_gene_score_check;
+alter table public.ratings add constraint ratings_gene_score_check check (gene_score between 0 and 5);
+alter table public.ratings drop constraint if exists ratings_fierte_score_check;
+alter table public.ratings add constraint ratings_fierte_score_check check (fierte_score between 0 and 5);
+alter table public.ratings drop constraint if exists ratings_interet_score_check;
+alter table public.ratings add constraint ratings_interet_score_check check (interet_score between 0 and 5);
 
 do $$ begin
   if exists (select 1 from information_schema.columns where table_schema = 'public' and table_name = 'ratings' and column_name = 'dossier_id') then
@@ -112,6 +145,25 @@ do $$ begin
     execute 'update public.ratings set created_at = coalesce(created_at, voted_at) where created_at is null';
   end if;
 end $$;
+
+update public.nominations
+set category_ids = array[coalesce(category_id, 'le_zin_du_mois')]
+where category_ids is null or cardinality(category_ids) = 0;
+
+update public.ratings
+set
+  rating_stars = coalesce(rating_stars, 0),
+  rire_score = case when rire_score = 0 and coalesce(rating_stars, 0) > 0 then rating_stars else rire_score end,
+  surprise_score = case when surprise_score = 0 and coalesce(rating_stars, 0) > 0 then rating_stars else surprise_score end,
+  gene_score = case when gene_score = 0 and coalesce(rating_stars, 0) > 0 then rating_stars else gene_score end,
+  fierte_score = case when fierte_score = 0 and coalesce(rating_stars, 0) > 0 then rating_stars else fierte_score end,
+  interet_score = case when interet_score = 0 and coalesce(rating_stars, 0) > 0 then rating_stars else interet_score end;
+
+update public.ratings
+set
+  rating_points = rire_score + surprise_score + gene_score + fierte_score + interet_score,
+  rating_score = round(((rire_score + surprise_score + gene_score + fierte_score + interet_score)::numeric / 5), 2),
+  rating_stars = round(((rire_score + surprise_score + gene_score + fierte_score + interet_score)::numeric / 5))::integer;
 
 create index if not exists rooms_code_idx on public.rooms(code);
 create index if not exists categories_active_sort_idx on public.categories(active, sort_order);
@@ -164,12 +216,46 @@ insert into public.categories (id, label, mood, sort_order) values
   ('le_zin_du_mois', 'Le Zin du mois', 'positive', 1),
   ('fierte_des_notres', 'La Fierté des Nôtres', 'positive', 2),
   ('xptdr', 'Xptdr', 'fun', 3),
-  ('honte_absolue', 'Honte Absolue', 'critical', 4)
+  ('roue_libre', 'La Roue Libre', 'fun', 4),
+  ('honte_de_la_oumma', 'La Honte de la Oumma', 'critical', 5),
+  ('bon_voyageur', 'Bon Voyageur', 'surprise', 6),
+  ('gros_chef_bandit', 'Gros Chef Bandit', 'fun', 7),
+  ('surprise_totale', 'Surprise Totale', 'surprise', 8),
+  ('analyse_pure', 'L’Analyse Pure', 'positive', 9)
 on conflict (id) do update set
   label = excluded.label,
   mood = excluded.mood,
   sort_order = excluded.sort_order,
   active = true;
+
+update public.nominations
+set category_id = case category_id
+  when 'honte_absolue' then 'honte_de_la_oumma'
+  when 'fierte' then 'fierte_des_notres'
+  when 'pepite_cachee' then 'le_zin_du_mois'
+  when 'roue' then 'roue_libre'
+  when 'viral' then 'surprise_totale'
+  else category_id
+end
+where category_id in ('honte_absolue', 'fierte', 'pepite_cachee', 'roue', 'viral');
+
+update public.nominations
+set category_ids = (
+  select array_agg(distinct case category_list.category_id
+    when 'honte_absolue' then 'honte_de_la_oumma'
+    when 'fierte' then 'fierte_des_notres'
+    when 'pepite_cachee' then 'le_zin_du_mois'
+    when 'roue' then 'roue_libre'
+    when 'viral' then 'surprise_totale'
+    else category_list.category_id
+  end)
+  from unnest(category_ids) as category_list(category_id)
+)
+where category_ids is not null;
+
+update public.nominations
+set category_ids = array[coalesce(category_id, 'le_zin_du_mois')]
+where category_ids is null or cardinality(category_ids) = 0;
 
 create or replace function public.recalculate_nomination_status(target_nomination_id uuid)
 returns public.nomination_status
@@ -182,11 +268,11 @@ declare
   average_score numeric;
   next_status public.nomination_status;
 begin
-  select count(*), avg(rating_stars)::numeric
+  select count(*), avg(coalesce(rating_score, rating_stars, 0))::numeric
   into vote_count, average_score
   from public.ratings
   where nomination_id = target_nomination_id
-    and rating_stars between 1 and 5;
+    and coalesce(rating_score, rating_stars, 0) between 0 and 5;
 
   if coalesce(vote_count, 0) < 2 then
     next_status := 'pending';
@@ -226,7 +312,7 @@ begin
     raise exception 'Dossier introuvable';
   end if;
 
-  if stars < 1 or stars > 5 then
+  if stars < 0 or stars > 5 then
     raise exception 'Note invalide';
   end if;
 
@@ -235,10 +321,132 @@ begin
     raise exception 'Réaction invalide';
   end if;
 
-  insert into public.ratings (nomination_id, voter_id, rating_stars, comment)
-  values (target_nomination_id, voter_id, stars, reaction_comment)
+  insert into public.ratings (
+    nomination_id,
+    voter_id,
+    rating_stars,
+    rating_score,
+    rating_points,
+    rire_score,
+    surprise_score,
+    gene_score,
+    fierte_score,
+    interet_score,
+    comment
+  )
+  values (
+    target_nomination_id,
+    voter_id,
+    stars,
+    stars,
+    stars * 5,
+    stars,
+    stars,
+    stars,
+    stars,
+    stars,
+    reaction_comment
+  )
   on conflict (nomination_id, voter_id) do update set
     rating_stars = excluded.rating_stars,
+    rating_score = excluded.rating_score,
+    rating_points = excluded.rating_points,
+    rire_score = excluded.rire_score,
+    surprise_score = excluded.surprise_score,
+    gene_score = excluded.gene_score,
+    fierte_score = excluded.fierte_score,
+    interet_score = excluded.interet_score,
+    comment = excluded.comment,
+    created_at = now();
+
+  perform public.recalculate_nomination_status(target_nomination_id);
+
+  select *
+  into updated_nomination
+  from public.nominations
+  where id = target_nomination_id;
+
+  return updated_nomination;
+end;
+$$;
+
+create or replace function public.submit_nomination_vote(
+  target_nomination_id uuid,
+  voter_id text,
+  rire integer,
+  surprise integer,
+  gene integer,
+  fierte integer,
+  interet integer,
+  reaction_comment text
+)
+returns public.nominations
+language plpgsql
+security definer
+set search_path = public
+as $$
+declare
+  updated_nomination public.nominations;
+  computed_points integer;
+  computed_score numeric(4,2);
+  computed_stars integer;
+begin
+  if voter_id is null or char_length(voter_id) < 8 or char_length(voter_id) > 96 then
+    raise exception 'Identifiant de votant invalide';
+  end if;
+
+  if not exists (select 1 from public.nominations where id = target_nomination_id) then
+    raise exception 'Dossier introuvable';
+  end if;
+
+  if rire < 0 or rire > 5 or surprise < 0 or surprise > 5 or gene < 0 or gene > 5 or fierte < 0 or fierte > 5 or interet < 0 or interet > 5 then
+    raise exception 'Méta-jugement invalide';
+  end if;
+
+  reaction_comment := btrim(coalesce(reaction_comment, ''));
+  if char_length(reaction_comment) < 2 or char_length(reaction_comment) > 180 then
+    raise exception 'Réaction invalide';
+  end if;
+
+  computed_points := rire + surprise + gene + fierte + interet;
+  computed_score := round((computed_points::numeric / 5), 2);
+  computed_stars := round(computed_score)::integer;
+
+  insert into public.ratings (
+    nomination_id,
+    voter_id,
+    rating_stars,
+    rating_score,
+    rating_points,
+    rire_score,
+    surprise_score,
+    gene_score,
+    fierte_score,
+    interet_score,
+    comment
+  )
+  values (
+    target_nomination_id,
+    voter_id,
+    computed_stars,
+    computed_score,
+    computed_points,
+    rire,
+    surprise,
+    gene,
+    fierte,
+    interet,
+    reaction_comment
+  )
+  on conflict (nomination_id, voter_id) do update set
+    rating_stars = excluded.rating_stars,
+    rating_score = excluded.rating_score,
+    rating_points = excluded.rating_points,
+    rire_score = excluded.rire_score,
+    surprise_score = excluded.surprise_score,
+    gene_score = excluded.gene_score,
+    fierte_score = excluded.fierte_score,
+    interet_score = excluded.interet_score,
     comment = excluded.comment,
     created_at = now();
 
@@ -304,6 +512,72 @@ begin
 end;
 $$;
 
+create or replace function public.update_own_nomination(
+  target_nomination_id uuid,
+  editor_id text,
+  next_comment text,
+  next_category_id text,
+  next_tiktoker_name text,
+  next_category_ids text[]
+)
+returns public.nominations
+language plpgsql
+security definer
+set search_path = public
+as $$
+declare
+  updated_nomination public.nominations;
+  selected_category_ids text[];
+begin
+  if editor_id is null or char_length(editor_id) < 8 or char_length(editor_id) > 96 then
+    raise exception 'Identifiant propriétaire invalide';
+  end if;
+
+  next_comment := btrim(coalesce(next_comment, ''));
+  next_tiktoker_name := btrim(coalesce(next_tiktoker_name, ''));
+
+  if char_length(next_comment) < 3 or char_length(next_comment) > 240 then
+    raise exception 'Contexte invalide';
+  end if;
+
+  if char_length(next_tiktoker_name) < 2 or char_length(next_tiktoker_name) > 48 then
+    raise exception 'TikToker invalide';
+  end if;
+
+  selected_category_ids := coalesce(nullif(next_category_ids, '{}'::text[]), array[next_category_id]);
+  selected_category_ids := array(
+    select selected.category_id
+    from (
+      select category_id_list.category_id, min(category_id_list.position_index) as first_seen
+      from unnest(selected_category_ids) with ordinality as category_id_list(category_id, position_index)
+      join public.categories c on c.id = category_id_list.category_id and c.active = true
+      group by category_id_list.category_id
+    ) as selected
+    order by selected.first_seen
+  );
+
+  if cardinality(selected_category_ids) = 0 then
+    raise exception 'Catégorie invalide';
+  end if;
+
+  update public.nominations
+  set
+    comment = next_comment,
+    category_id = selected_category_ids[1],
+    category_ids = selected_category_ids,
+    tiktoker_name = next_tiktoker_name
+  where id = target_nomination_id
+    and submitted_by = editor_id
+  returning * into updated_nomination;
+
+  if updated_nomination.id is null then
+    raise exception 'Modification verrouillée';
+  end if;
+
+  return updated_nomination;
+end;
+$$;
+
 create or replace function public.delete_own_nomination(
   target_nomination_id uuid,
   editor_id text
@@ -343,17 +617,23 @@ as $$
   with accepted_nomination_scores as (
     select
       n.id,
-      n.category_id,
+      nomination_category.category_id,
       n.tiktoker_name,
       n.submitted_by,
-      sum(r.rating_stars)::integer as points,
-      avg(r.rating_stars)::numeric as average_rating
+      sum(coalesce(r.rating_points, r.rating_stars, 0))::integer as points,
+      avg(coalesce(r.rating_score, r.rating_stars, 0))::numeric as average_rating
     from public.nominations n
+    join lateral unnest(
+      case
+        when cardinality(n.category_ids) > 0 then n.category_ids
+        else array[n.category_id]
+      end
+    ) as nomination_category(category_id) on true
     join public.ratings r on r.nomination_id = n.id
     where n.status = 'accepted'
       and n.created_at >= season_month
       and n.created_at < (season_month + interval '1 month')
-    group by n.id, n.category_id, n.tiktoker_name, n.submitted_by
+    group by n.id, nomination_category.category_id, n.tiktoker_name, n.submitted_by
   ),
   category_scores as (
     select
@@ -423,7 +703,9 @@ end;
 $$;
 
 grant execute on function public.submit_nomination_vote(uuid, text, integer, text) to anon;
+grant execute on function public.submit_nomination_vote(uuid, text, integer, integer, integer, integer, integer, text) to anon;
 grant execute on function public.update_own_nomination(uuid, text, text, text, text) to anon;
+grant execute on function public.update_own_nomination(uuid, text, text, text, text, text[]) to anon;
 grant execute on function public.delete_own_nomination(uuid, text) to anon;
 grant execute on function public.build_monthly_ceremony(date) to anon;
 grant execute on function public.freeze_monthly_ceremony(date) to anon;

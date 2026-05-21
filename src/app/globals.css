@@ -289,6 +289,15 @@ video {
     border-radius: 10px;
   }
 
+  .media-shimmer {
+    background:
+      linear-gradient(110deg, rgba(212, 175, 55, 0.08), rgba(240, 216, 137, 0.24), rgba(212, 175, 55, 0.08)),
+      radial-gradient(circle at 50% 20%, rgba(212, 175, 55, 0.18), transparent 18rem),
+      #050505;
+    background-size: 220% 100%, 100% 100%, 100% 100%;
+    animation: shimmer-sweep 1.35s linear infinite;
+  }
+
   .ticker {
     overflow: hidden;
     white-space: nowrap;
@@ -299,11 +308,14 @@ video {
   }
 
   .ticker-track {
-    display: inline-block;
+    display: block;
+    width: 100%;
+    overflow: hidden;
     padding: 0.34rem 0.55rem;
     font-size: 0.58rem;
     font-weight: 900;
     text-transform: uppercase;
+    text-indent: 100%;
     animation: ticker-move 18s linear infinite;
   }
 
@@ -343,9 +355,18 @@ video {
 
 @keyframes ticker-move {
   from {
-    transform: translateX(0);
+    text-indent: 100%;
   }
   to {
-    transform: translateX(-50%);
+    text-indent: -220%;
+  }
+}
+
+@keyframes shimmer-sweep {
+  from {
+    background-position: 220% 0, 0 0, 0 0;
+  }
+  to {
+    background-position: -120% 0, 0 0, 0 0;
   }
 }
