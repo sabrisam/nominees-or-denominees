@@ -147,6 +147,20 @@ create trigger nominations_set_updated_at
 before update on public.nominations
 for each row execute function public.set_updated_at();
 
+with archived_categories as (
+  select
+    id,
+    1000 + row_number() over (order by sort_order, id) as archived_sort_order
+  from public.categories
+  where id not in ('fierte_des_notres', 'roue_libre', 'honte_absolue', 'surprise_totale')
+)
+update public.categories as category
+set
+  sort_order = archived_categories.archived_sort_order,
+  active = false
+from archived_categories
+where category.id = archived_categories.id;
+
 insert into public.categories (id, label, mood, sort_order) values
   ('fierte_des_notres', 'La Fierté des Nôtres', 'positive', 1),
   ('roue_libre', 'Roue Libre', 'fun', 2),
