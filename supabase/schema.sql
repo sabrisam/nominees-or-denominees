@@ -69,10 +69,30 @@ create trigger nominations_set_updated_at
 before update on public.nominations
 for each row execute function public.set_updated_at();
 
+update public.categories
+set sort_order = sort_order + 1000
+where id in (
+  'moment_marquant',
+  'pepite_cachee',
+  'style_remarquable',
+  'roue_libre',
+  'malaise_public',
+  'fou_rire',
+  'replique_culte',
+  'derapage_leger',
+  'choix_discutable',
+  'signal_alerte',
+  'elan_creatif',
+  'silence_genant',
+  'performance_surprise',
+  'scene_improbable',
+  'voyage_express'
+);
+
 insert into public.categories (id, label, mood, sort_order) values
   ('moment_marquant', 'Le Zin du mois', 'positive', 1),
   ('pepite_cachee', 'La fierté des nôtres', 'positive', 2),
-  ('style_remarquable', 'La honte du mois', 'critical', 3),
+  ('style_remarquable', 'La honte de la Oumma', 'critical', 3),
   ('roue_libre', 'Roue libre', 'fun', 4),
   ('malaise_public', 'Trop gênant', 'critical', 5),
   ('fou_rire', 'Xptdr', 'fun', 6),
@@ -88,6 +108,24 @@ on conflict (id) do update set
   mood = excluded.mood,
   sort_order = excluded.sort_order,
   active = true;
+
+update public.categories
+set active = false
+where id not in (
+  'moment_marquant',
+  'pepite_cachee',
+  'style_remarquable',
+  'roue_libre',
+  'malaise_public',
+  'fou_rire',
+  'replique_culte',
+  'derapage_leger',
+  'choix_discutable',
+  'signal_alerte',
+  'elan_creatif',
+  'silence_genant',
+  'performance_surprise'
+);
 
 create or replace function public.nod_status_from_votes(next_votes jsonb)
 returns public.nomination_status

@@ -4,11 +4,11 @@
 
 :root {
   color-scheme: light;
-  background: #f0f0f0;
-  --paper: #f0f0f0;
+  background: #e6e6e2;
+  --paper: #e6e6e2;
   --ink: #050505;
-  --red: #dc2626;
-  --yellow: #fde047;
+  --red: #e11d48;
+  --yellow: #d9f99d;
 }
 
 * {
@@ -71,7 +71,9 @@ video {
     min-height: 100%;
     overflow-x: hidden;
     background-color: var(--paper);
-    background-image: url("data:image/svg+xml,%3Csvg width='48' height='48' viewBox='0 0 48 48' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M0 0H48V48H0z' fill='%23f0f0f0'/%3E%3Cpath d='M0 12H48M0 24H48M0 36H48M12 0V48M24 0V48M36 0V48' stroke='%23000000' stroke-opacity='.055' stroke-width='1'/%3E%3C/svg%3E");
+    background-image:
+      url("data:image/svg+xml,%3Csvg width='84' height='84' viewBox='0 0 84 84' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.9' numOctaves='2' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='84' height='84' filter='url(%23n)' opacity='.13'/%3E%3C/svg%3E"),
+      url("data:image/svg+xml,%3Csvg width='48' height='48' viewBox='0 0 48 48' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M0 0H48V48H0z' fill='%23e6e6e2'/%3E%3Cpath d='M0 12H48M0 24H48M0 36H48M12 0V48M24 0V48M36 0V48' stroke='%23000000' stroke-opacity='.055' stroke-width='1'/%3E%3C/svg%3E");
     color: var(--ink);
   }
 
@@ -105,7 +107,7 @@ video {
     position: absolute;
     display: block;
     border: 4px solid #000000;
-    background: rgba(240, 240, 240, 0.4);
+    background: rgba(230, 230, 226, 0.45);
     box-shadow: 8px 8px 0 #000000;
   }
 
@@ -141,6 +143,40 @@ video {
     text-transform: uppercase;
     letter-spacing: -0.05em;
     line-height: 0.85;
+  }
+
+  .masthead-title {
+    font-family: "Rockwell Extra Bold", Rockwell, Clarendon, Impact, Haettenschweiler, "Franklin Gothic Heavy", serif;
+    font-weight: 900;
+    text-transform: uppercase;
+    letter-spacing: -0.07em;
+    line-height: 0.78;
+   }
+
+  .paper-tear {
+    height: 1.15rem;
+    border-left: 4px solid #000000;
+    border-right: 4px solid #000000;
+    background: #f8f7ef;
+    clip-path: polygon(0 15%, 6% 45%, 12% 18%, 18% 64%, 24% 25%, 31% 78%, 38% 32%, 45% 72%, 53% 18%, 61% 62%, 70% 28%, 78% 76%, 87% 34%, 94% 64%, 100% 24%, 100% 100%, 0 100%);
+  }
+
+  .jagged-sticker {
+    display: inline-flex;
+    width: 4.6rem;
+    height: 4.6rem;
+    align-items: center;
+    justify-content: center;
+    border: 4px solid #000000;
+    background: #d9f99d;
+    color: #000000;
+    padding: 0.35rem;
+    text-align: center;
+    font-size: 0.78rem;
+    font-weight: 900;
+    line-height: 0.82;
+    text-transform: uppercase;
+    clip-path: polygon(50% 0%, 58% 11%, 70% 5%, 75% 18%, 89% 16%, 88% 31%, 100% 39%, 91% 50%, 100% 61%, 88% 69%, 89% 84%, 75% 82%, 70% 95%, 58% 89%, 50% 100%, 42% 89%, 30% 95%, 25% 82%, 11% 84%, 12% 69%, 0% 61%, 9% 50%, 0% 39%, 12% 31%, 11% 16%, 25% 18%, 30% 5%, 42% 11%);
   }
 
   .brutal-card {

@@ -10,16 +10,20 @@ const DEFAULT_REGION = "nyc3";
 const MAX_SINGLE_PUT_BYTES = 5 * 1024 * 1024 * 1024;
 const ALLOWED_FOLDERS = new Set(["videos", "miniatures"]);
 
+function isPlaceholder(value: string) {
+  return /REMPLACER_PAR|YOUR_|your-|placeholder|changeme/i.test(value);
+}
+
 function getRequiredEnv(name: string) {
   const value = process.env[name];
-  if (!value) {
+  if (!value || isPlaceholder(value)) {
     throw new Error(`Variable manquante: ${name}`);
   }
   return value;
 }
 
 function getRegion(endpoint: string, bucket: string) {
-  if (process.env.SPACES_REGION) return process.env.SPACES_REGION;
+  if (process.env.SPACES_REGION && !isPlaceholder(process.env.SPACES_REGION)) return process.env.SPACES_REGION;
 
   try {
     const host = new URL(endpoint).hostname;
@@ -28,10 +32,10 @@ function getRegion(endpoint: string, bucket: string) {
       return firstLabel;
     }
   } catch {
-    return process.env.SPACES_REGION || DEFAULT_REGION;
+    return DEFAULT_REGION;
   }
 
-  return process.env.SPACES_REGION || DEFAULT_REGION;
+  return DEFAULT_REGION;
 }
 
 function buildPublicUrl(endpoint: string, bucket: string, key: string) {
@@ -93,8 +97,12 @@ export async function POST(request: Request) {
       return NextResponse.json({ ok: false, error: "Type de média refusé." }, { status: 400 });
     }
 
-    const bucket = process.env.SPACES_BUCKET || DEFAULT_BUCKET;
-    const endpoint = process.env.NEXT_PUBLIC_SPACES_ENDPOINT || `https://${process.env.SPACES_REGION || DEFAULT_REGION}.digitaloceanspaces.com`;
+    const configuredBucket = process.env.SPACES_BUCKET;
+    const configuredEndpoint = process.env.NEXT_PUBLIC_SPACES_ENDPOINT;
+    const configuredRegion = process.env.SPACES_REGION;
+    const fallbackRegion = configuredRegion && !isPlaceholder(configuredRegion) ? configuredRegion : DEFAULT_REGION;
+    const bucket = configuredBucket && !isPlaceholder(configuredBucket) ? configuredBucket : DEFAULT_BUCKET;
+    const endpoint = configuredEndpoint && !isPlaceholder(configuredEndpoint) ? configuredEndpoint : `https://${fallbackRegion}.digitaloceanspaces.com`;
     const accessKeyId = getRequiredEnv("SPACES_KEY");
     const secretAccessKey = getRequiredEnv("SPACES_SECRET");
     const region = getRegion(endpoint, bucket);
