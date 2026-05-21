@@ -30,7 +30,7 @@ import {
 import type { LucideIcon } from "lucide-react";
 import type { RealtimeChannel } from "@supabase/supabase-js";
 
-type Tab = "feed" | "studio" | "trophies" | "archive";
+type Tab = "feed" | "vote" | "studio" | "trophies" | "archive";
 type NominationStatus = "pending" | "accepted" | "rejected";
 type VerdictChoice = "propel" | "ban";
 type ToastTone = "success" | "error" | "info";
@@ -95,9 +95,11 @@ const DEFAULT_ROOM_CODE = "NOD-CLUB";
 const MIN_VERDICT_VOTES = 2;
 const MAX_DIRECT_UPLOAD_BYTES = 5 * 1024 * 1024 * 1024;
 const STAR_VALUES = [1, 2, 3, 4, 5] as const;
-const HIGH_SCORE_TITLE = "LA FIERTÉ DES NÔTRES : LES ZINS";
-const LOW_SCORE_TITLE = "LA HONTE DE LA OUMMA : LES BANNIS";
-const ZINE_TITLE = "LE ZINE DU MOIS : COMPRESSIONS MOBILES";
+const DIRECT_TITLE = "LE ZIN DU MOIS";
+const VOTE_TITLE = "DOSSIERS À VOTER";
+const HIGH_SCORE_TITLE = "LA FIERTÉ DES NÔTRES";
+const TROPHY_TITLE = "LES ZINS PROPULSÉS";
+const LOW_SCORE_TITLE = "LES DOSSIERS BANNIS";
 const SIMULATION_NOTICE = "MODE SIMULATION : stockage en cours d'activation.";
 const FALLBACK_VIDEO_URL = "https://interactive-examples.mdn.mozilla.net/media/cc0-videos/flower.mp4";
 const FALLBACK_IMAGE_URL =
@@ -125,9 +127,10 @@ const CATEGORY_BY_ID = Object.fromEntries(CATEGORIES.map((category) => [category
 
 const TAB_ITEMS: Array<{ id: Tab; label: string; icon: LucideIcon }> = [
   { id: "feed", label: "Direct", icon: Sparkles },
-  { id: "trophies", label: "Zins", icon: Crown },
-  { id: "archive", label: "Bannis", icon: ShieldAlert },
-  { id: "studio", label: "Studio", icon: Plus }
+  { id: "vote", label: "À voter", icon: Zap },
+  { id: "studio", label: "Studio", icon: Plus },
+  { id: "trophies", label: "Trophées", icon: Crown },
+  { id: "archive", label: "Bannis", icon: ShieldAlert }
 ];
 
 const TAB_ORDER: Tab[] = TAB_ITEMS.map((item) => item.id);
@@ -1362,7 +1365,7 @@ export default function Home() {
             <p className="text-[clamp(2rem,11vw,3rem)] font-black leading-none">{pendingForMe.length}</p>
           </BrutalCard>
           <BrutalCard tone="red" className="p-1.5">
-            <p className="text-[10px] font-black uppercase leading-none">Validés</p>
+            <p className="text-[10px] font-black uppercase leading-none">Propulsés</p>
             <p className="text-[clamp(2rem,11vw,3rem)] font-black leading-none">{accepted.length}</p>
           </BrutalCard>
           <BrutalCard tone="black" className="p-1.5">
@@ -1392,59 +1395,13 @@ export default function Home() {
                   </h1>
                   <div className="paper-tear -mt-[4px]" />
                   <div className="-mt-[4px] border-4 border-black bg-black px-2 py-1 text-white">
-                    <p className="tabloid-headline text-[clamp(1.35rem,7.6vw,2.35rem)] leading-[0.85]">{ZINE_TITLE}</p>
+                    <p className="tabloid-headline text-[clamp(1.35rem,7.6vw,2.35rem)] leading-[0.85]">{DIRECT_TITLE}</p>
                   </div>
                 </BrutalCard>
               </motion.div>
 
-              {pendingForMe.length > 0 && (
-                <motion.div {...revealItem} className="space-y-2">
-                  <SectionTitle tone="yellow">À VOTER</SectionTitle>
-                  {pendingForMe.slice(0, 1).map((nomination) => {
-                    const category = getCategoryMeta(nomination.category_id);
-                    const Icon = category.icon;
-                    const draftRating = clampRating(ratingDraftById[nomination.id] ?? 4);
-
-                    return (
-                      <motion.article
-                        key={nomination.id}
-                        animate={
-                          shakeId === nomination.id
-                            ? { x: [0, -12, 12, -9, 9, 0], rotate: [0, -1.2, 1.2, -0.8, 0.8, 0] }
-                            : { x: 0, rotate: 0 }
-                        }
-                        transition={{ duration: 0.42 }}
-                        className="brutal-card overflow-hidden"
-                      >
-                        <div className="relative border-b-4 border-black bg-black">
-                          <MediaFrame nomination={nomination} height="h-[min(42svh,21rem)]" />
-                          <OwnershipBadge owned={ownsNomination(nomination)} className="absolute right-2 top-2 rotate-2" />
-                          <div className="absolute bottom-2 left-2 right-2 border-4 border-black bg-[#f2efe3] p-2">
-                            <p className="flex items-center gap-1 text-[10px] font-black uppercase text-[#e11d48]">
-                              <Icon className="h-3.5 w-3.5" /> {category.label}
-                            </p>
-                            <p className="text-[clamp(1.8rem,10vw,3rem)] font-black uppercase leading-[0.84]">&quot;{nomination.comment}&quot;</p>
-                          </div>
-                        </div>
-                        <div className="space-y-2 p-2">
-                          <StarInput value={draftRating} onChange={(value) => setRatingDraftById((prev) => ({ ...prev, [nomination.id]: value }))} size="lg" />
-                          <div className="grid grid-cols-2 gap-2">
-                            <motion.button whileTap={TAP_REBOUND} transition={TAP_TRANSITION} onClick={() => void applyVote(nomination.id, "propel")} disabled={voteBusyId === nomination.id} className="brutal-action bg-[#b5f42b] text-black disabled:opacity-50">
-                              Propulser
-                            </motion.button>
-                            <motion.button whileTap={TAP_REBOUND} transition={TAP_TRANSITION} onClick={() => void applyVote(nomination.id, "ban")} disabled={voteBusyId === nomination.id} className="brutal-action bg-[#e11d48] text-white disabled:opacity-50">
-                              Bannir
-                            </motion.button>
-                          </div>
-                        </div>
-                      </motion.article>
-                    );
-                  })}
-                </motion.div>
-              )}
-
               <motion.div {...revealItem} className="space-y-2">
-                <SectionTitle>{ZINE_TITLE}</SectionTitle>
+                <SectionTitle>{DIRECT_TITLE}</SectionTitle>
                 {feedItems.length === 0 ? (
                   <BrutalCard className="p-4 text-center">
                     <Camera className="mx-auto mb-3 h-9 w-9" />
@@ -1466,6 +1423,70 @@ export default function Home() {
                   </div>
                 )}
               </motion.div>
+            </motion.section>
+          )}
+
+          {tab === "vote" && (
+            <motion.section
+              key="vote"
+              {...pageTransition}
+              drag={reduceMotion ? false : "x"}
+              dragConstraints={{ left: 0, right: 0 }}
+              onDragEnd={(_, info) => handleSectionDrag(info)}
+              transition={{ duration: reduceMotion ? 0.01 : 0.26, type: "spring", stiffness: 230, damping: 25 }}
+              className="space-y-2"
+            >
+              <SectionTitle tone="yellow">{VOTE_TITLE}</SectionTitle>
+              {pendingForMe.length === 0 ? (
+                <BrutalCard tone="yellow" className="p-4 text-center">
+                  <Check className="mx-auto mb-3 h-9 w-9" />
+                  <p className="text-3xl font-black uppercase leading-none">File vide.</p>
+                </BrutalCard>
+              ) : (
+                pendingForMe.map((nomination) => {
+                  const category = getCategoryMeta(nomination.category_id);
+                  const Icon = category.icon;
+                  const draftRating = clampRating(ratingDraftById[nomination.id] ?? 4);
+
+                  return (
+                    <motion.article
+                      key={nomination.id}
+                      animate={
+                        shakeId === nomination.id
+                          ? { x: [0, -12, 12, -9, 9, 0], rotate: [0, -1.2, 1.2, -0.8, 0.8, 0] }
+                          : { x: 0, rotate: 0 }
+                      }
+                      transition={{ duration: 0.42 }}
+                      className="brutal-card overflow-hidden"
+                    >
+                      <div className="relative border-b-4 border-black bg-black">
+                        <MediaFrame nomination={nomination} height="h-[min(46svh,23rem)]" />
+                        <Sticker tone="yellow" className="absolute left-2 top-2 -rotate-2">
+                          À voter
+                        </Sticker>
+                        <OwnershipBadge owned={ownsNomination(nomination)} className="absolute right-2 top-2 rotate-2" />
+                        <div className="absolute bottom-2 left-2 right-2 border-4 border-black bg-[#f2efe3] p-2">
+                          <p className="flex items-center gap-1 text-[10px] font-black uppercase text-[#e11d48]">
+                            <Icon className="h-3.5 w-3.5" /> {category.label}
+                          </p>
+                          <p className="text-[clamp(1.8rem,10vw,3rem)] font-black uppercase leading-[0.84]">&quot;{nomination.comment}&quot;</p>
+                        </div>
+                      </div>
+                      <div className="space-y-2 p-2">
+                        <StarInput value={draftRating} onChange={(value) => setRatingDraftById((prev) => ({ ...prev, [nomination.id]: value }))} size="lg" />
+                        <div className="grid grid-cols-2 gap-2">
+                          <motion.button whileTap={TAP_REBOUND} transition={TAP_TRANSITION} onClick={() => void applyVote(nomination.id, "propel")} disabled={voteBusyId === nomination.id} className="brutal-action bg-[#b5f42b] text-black disabled:opacity-50">
+                            Propulser
+                          </motion.button>
+                          <motion.button whileTap={TAP_REBOUND} transition={TAP_TRANSITION} onClick={() => void applyVote(nomination.id, "ban")} disabled={voteBusyId === nomination.id} className="brutal-action bg-[#e11d48] text-white disabled:opacity-50">
+                            Bannir
+                          </motion.button>
+                        </div>
+                      </div>
+                    </motion.article>
+                  );
+                })
+              )}
             </motion.section>
           )}
 
@@ -1582,7 +1603,7 @@ export default function Home() {
               className="space-y-2"
             >
               <BrutalCard tone="black" className="p-2 text-white">
-                <h2 className="tabloid-headline text-[clamp(2.35rem,12vw,4.2rem)] leading-[0.8]">{HIGH_SCORE_TITLE}</h2>
+                <h2 className="tabloid-headline text-[clamp(2.35rem,12vw,4.2rem)] leading-[0.8]">{TROPHY_TITLE}</h2>
               </BrutalCard>
 
               {categoryWinners.length === 0 ? (
@@ -1695,11 +1716,11 @@ export default function Home() {
       )}
 
       <nav className="bottom-tabloid fixed bottom-0 left-0 right-0 z-40 px-2 pt-2" style={{ paddingBottom: "calc(env(safe-area-inset-bottom) + 10px)" }}>
-        <div className="mx-auto grid w-full max-w-[30rem] grid-cols-4 gap-1">
+        <div className="mx-auto grid w-full max-w-[30rem] grid-cols-5 gap-1">
           {TAB_ITEMS.map((item) => {
             const Icon = item.icon;
             const active = tab === item.id;
-            const badge = item.id === "feed" ? pendingForMe.length : 0;
+            const badge = item.id === "vote" ? pendingForMe.length : 0;
 
             return (
               <motion.button key={item.id} whileTap={TAP_REBOUND} transition={TAP_TRANSITION} onClick={() => switchTab(item.id)} className={`relative flex flex-col items-center justify-center gap-1 border-4 border-black px-1 py-2 transition active:translate-x-0.5 active:translate-y-0.5 ${active ? "bg-[#e11d48] text-white" : "bg-[#f2efe3] text-black"}`}>
