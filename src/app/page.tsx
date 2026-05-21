@@ -247,6 +247,16 @@ function averageRating(nomination: Nomination) {
   return averageFromVotes(nomination.votes);
 }
 
+function countdownToNextCeremony() {
+  const now = new Date();
+  const next = new Date(now.getFullYear(), now.getMonth() + 1, 1);
+  const diffMs = Math.max(0, next.getTime() - now.getTime());
+  const days = Math.floor(diffMs / 86400000);
+  const hours = Math.floor((diffMs % 86400000) / 3600000);
+  const mins = Math.floor((diffMs % 3600000) / 60000);
+  return { days, hours, mins };
+}
+
 function getCategoryMeta(value: string): CategoryMeta {
   return CATEGORY_BY_ID[value] ?? { id: "custom", label: value || "Sans catégorie", mood: "fun", icon: Archive };
 }
@@ -696,6 +706,7 @@ export default function Home() {
 
   const [toast, setToast] = useState<ToastState>(null);
   const toastTimeoutRef = useRef<number | null>(null);
+  const [ceremonyCountdown, setCeremonyCountdown] = useState(countdownToNextCeremony);
 
   const [preparedFile, setPreparedFile] = useState<File | null>(null);
   const [thumbnailFile, setThumbnailFile] = useState<File | null>(null);
@@ -757,6 +768,13 @@ export default function Home() {
     } finally {
       setBootingSession(false);
     }
+  }, []);
+
+  useEffect(() => {
+    const timer = window.setInterval(() => {
+      setCeremonyCountdown(countdownToNextCeremony());
+    }, 30000);
+    return () => window.clearInterval(timer);
   }, []);
 
   useEffect(() => {
@@ -1353,7 +1371,12 @@ export default function Home() {
         className="relative z-10 mx-auto min-h-0 w-full max-w-[30rem] flex-1 overflow-y-auto overscroll-contain px-2 pb-4"
         style={{ paddingTop: "calc(env(safe-area-inset-top) + 6px)" }}
       >
-        <header className="sticky top-0 z-30 mb-2 flex justify-end bg-[#1a1a1a] py-1.5">
+        <header className="sticky top-0 z-30 mb-2 grid grid-cols-[1fr_auto] gap-1 bg-[#1a1a1a] py-1.5">
+          <div className="ticker border-4 border-black bg-[#b5f42b] text-black">
+            <span className="ticker-track">
+              CÉRÉMONIE LE 1ER DU MOIS / DANS {ceremonyCountdown.days}J {ceremonyCountdown.hours}H {ceremonyCountdown.mins}M / CÉRÉMONIE LE 1ER DU MOIS / DANS {ceremonyCountdown.days}J {ceremonyCountdown.hours}H {ceremonyCountdown.mins}M
+            </span>
+          </div>
           <motion.button whileTap={TAP_REBOUND} transition={TAP_TRANSITION} onClick={() => void fetchNominations()} disabled={syncing || !supabase} className="brutal-icon-button disabled:opacity-50" aria-label="Rafraîchir le flux">
             <RefreshCw className={`h-4 w-4 ${syncing ? "animate-spin" : ""}`} />
           </motion.button>
