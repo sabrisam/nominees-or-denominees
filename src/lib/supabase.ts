@@ -11,8 +11,29 @@ export function getSupabaseBrowserClient() {
   }
 
   if (!browserClient) {
-    browserClient = createClient(url, anonKey);
+    browserClient = createClient(url, anonKey, {
+      auth: {
+        persistSession: true,
+        autoRefreshToken: true,
+        detectSessionInUrl: false
+      }
+    });
   }
 
   return browserClient;
+}
+
+export async function ensureAnonymousSession(client: SupabaseClient) {
+  const { data: { session }, error: sessionError } = await client.auth.getSession();
+  if (session?.user) {
+    return session.user;
+  }
+  
+  const { data: { user }, error: signInError } = await client.auth.signInAnonymously();
+  if (signInError) {
+    console.error("Failed to sign in anonymously:", signInError);
+    return null;
+  }
+  
+  return user;
 }
