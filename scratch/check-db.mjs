@@ -1,5 +1,4 @@
 import { createClient } from '@supabase/supabase-js';
-import dotenv from 'dotenv';
 import { readFileSync } from 'fs';
 
 // Load env variables manually from .env.local
