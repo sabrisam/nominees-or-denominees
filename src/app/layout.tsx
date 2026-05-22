@@ -1,5 +1,4 @@
 import type { Metadata, Viewport } from "next";
-import { ViewportFix } from "@/components/ViewportFix";
 import "./globals.css";
 
 export const metadata: Metadata = {
@@ -40,8 +39,7 @@ export default function RootLayout({
   return (
     <html lang="fr">
       <body>
-        <ViewportFix />
-        {children}
+        <div className="nod-viewport-host">{children}</div>
       </body>
     </html>
   );
