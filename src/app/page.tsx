@@ -2552,6 +2552,6 @@ export default function Home() {
           })}
         </div>
       </nav>
-    </div>
+    </motion.div>
   );
 }
