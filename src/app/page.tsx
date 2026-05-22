@@ -28,7 +28,6 @@ import {
   Lock,
   Pencil,
   Plus,
-  RefreshCw,
   ShieldAlert,
   Sparkles,
   Trophy,

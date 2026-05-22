@@ -175,9 +175,6 @@ export async function uploadMediaFile(
   };
 }
 
-/** @deprecated Use uploadMediaFile — kept for any stale imports. */
-export const uploadFileOrFallback = uploadMediaFile;
-
 export function isStorageUnavailableMessage(message: string) {
   return message.toLowerCase().includes("stockage indisponible");
 }
