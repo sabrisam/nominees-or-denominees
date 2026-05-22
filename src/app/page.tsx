@@ -2300,7 +2300,7 @@ export default function Home() {
       </main>
 
       {tab !== "studio" && (
-        <motion.button initial={reduceMotion ? { opacity: 1 } : { opacity: 0, scale: 0.96, y: 8 }} animate={{ opacity: 1, scale: 1, y: 0 }} whileTap={TAP_REBOUND} transition={TAP_TRANSITION} onClick={() => switchTab("studio")} className="brutal-fab absolute right-5 z-40 flex h-12 w-12 items-center justify-center pointer-events-auto" style={{ bottom: "calc(env(safe-area-inset-bottom) + 76px)" }} aria-label="Lancer un dossier">
+        <motion.button initial={reduceMotion ? { opacity: 1 } : { opacity: 0, scale: 0.96, y: 8 }} animate={{ opacity: 1, scale: 1, y: 0 }} whileTap={TAP_REBOUND} transition={TAP_TRANSITION} onClick={() => switchTab("studio")} className="brutal-fab absolute right-5 z-40 flex h-12 w-12 items-center justify-center pointer-events-auto" style={{ bottom: "calc(env(safe-area-inset-bottom) + 90px)" }} aria-label="Lancer un dossier">
           <Plus className="h-6 w-6" />
         </motion.button>
       )}
