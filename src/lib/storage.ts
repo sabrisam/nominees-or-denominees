@@ -3,7 +3,8 @@ import type { UploadReference } from "@/types";
 
 export const STORAGE_UNAVAILABLE_NOTICE = "Stockage indisponible : échec du transfert serveur.";
 
-const SUPABASE_STORAGE_BUCKET = process.env.NEXT_PUBLIC_SUPABASE_STORAGE_BUCKET || "nod-media";
+/** Client-only bucket — no /api/media/upload or Spaces presign. */
+const SUPABASE_STORAGE_BUCKET = "nod-media";
 
 function sanitizeStorageFileName(value: string) {
   const cleaned = value
@@ -15,20 +16,6 @@ function sanitizeStorageFileName(value: string) {
     .slice(0, 90);
 
   return cleaned || "media";
-}
-
-function inferBrowserContentType(file: File) {
-  const extension = file.name.split(".").pop()?.toLowerCase() ?? "";
-  const currentType = file.type.toLowerCase();
-
-  if (extension === "mp4" || currentType.includes("mp4")) return "video/mp4";
-  if (extension === "mov" || extension === "qt" || currentType.includes("quicktime")) return "video/quicktime";
-  if (extension === "webm" || currentType.includes("webm")) return "video/webm";
-  if (extension === "webp" || currentType.includes("webp")) return "image/webp";
-  if (extension === "jpg" || extension === "jpeg" || currentType.includes("jpeg")) return "image/jpeg";
-  if (extension === "png" || currentType.includes("png")) return "image/png";
-
-  return file.type || "application/octet-stream";
 }
 
 function mediaMonthKey(date = new Date()) {
@@ -151,54 +138,17 @@ export async function extractVideoThumbnail(file: File) {
   }
 }
 
-async function uploadFileToSpaces(file: File, folder: "videos" | "miniatures") {
-  const contentType = inferBrowserContentType(file);
-  const signResponse = await fetch("/api/spaces/presign", {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({
-      fileName: file.name,
-      contentType,
-      folder
-    })
-  });
-
-  const payload = (await signResponse.json()) as {
-    uploadUrl?: string;
-    publicUrl?: string;
-    key?: string;
-    error?: string;
-  };
-
-  if (!signResponse.ok || !payload.uploadUrl || !payload.publicUrl || !payload.key) {
-    throw new Error(STORAGE_UNAVAILABLE_NOTICE);
-  }
-
-  const uploadResponse = await fetch(payload.uploadUrl, {
-    method: "PUT",
-    headers: { "Content-Type": contentType },
-    body: file
-  });
-
-  if (!uploadResponse.ok) throw new Error(STORAGE_UNAVAILABLE_NOTICE);
-
-  return {
-    key: payload.key,
-    publicUrl: payload.publicUrl
-  };
-}
-
 async function uploadFileToSupabaseStorage(supabase: SupabaseClient, file: File, folder: "videos" | "miniatures") {
   const key = storageKey(file, folder);
-  const contentType = inferBrowserContentType(file);
 
   const { error, data } = await supabase.storage.from(SUPABASE_STORAGE_BUCKET).upload(key, file, {
     cacheControl: "3600",
     upsert: true,
-    contentType: file.type || contentType
+    contentType: file.type
   });
 
   if (error || !data?.path) {
+    console.error("[Supabase Storage Error]:", error);
     throw new Error(STORAGE_UNAVAILABLE_NOTICE);
   }
 
@@ -220,19 +170,16 @@ export async function uploadFileOrFallback(
   folder: "videos" | "miniatures",
   signal?: AbortSignal
 ): Promise<UploadReference> {
+  if (signal?.aborted) throw new DOMException("Upload annulé.", "AbortError");
+
   try {
-    const uploaded = await uploadFileToSpaces(file, folder);
+    const uploaded = await uploadFileToSupabaseStorage(supabase, file, folder);
     if (signal?.aborted) throw new DOMException("Upload annulé.", "AbortError");
-    return { ...uploaded, provider: "spaces" };
-  } catch (spacesError) {
-    if (signal?.aborted) throw spacesError;
-    try {
-      const uploaded = await uploadFileToSupabaseStorage(supabase, file, folder);
-      if (signal?.aborted) throw new DOMException("Upload annulé.", "AbortError");
-      return { ...uploaded, provider: "supabase" };
-    } catch {
-      throw new Error(STORAGE_UNAVAILABLE_NOTICE);
-    }
+    return { ...uploaded, provider: "supabase" };
+  } catch (err) {
+    if (signal?.aborted) throw err;
+    console.error("[Upload Exception]:", err);
+    throw new Error(STORAGE_UNAVAILABLE_NOTICE);
   }
 }
 

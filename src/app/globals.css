@@ -24,12 +24,14 @@
 
 html,
 body {
-  height: 100dvh;
-  width: 100vw;
-  margin: 0;
-  padding: 0;
-  overflow: hidden;
-  position: fixed;
+  height: 100dvh !important;
+  width: 100vw !important;
+  margin: 0 !important;
+  padding: 0 !important;
+  overflow: hidden !important;
+  position: fixed !important;
+  top: 0;
+  left: 0;
   background: #050505;
 }
 
@@ -96,8 +98,7 @@ video {
   }
 
   .tabloid-scroll {
-    flex: 1;
-    min-height: 0;
+    height: calc(100dvh - env(safe-area-inset-top) - env(safe-area-inset-bottom) - 84px);
     overflow-y: auto;
     -webkit-overflow-scrolling: touch;
     overscroll-behavior: contain;
