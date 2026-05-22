@@ -24,25 +24,26 @@
   letter-spacing: 0;
 }
 
-html,
-body,
-body > div {
-  height: 100vh !important;
-  height: 100dvh !important;
-  min-height: 100dvh !important;
-  width: 100vw !important;
-  margin: 0 !important;
-  padding: 0 !important;
-  overflow: hidden !important;
-  position: fixed !important;
-  top: 0;
-  left: 0;
-  right: 0;
-  bottom: 0 !important;
+@media (display-mode: standalone) {
+  :root {
+    --app-height: 100vh;
+  }
+}
+
+html {
+  height: var(--app-height, 100dvh);
   background: #050505;
 }
 
 body {
+  position: fixed;
+  inset: 0;
+  width: 100%;
+  margin: 0;
+  padding: 0;
+  overflow: hidden;
+  overscroll-behavior: none;
+  background: #050505;
   color: var(--cream);
   font-size: 14px;
   font-family: "SF Pro Text", "Avenir Next", "Helvetica Neue", system-ui, sans-serif;
@@ -50,35 +51,42 @@ body {
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
   -webkit-tap-highlight-color: transparent;
-  overscroll-behavior: none;
 }
 
+.pwa-root,
 body > div {
-  display: flex !important;
-  flex-direction: column !important;
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  width: 100%;
+  min-height: 0;
+  overflow: hidden;
 }
 
 .tabloid-app {
-  position: relative !important;
-  display: flex !important;
-  flex-direction: column !important;
-  flex: 1 1 auto !important;
-  min-height: 0 !important;
-  width: 100% !important;
-  height: 100% !important;
-  overflow: hidden !important;
-  background: #050505;
-}
-
-.tabloid-stage {
+  position: relative;
   display: flex;
-  flex: 1 1 auto;
   flex-direction: column;
+  flex: 1 1 auto;
   min-height: 0;
   width: 100%;
   height: 100%;
   overflow: hidden;
-  position: relative;
+  background: #050505;
+}
+
+.tabloid-app.tabloid-haptic-pulse {
+  animation: tabloid-haptic-flash 0.15s ease;
+}
+
+@keyframes tabloid-haptic-flash {
+  0%,
+  100% {
+    filter: brightness(1);
+  }
+  50% {
+    filter: brightness(1.05);
+  }
 }
 
 .tabloid-main {
@@ -93,25 +101,24 @@ body > div {
 }
 
 .tabloid-scroll {
-  position: relative;
   flex: 1 1 auto;
   min-height: 0;
-  overflow-y: auto !important;
+  overflow-y: auto;
   -webkit-overflow-scrolling: touch;
-  padding-top: env(safe-area-inset-top) !important;
-  padding-bottom: 72px !important;
+  overscroll-behavior: contain;
+  padding-top: env(safe-area-inset-top);
+  padding-bottom: 12px;
 }
 
 .bottom-tabloid {
-  position: absolute !important;
-  bottom: 0 !important;
-  left: 0 !important;
-  right: 0 !important;
+  position: relative;
+  flex-shrink: 0;
   z-index: 50;
-  padding-bottom: calc(env(safe-area-inset-bottom) + 4px) !important;
-  background: rgba(18, 18, 18, 0.9) !important;
-  backdrop-filter: blur(20px) !important;
-  -webkit-backdrop-filter: blur(20px) !important;
+  padding-top: 6px;
+  padding-bottom: env(safe-area-inset-bottom);
+  background: rgba(18, 18, 18, 0.9);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
 }
 
 .toast-stack {
@@ -123,10 +130,15 @@ body > div {
   max-width: 24rem;
   padding-top: 10px;
   transform: translateX(-50%);
+  pointer-events: none;
+}
+
+.toast-stack > * {
+  pointer-events: auto;
 }
 
 .brutal-fab-dock {
-  bottom: calc(env(safe-area-inset-bottom) + 72px);
+  bottom: calc(env(safe-area-inset-bottom) + var(--tab-nav-offset));
 }
 
 button,
