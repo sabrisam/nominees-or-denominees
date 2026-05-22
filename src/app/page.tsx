@@ -1814,7 +1814,6 @@ export default function Home() {
     haptic(HAPTICS.media);
     setUploadLoading(true);
     setMediaProgress(0.15);
-    setStudioNotice(null);
 
     try {
       const activeRoomId = roomId ?? (await ensureRoom());
@@ -1890,7 +1889,6 @@ export default function Home() {
 
       setMediaProgress(1);
       haptic(HAPTICS.success);
-      setStudioNotice(null);
       showToast("success", "Dossier lancé dans le club.");
       resetStudioDraft();
       switchTab("direct");
@@ -1898,10 +1896,8 @@ export default function Home() {
       void fetchNominations(true, activeRoomId);
     } catch (err) {
       const message = err instanceof Error ? err.message : "Échec de l'envoi.";
-      setStudioNotice(null);
       showToast("error", isStorageUnavailableMessage(message) ? STORAGE_UNAVAILABLE_NOTICE : message);
     } finally {
-      setStudioNotice(null);
       setUploadLoading(false);
       setMediaProgress(0);
     }
@@ -2175,12 +2171,6 @@ export default function Home() {
                   </motion.button>
                 )}
               </BrutalCard>
-
-              {studioNotice && (
-                <BrutalCard tone="yellow" className="p-2">
-                  <p className="tabloid-headline text-[clamp(0.95rem,5vw,1.4rem)] leading-[0.82]">{studioNotice}</p>
-                </BrutalCard>
-              )}
 
               {(isPreparingMedia || uploadLoading) && (
                 <BrutalCard tone="yellow" className="p-2">
