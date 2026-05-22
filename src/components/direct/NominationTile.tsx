@@ -31,7 +31,7 @@ export function NominationTile({
   const categories = categorySummary(nomination.category_ids);
 
   return (
-    <motion.div whileHover={{ scale: 1.015 }} whileTap={{ scale: 0.985 }} transition={{ type: "spring", stiffness: 400, damping: 25 }}>
+    <motion.div layout whileHover={{ scale: 1.015 }} whileTap={{ scale: 0.985 }} transition={{ type: "spring", stiffness: 400, damping: 25 }}>
       <BrutalCard tone={index % 3 === 0 ? "yellow" : "paper"} className="overflow-hidden">
         <div className="media-cut relative aspect-[4/3] border-b border-[#d4af37]/20">
           <MediaFrame nomination={nomination} height="h-full" controls={false} />
