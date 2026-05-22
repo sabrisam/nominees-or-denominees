@@ -1362,6 +1362,7 @@ export default function Home() {
       setSyncing(true);
 
       try {
+        // Attempt 1: full query with all optional columns + nested ratings
         const nominationsResult = await supabase
           .from("nominations")
           .select("id,room_id,category_id,category_ids,tiktoker_name,media_url,video_storage_path,thumbnail_url,thumbnail_storage_path,media_kind,comment,submitted_by,status,created_at,ratings(id,nomination_id,voter_id,rating_stars,rating_score,rating_points,rire_score,surprise_score,gene_score,fierte_score,interet_score,comment,created_at)")
@@ -1371,17 +1372,34 @@ export default function Home() {
         let data = nominationsResult.data as Record<string, unknown>[] | null;
         let error = nominationsResult.error;
 
-        if (error && /category_ids|rating_score|rating_points|rire_score|surprise_score|gene_score|fierte_score|interet_score/i.test(error.message)) {
-          const legacy = await supabase
+        // Attempt 2: if ANY error (empty body {}, unknown column, broken relation) — use safe query without optional columns
+        if (error) {
+          console.warn("[NOD Fetch] Attempt 1 failed, trying safe query.", { code: error.code, msg: error.message });
+          const safe = await supabase
             .from("nominations")
             .select("id,room_id,category_id,tiktoker_name,media_url,video_storage_path,thumbnail_url,thumbnail_storage_path,media_kind,comment,submitted_by,status,created_at,ratings(id,nomination_id,voter_id,rating_stars,comment,created_at)")
             .eq("room_id", activeRoomId)
             .order("created_at", { ascending: false });
-          data = legacy.data as Record<string, unknown>[] | null;
-          error = legacy.error;
+          data = safe.data as Record<string, unknown>[] | null;
+          error = safe.error;
         }
 
-        if (error) throw error;
+        // Attempt 3: absolute bare minimum — no nested ratings
+        if (error) {
+          console.warn("[NOD Fetch] Attempt 2 failed, trying bare minimum.", { code: error.code, msg: error.message });
+          const bare = await supabase
+            .from("nominations")
+            .select("id,room_id,category_id,tiktoker_name,media_url,thumbnail_url,media_kind,comment,submitted_by,status,created_at")
+            .eq("room_id", activeRoomId)
+            .order("created_at", { ascending: false });
+          data = bare.data as Record<string, unknown>[] | null;
+          error = bare.error;
+        }
+
+        if (error) {
+          console.error("[NOD Fetch] All attempts failed:", error);
+          throw error;
+        }
 
         const rows = ((data ?? []) as Record<string, unknown>[]).map(parseNomination);
         setNominations(rows);
@@ -1838,6 +1856,11 @@ export default function Home() {
       const mediaUpload = mediaKind === "video" ? await uploadMediaFile(supabase, preparedFile, "videos") : thumbnailUpload;
       setMediaProgress(0.82);
 
+      // Always use the live Supabase auth UID (not cached participant.id which may be stale)
+      const { data: { session: liveSession } } = await supabase.auth.getSession();
+      const liveUid = liveSession?.user?.id ?? participant.id;
+      console.info("[NOD Insert] liveUid=", liveUid, "participant.id=", participant.id);
+
       const nominationInsert = {
         room_id: activeRoomId,
         category_id: primaryCategoryId(cleanCategoryIds),
@@ -1849,7 +1872,7 @@ export default function Home() {
         thumbnail_storage_path: thumbnailUpload.key,
         media_kind: mediaKind,
         comment: cleanedComment,
-        submitted_by: participant.id,
+        submitted_by: liveUid,
         status: "pending"
       };
 
@@ -1859,10 +1882,19 @@ export default function Home() {
         .select("id")
         .single();
 
-      if (insertError && /category_ids/i.test(insertError.message)) {
+      if (insertError) {
+        console.error("[NOD Insert] Attempt 1 error:", { code: insertError.code, msg: insertError.message, details: (insertError as any).details, hint: (insertError as any).hint });
+      }
+
+      // Fallback: if category_ids column doesn't exist OR any 4xx error on insert
+      if (insertError) {
         const legacyInsert: Partial<typeof nominationInsert> = { ...nominationInsert };
         delete legacyInsert.category_ids;
+        console.info("[NOD Insert] Retrying without category_ids...");
         const legacy = await supabase.from("nominations").insert(legacyInsert).select("id").single();
+        if (legacy.error) {
+          console.error("[NOD Insert] Attempt 2 error:", { code: legacy.error.code, msg: legacy.error.message, details: (legacy.error as any).details, hint: (legacy.error as any).hint });
+        }
         insertedNomination = legacy.data;
         insertError = legacy.error;
       }
