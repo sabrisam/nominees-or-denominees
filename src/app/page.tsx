@@ -1476,8 +1476,8 @@ export default function Home() {
   // supabase client is initialized inside initParticipant
 
   useEffect(() => {
-    try {
-      async function initParticipant() {
+    const initParticipant = async () => {
+      try {
         const client = getSupabaseBrowserClient();
         setSupabase(client);
         if (!client) {
@@ -1488,19 +1488,19 @@ export default function Home() {
         const user = await ensureAnonymousSession(client);
         if (user) {
           const storedPseudo = sanitizePseudo(localStorage.getItem(PSEUDO_KEY) || "");
-          const nextPseudo = storedPseudo || makeDefaultPseudo(user.id);
+          const nextPseudo = storedPseudo || `Joueur ${user.id.slice(0, 4).toUpperCase()}`;
 
           if (storedPseudo !== nextPseudo) localStorage.setItem(PSEUDO_KEY, nextPseudo);
 
           setParticipant({ id: user.id, pseudo: nextPseudo });
         }
+      } catch (err) {
+        console.error(err);
+      } finally {
+        setBootingSession(false);
       }
-      initParticipant();
-    } catch (err) {
-      console.error(err);
-    } finally {
-      setBootingSession(false);
-    }
+    };
+    initParticipant();
   }, []);
 
   useEffect(() => {

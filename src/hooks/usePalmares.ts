@@ -16,6 +16,7 @@ export function usePalmares(supabase: SupabaseClient | null, roomCode: string) {
       setIsLoading(true);
       try {
         const targetMonth = new Date().toISOString();
+        if (!supabase) return;
         const { data, error } = await supabase.rpc("get_monthly_leaderboard", {
           room_code: roomCode,
           target_month: targetMonth
