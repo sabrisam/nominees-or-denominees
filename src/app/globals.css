@@ -22,31 +22,26 @@
   letter-spacing: 0;
 }
 
-html {
-  height: 100vh;
+html,
+body {
   height: 100dvh;
-  min-height: -webkit-fill-available;
-  background: var(--midnight);
-  -webkit-tap-highlight-color: transparent;
-  overscroll-behavior: none;
+  width: 100vw;
+  margin: 0;
+  padding: 0;
   overflow: hidden;
-  position: relative;
+  position: fixed;
+  background: #050505;
 }
 
 body {
-  height: 100vh;
-  height: 100dvh;
-  min-height: -webkit-fill-available;
-  margin: 0;
-  background: var(--midnight);
   color: var(--cream);
   font-size: 14px;
   font-family: "SF Pro Text", "Avenir Next", "Helvetica Neue", system-ui, sans-serif;
   text-rendering: geometricPrecision;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
-  overflow: hidden;
-  position: relative;
+  -webkit-tap-highlight-color: transparent;
+  overscroll-behavior: none;
 }
 
 button,
