@@ -4,7 +4,7 @@
 
 import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import confetti from "canvas-confetti";
-import { getSupabaseBrowserClient } from "@/lib/supabase";
+import { getSupabaseBrowserClient, ensureAnonymousSession } from "@/lib/supabase";
 import { Ticker } from "@/components/ui/Ticker";
 import { AnimatePresence, motion, type PanInfo, useReducedMotion } from "framer-motion";
 import { usePalmares } from "@/hooks/usePalmares";
@@ -1473,27 +1473,31 @@ export default function Home() {
     setTab(nextTab);
   }, []);
 
-  useEffect(() => {
-    setSupabase(getSupabaseBrowserClient());
-  }, []);
-
-  useEffect(() => {
-    return () => {
-      if (toastTimeoutRef.current) window.clearTimeout(toastTimeoutRef.current);
-    };
-  }, []);
+  // supabase client is initialized inside initParticipant
 
   useEffect(() => {
     try {
-      const storedId = localStorage.getItem(USER_DEVICE_ID_KEY) || localStorage.getItem(LEGACY_SESSION_ID_KEY);
-      const nextId = storedId || makeSessionId();
-      const storedPseudo = sanitizePseudo(localStorage.getItem(PSEUDO_KEY) || "");
-      const nextPseudo = storedPseudo || `Joueur ${nextId.slice(0, 4).toUpperCase()}`;
-      localStorage.setItem(USER_DEVICE_ID_KEY, nextId);
-      localStorage.setItem(LEGACY_SESSION_ID_KEY, nextId);
-      localStorage.setItem(PSEUDO_KEY, nextPseudo);
-      localStorage.setItem(ROOM_CODE_KEY, DEFAULT_ROOM_CODE);
-      setParticipant({ id: nextId, pseudo: nextPseudo });
+      async function initParticipant() {
+        const client = getSupabaseBrowserClient();
+        setSupabase(client);
+        if (!client) {
+          console.error("[NOD] Supabase non configuré — vérifie .env.local");
+          return;
+        }
+
+        const user = await ensureAnonymousSession(client);
+        if (user) {
+          const storedPseudo = sanitizePseudo(localStorage.getItem(PSEUDO_KEY) || "");
+          const nextPseudo = storedPseudo || makeDefaultPseudo(user.id);
+
+          if (storedPseudo !== nextPseudo) localStorage.setItem(PSEUDO_KEY, nextPseudo);
+
+          setParticipant({ id: user.id, pseudo: nextPseudo });
+        }
+      }
+      initParticipant();
+    } catch (err) {
+      console.error(err);
     } finally {
       setBootingSession(false);
     }
