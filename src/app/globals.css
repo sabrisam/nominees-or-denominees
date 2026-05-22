@@ -372,11 +372,11 @@ video {
 }
 
 @keyframes ticker-move {
-  from {
-    transform: translateX(100vw);
+  0% {
+    transform: translate3d(0, 0, 0);
   }
-  to {
-    transform: translateX(-100%);
+  100% {
+    transform: translate3d(-50%, 0, 0);
   }
 }
 
