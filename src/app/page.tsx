@@ -2362,42 +2362,17 @@ export default function Home() {
             </motion.section>
           )}
 
-          {showAccount && (
-            <motion.div initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }} exit={{ opacity: 0, scale: 0.95 }} className="fixed inset-0 z-[100] flex flex-col justify-end bg-black/80 px-2 pb-5 pt-20 backdrop-blur-md sm:items-center sm:justify-center">
-              <BrutalCard className="w-full max-w-sm space-y-4 p-4">
-                <div className="flex items-center justify-between">
-                  <h3 className="tabloid-headline text-2xl text-white">Sécurité du Compte</h3>
-                  <motion.button whileTap={TAP_REBOUND} onClick={() => setShowAccount(false)} className="brutal-icon-button">
-                    <VolumeX className="h-4 w-4" />
-                  </motion.button>
-                </div>
-                
-                <div className="space-y-1.5 rounded-[10px] border border-[#d4af37]/30 bg-[#d4af37]/10 p-3">
-                  <p className="text-[10px] font-black uppercase text-[#d4af37]">Ton Code de Récupération</p>
-                  <p className="text-xs text-zinc-300">Si tu effaces l'application, utilise ce code pour restaurer tes scores :</p>
-                  <textarea readOnly value={recoveryCode} rows={3} className="brutal-input mt-1 w-full p-2 text-[10px] font-mono text-white opacity-80" onClick={(e) => { (e.target as HTMLTextAreaElement).select(); navigator.clipboard.writeText(recoveryCode); showToast("success", "Copié"); }} />
-                </div>
-
-                <div className="space-y-1.5 border-t border-white/10 pt-4">
-                  <p className="text-[10px] font-black uppercase text-white">Restaurer un compte</p>
-                  <input type="text" placeholder="Coller le code ici..." value={inputRecovery} onChange={(e) => setInputRecovery(e.target.value)} className="brutal-input w-full p-2 text-xs" />
-                  <motion.button whileTap={TAP_REBOUND} disabled={!inputRecovery.trim() || uploadLoading} onClick={applyRecoveryToken} className="brutal-action mt-2 w-full bg-white text-black disabled:opacity-50">
-                    Restaurer les données
-                  </motion.button>
-                </div>
-              </BrutalCard>
-            </motion.div>
-          )}
         </AnimatePresence>
+        </div>
       </main>
 
       {tab !== "studio" && (
-        <motion.button initial={reduceMotion ? { opacity: 1 } : { opacity: 0, scale: 0.96, y: 8 }} animate={{ opacity: 1, scale: 1, y: 0 }} whileTap={TAP_REBOUND} transition={TAP_TRANSITION} onClick={() => switchTab("studio")} className="brutal-fab fixed right-5 z-40 flex h-12 w-12 items-center justify-center pointer-events-auto" style={{ bottom: "calc(env(safe-area-inset-bottom) + 76px)" }} aria-label="Lancer un dossier">
+        <motion.button initial={reduceMotion ? { opacity: 1 } : { opacity: 0, scale: 0.96, y: 8 }} animate={{ opacity: 1, scale: 1, y: 0 }} whileTap={TAP_REBOUND} transition={TAP_TRANSITION} onClick={() => switchTab("studio")} className="brutal-fab absolute right-5 z-40 flex h-12 w-12 items-center justify-center pointer-events-auto" style={{ bottom: "calc(env(safe-area-inset-bottom) + 76px)" }} aria-label="Lancer un dossier">
           <Plus className="h-6 w-6" />
         </motion.button>
       )}
 
-      <nav aria-label="Navigation principale" className="bottom-tabloid fixed bottom-0 left-0 right-0 z-50 px-2 pt-1.5 pointer-events-auto" style={{ paddingBottom: "calc(env(safe-area-inset-bottom) + 8px)" }}>
+      <nav aria-label="Navigation principale" className="bottom-tabloid px-2 pt-1.5 pointer-events-auto">
         <div className="mx-auto grid w-full max-w-[30rem] grid-cols-5 gap-1">
           {TAB_ITEMS.map((item) => {
             const Icon = item.icon;
