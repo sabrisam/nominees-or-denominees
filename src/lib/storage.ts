@@ -203,43 +203,51 @@ export async function uploadMediaFile(
   console.info(`[NOD Upload] Buffer prêt: ${buffer.byteLength} bytes. Provider: DO Spaces (Forced)`);
 
   // ---- DIGITALOCEAN SPACES VIA PRESIGNED URL ----
-  // 1. Demander une URL pré-signée au serveur (contourne la limite de 4.5MB Vercel)
-  const presignRes = await fetch("/api/media/upload", {
-    method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-      "Authorization": `Bearer ${token}`
-    },
-    body: JSON.stringify({
-      fileName: file.name,
-      fileType: contentType,
-      folder
-    }),
-    signal
-  });
+  let presignRes;
+  try {
+    presignRes = await fetch("/api/media/upload", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        "Authorization": `Bearer ${token}`
+      },
+      body: JSON.stringify({
+        fileName: file.name,
+        fileType: contentType,
+        folder
+      }),
+      signal
+    });
+  } catch (err: any) {
+    throw new Error(`[S1] Réseau API injoignable: ${err?.message}`);
+  }
 
   if (!presignRes.ok) {
     const err = await presignRes.json().catch(() => ({}));
-    throw new Error(`Erreur Presigned URL: ${err.error || presignRes.statusText}`);
+    throw new Error(`[S1] Erreur Vercel: ${err.error || presignRes.statusText}`);
   }
 
   const { presignedUrl, publicUrl, key } = await presignRes.json();
 
-  // 2. Uploader directement vers DigitalOcean depuis le navigateur
-  console.info(`[NOD Upload Spaces] Envoi PUT direct de ${buffer.byteLength} bytes...`);
-  const uploadRes = await fetch(presignedUrl, {
-    method: "PUT",
-    headers: {
-      "Content-Type": contentType,
-      "x-amz-acl": "public-read"
-    },
-    body: buffer,
-    signal
-  });
+  let uploadRes;
+  try {
+    console.info(`[NOD Upload Spaces] Envoi PUT direct de ${buffer.byteLength} bytes...`);
+    uploadRes = await fetch(presignedUrl, {
+      method: "PUT",
+      headers: {
+        "Content-Type": contentType,
+        "x-amz-acl": "public-read"
+      },
+      body: buffer,
+      signal
+    });
+  } catch (err: any) {
+    throw new Error(`[S2] DO Spaces bloqué (CORS/Réseau): ${err?.message}`);
+  }
 
   if (!uploadRes.ok) {
     console.error("[NOD Upload Spaces] Erreur PUT:", uploadRes.status, uploadRes.statusText);
-    throw new Error(`Échec de l'upload direct DO Spaces (${uploadRes.status})`);
+    throw new Error(`[S2] Échec DO Spaces HTTP ${uploadRes.status}`);
   }
 
   console.info(`[NOD Upload Spaces] Succès: publicUrl=${publicUrl}`);
