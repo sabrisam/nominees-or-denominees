@@ -12,8 +12,13 @@ export const HAPTICS = {
 } as const;
 
 export function haptic(pattern: number | readonly number[]) {
-  if (typeof window === "undefined" || !window.navigator.vibrate) return;
+  if (typeof window !== "undefined") {
+    window.dispatchEvent(new CustomEvent("nod-haptic", { detail: { pattern } }));
+  }
+  if (typeof navigator === "undefined" || !("vibrate" in navigator)) return;
   try {
-    window.navigator.vibrate(pattern);
-  } catch {}
+    navigator.vibrate(pattern as VibratePattern);
+  } catch {
+    // iOS Safari ignore souvent cette API; les ressorts visuels gardent le retour tactile.
+  }
 }
