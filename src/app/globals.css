@@ -82,16 +82,25 @@ video {
 
 @layer components {
   .tabloid-app {
+    display: flex;
+    flex-direction: column;
     position: relative;
-    height: 100vh;
     height: 100dvh;
-    min-height: -webkit-fill-available;
+    width: 100%;
     overflow: hidden;
     background:
       radial-gradient(circle at 50% -10%, rgba(212, 175, 55, 0.22), transparent 30rem),
       radial-gradient(circle at 10% 18%, rgba(240, 216, 137, 0.1), transparent 18rem),
       linear-gradient(180deg, #050505 0%, #0b0a08 48%, #050505 100%);
     color: var(--cream);
+  }
+
+  .tabloid-scroll {
+    flex: 1;
+    min-height: 0;
+    overflow-y: auto;
+    -webkit-overflow-scrolling: touch;
+    overscroll-behavior: contain;
   }
 
   .paper-backdrop {
@@ -332,10 +341,16 @@ video {
   }
 
   .bottom-tabloid {
+    position: absolute;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    z-index: 50;
     border-top: 1px solid rgba(212, 175, 55, 0.18);
-    background: rgba(5, 5, 5, 0.82);
-    backdrop-filter: blur(22px);
+    background: rgba(18, 18, 18, 0.86);
+    backdrop-filter: blur(20px);
     box-shadow: 0 -14px 42px rgba(0, 0, 0, 0.45);
+    padding-bottom: env(safe-area-inset-bottom);
   }
 
   .gold-pill {
