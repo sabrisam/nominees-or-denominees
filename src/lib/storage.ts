@@ -1,7 +1,45 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 import type { UploadReference } from "@/types";
 
-const STORAGE_UNAVAILABLE_NOTICE = "Stockage indisponible : échec du transfert serveur.";
+export const STORAGE_UNAVAILABLE_NOTICE = "Stockage indisponible : échec du transfert serveur.";
+
+const SUPABASE_STORAGE_BUCKET = process.env.NEXT_PUBLIC_SUPABASE_STORAGE_BUCKET || "nod-media";
+
+function sanitizeStorageFileName(value: string) {
+  const cleaned = value
+    .normalize("NFKD")
+    .replace(/[^\w.-]+/g, "-")
+    .replace(/-+/g, "-")
+    .replace(/^-|-$/g, "")
+    .toLowerCase()
+    .slice(0, 90);
+
+  return cleaned || "media";
+}
+
+function inferBrowserContentType(file: File) {
+  const extension = file.name.split(".").pop()?.toLowerCase() ?? "";
+  const currentType = file.type.toLowerCase();
+
+  if (extension === "mp4" || currentType.includes("mp4")) return "video/mp4";
+  if (extension === "mov" || extension === "qt" || currentType.includes("quicktime")) return "video/quicktime";
+  if (extension === "webm" || currentType.includes("webm")) return "video/webm";
+  if (extension === "webp" || currentType.includes("webp")) return "image/webp";
+  if (extension === "jpg" || extension === "jpeg" || currentType.includes("jpeg")) return "image/jpeg";
+  if (extension === "png" || currentType.includes("png")) return "image/png";
+
+  return file.type || "application/octet-stream";
+}
+
+function mediaMonthKey(date = new Date()) {
+  const year = date.getUTCFullYear();
+  const month = String(date.getUTCMonth() + 1).padStart(2, "0");
+  return `${year}-${month}`;
+}
+
+function storageKey(file: File, folder: "videos" | "miniatures") {
+  return `${folder}/${mediaMonthKey()}/${crypto.randomUUID()}-${sanitizeStorageFileName(file.name)}`;
+}
 
 export function waitForMediaEvent(target: HTMLMediaElement, eventName: string, timeoutMs = 15000) {
   return new Promise<void>((resolve, reject) => {
@@ -113,67 +151,91 @@ export async function extractVideoThumbnail(file: File) {
   }
 }
 
-export async function uploadFileOrFallback(supabase: SupabaseClient, file: File, folder: "videos" | "miniatures", signal?: AbortSignal): Promise<UploadReference> {
-  const providerConfig = process.env.NEXT_PUBLIC_STORAGE_PROVIDER || "supabase";
+async function uploadFileToSpaces(file: File, folder: "videos" | "miniatures") {
+  const contentType = inferBrowserContentType(file);
+  const signResponse = await fetch("/api/spaces/presign", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({
+      fileName: file.name,
+      contentType,
+      folder
+    })
+  });
 
-  try {
-    if (providerConfig === "spaces") {
-      const sessionData = await supabase.auth.getSession();
-      const token = sessionData.data.session?.access_token || "";
+  const payload = (await signResponse.json()) as {
+    uploadUrl?: string;
+    publicUrl?: string;
+    key?: string;
+    error?: string;
+  };
 
-      const formData = new FormData();
-      formData.append("file", file);
-      formData.append("folder", folder);
-
-      const response = await fetch("/api/media/upload", {
-        method: "POST",
-        headers: {
-          "Authorization": `Bearer ${token}`
-        },
-        body: formData,
-        signal
-      });
-
-      if (!response.ok) {
-        throw new Error(STORAGE_UNAVAILABLE_NOTICE);
-      }
-
-      const payload = await response.json();
-      if (!payload.ok || !payload.publicUrl || !payload.key) {
-        throw new Error(STORAGE_UNAVAILABLE_NOTICE);
-      }
-
-      return {
-        key: payload.key,
-        publicUrl: payload.publicUrl,
-        provider: payload.provider || "spaces"
-      };
-    } else {
-      // Client-side direct upload to Supabase Storage (watertight fallback for iOS Safari)
-      const bucket = process.env.NEXT_PUBLIC_SUPABASE_STORAGE_BUCKET || "nod-media";
-      const key = `${folder}/${new Date().getUTCFullYear()}-${String(new Date().getUTCMonth() + 1).padStart(2, "0")}/${crypto.randomUUID()}-${file.name.replace(/[^a-zA-Z0-9.-]/g, "_")}`;
-
-      const { error, data } = await supabase.storage.from(bucket).upload(key, file, {
-        cacheControl: "3600",
-        upsert: true,
-        contentType: file.type
-      });
-
-      if (error) {
-        console.error("[Supabase Storage Error]:", error);
-        throw new Error(STORAGE_UNAVAILABLE_NOTICE);
-      }
-
-      const { data: { publicUrl } } = supabase.storage.from(bucket).getPublicUrl(data.path);
-
-      return {
-        key: data.path,
-        publicUrl,
-        provider: "supabase"
-      };
-    }
-  } catch (err: any) {
-    console.error("[Upload Exception]:", err);
-    throw new Error(err.message || STORAGE_UNAVAILABLE_NOTICE);
+  if (!signResponse.ok || !payload.uploadUrl || !payload.publicUrl || !payload.key) {
+    throw new Error(STORAGE_UNAVAILABLE_NOTICE);
   }
+
+  const uploadResponse = await fetch(payload.uploadUrl, {
+    method: "PUT",
+    headers: { "Content-Type": contentType },
+    body: file
+  });
+
+  if (!uploadResponse.ok) throw new Error(STORAGE_UNAVAILABLE_NOTICE);
+
+  return {
+    key: payload.key,
+    publicUrl: payload.publicUrl
+  };
+}
+
+async function uploadFileToSupabaseStorage(supabase: SupabaseClient, file: File, folder: "videos" | "miniatures") {
+  const key = storageKey(file, folder);
+  const contentType = inferBrowserContentType(file);
+
+  const { error, data } = await supabase.storage.from(SUPABASE_STORAGE_BUCKET).upload(key, file, {
+    cacheControl: "3600",
+    upsert: true,
+    contentType: file.type || contentType
+  });
+
+  if (error || !data?.path) {
+    throw new Error(STORAGE_UNAVAILABLE_NOTICE);
+  }
+
+  const {
+    data: { publicUrl }
+  } = supabase.storage.from(SUPABASE_STORAGE_BUCKET).getPublicUrl(data.path);
+
+  if (!publicUrl) throw new Error(STORAGE_UNAVAILABLE_NOTICE);
+
+  return {
+    key: data.path,
+    publicUrl
+  };
+}
+
+export async function uploadFileOrFallback(
+  supabase: SupabaseClient,
+  file: File,
+  folder: "videos" | "miniatures",
+  signal?: AbortSignal
+): Promise<UploadReference> {
+  try {
+    const uploaded = await uploadFileToSpaces(file, folder);
+    if (signal?.aborted) throw new DOMException("Upload annulé.", "AbortError");
+    return { ...uploaded, provider: "spaces" };
+  } catch (spacesError) {
+    if (signal?.aborted) throw spacesError;
+    try {
+      const uploaded = await uploadFileToSupabaseStorage(supabase, file, folder);
+      if (signal?.aborted) throw new DOMException("Upload annulé.", "AbortError");
+      return { ...uploaded, provider: "supabase" };
+    } catch {
+      throw new Error(STORAGE_UNAVAILABLE_NOTICE);
+    }
+  }
+}
+
+export function isStorageUnavailableMessage(message: string) {
+  return message.toLowerCase().includes("stockage indisponible");
 }
