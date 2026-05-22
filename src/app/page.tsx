@@ -1243,6 +1243,7 @@ export default function Home() {
 
   const fileInputRef = useRef<HTMLInputElement | null>(null);
   const channelRef = useRef<RealtimeChannel | null>(null);
+  const shellRef = useRef<HTMLDivElement | null>(null);
 
   const showToast = useCallback((tone: ToastTone, message: string) => {
     if (tone === "error") haptic(HAPTICS.error);
