@@ -1454,6 +1454,7 @@ export default function Home() {
   const [scoreDraftById, setScoreDraftById] = useState<Record<string, DimensionScores>>({});
   const [reviewDraftById, setReviewDraftById] = useState<Record<string, string>>({});
   const [voteBusyId, setVoteBusyId] = useState<string | null>(null);
+  const [bootError, setBootError] = useState<string | null>(null);
   const [shakeId, setShakeId] = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement | null>(null);
   const channelRef = useRef<RealtimeChannel | null>(null);
@@ -1493,9 +1494,13 @@ export default function Home() {
           if (storedPseudo !== nextPseudo) localStorage.setItem(PSEUDO_KEY, nextPseudo);
 
           setParticipant({ id: user.id, pseudo: nextPseudo });
+        } else {
+          const { error } = await client.auth.signInAnonymously();
+          setBootError(error?.message || "Échec authentification anonyme. Activez-le sur Supabase.");
         }
       } catch (err) {
         console.error(err);
+        setBootError(err instanceof Error ? err.message : String(err));
       } finally {
         setBootingSession(false);
       }
@@ -2188,8 +2193,17 @@ export default function Home() {
       <div className="tabloid-app flex items-center justify-center">
         <PaperBackdrop />
         <BrutalCard tone="yellow" className="p-5 text-center">
-          <Loader2 className="mx-auto mb-3 h-8 w-8 animate-spin text-black" />
-          <p className="text-xl font-black uppercase leading-none">Chargement du jeu...</p>
+          {bootError ? (
+            <>
+              <p className="mb-2 text-xl font-black uppercase leading-none text-red-600">Erreur Fatale</p>
+              <p className="font-mono text-sm">{bootError}</p>
+            </>
+          ) : (
+            <>
+              <Loader2 className="mx-auto mb-3 h-8 w-8 animate-spin text-black" />
+              <p className="text-xl font-black uppercase leading-none">Chargement du jeu...</p>
+            </>
+          )}
         </BrutalCard>
       </div>
     );
