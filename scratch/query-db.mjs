@@ -2,7 +2,6 @@ import { createClient } from '@supabase/supabase-js'
 import fs from 'fs'
 import path from 'path'
 
-// Custom parsing of .env.local
 const envPath = path.resolve('.env.local')
 const envContent = fs.readFileSync(envPath, 'utf8')
 const envVars = {}
@@ -18,35 +17,25 @@ envContent.split('\n').forEach(line => {
   }
 })
 
-const supabaseUrl = envVars.NEXT_PUBLIC_SUPABASE_URL
-const supabaseKey = envVars.NEXT_PUBLIC_SUPABASE_ANON_KEY
-const supabase = createClient(supabaseUrl, supabaseKey)
+const supabase = createClient(envVars.NEXT_PUBLIC_SUPABASE_URL, envVars.NEXT_PUBLIC_SUPABASE_ANON_KEY)
 
 async function run() {
-  const { data: nominations, error: nomError } = await supabase
-    .from('nominations')
-    .select('id, tiktoker_name, submitted_by, media_url, created_at')
-    .order('created_at', { ascending: false })
-    .limit(10)
-  
-  if (nomError) {
-    console.error('Nominations Error:', nomError)
-  } else {
-    console.log('Nominations (last 10):')
-    console.log(JSON.stringify(nominations, null, 2))
+  const tables = ['rooms', 'categories', 'nominations', 'ratings']
+  for (const table of tables) {
+    const { count, error } = await supabase.from(table).select('*', { count: 'exact', head: true })
+    if (error) {
+      console.log(`Table ${table}: error`, error.message)
+    } else {
+      console.log(`Table ${table}: ${count} rows`)
+    }
   }
 
-  const { data: ratings, error: ratError } = await supabase
-    .from('ratings')
-    .select('id, nomination_id, voter_id, created_at')
-    .order('created_at', { ascending: false })
-    .limit(10)
-
-  if (ratError) {
-    console.error('Ratings Error:', ratError)
+  // Also query categories
+  const { data: categories, error: catErr } = await supabase.from('categories').select('*')
+  if (catErr) {
+    console.log('Categories error:', catErr.message)
   } else {
-    console.log('Ratings (last 10):')
-    console.log(JSON.stringify(ratings, null, 2))
+    console.log('Categories list:', categories)
   }
 }
 run()
