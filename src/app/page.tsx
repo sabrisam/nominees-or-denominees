@@ -1934,6 +1934,7 @@ export default function Home() {
       setStudioNotice(null);
       showToast("error", isStorageUnavailableMessage(message) ? STORAGE_UNAVAILABLE_NOTICE : message);
     } finally {
+      setStudioNotice(null);
       setUploadLoading(false);
       setMediaProgress(0);
     }
