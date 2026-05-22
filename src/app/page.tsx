@@ -1858,7 +1858,14 @@ export default function Home() {
 
       // Always use the live Supabase auth UID (not cached participant.id which may be stale)
       const { data: { session: liveSession } } = await supabase.auth.getSession();
-      const liveUid = liveSession?.user?.id ?? participant.id;
+      let liveUid = liveSession?.user?.id ?? participant.id;
+      
+      // Prevent PostgreSQL "operator does not exist: uuid = text" if liveUid is not a valid UUID format
+      const isUuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(liveUid);
+      if (!isUuid) {
+        liveUid = "00000000-0000-0000-0000-000000000000"; // Safe empty UUID fallback
+      }
+      
       console.info("[NOD Insert] liveUid=", liveUid, "participant.id=", participant.id);
 
       const nominationInsert = {
