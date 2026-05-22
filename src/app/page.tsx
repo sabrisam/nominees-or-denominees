@@ -1921,9 +1921,6 @@ export default function Home() {
       setMediaProgress(1);
       haptic(HAPTICS.success);
       setStudioNotice(null);
-      if (thumbnailUpload.provider === "supabase" || mediaUpload.provider === "supabase") {
-        showToast("info", SUPABASE_STORAGE_NOTICE);
-      }
       showToast("success", "Dossier lancé dans le club.");
       resetStudioDraft();
       switchTab("direct");
@@ -2047,8 +2044,16 @@ export default function Home() {
         )}
       </AnimatePresence>
 
-      <main className="relative z-10 mx-auto flex min-h-0 w-full max-w-[30rem] flex-1 flex-col overflow-hidden px-2" style={{ paddingTop: "calc(env(safe-area-inset-top) + 5px)" }}>
-        <header className="z-30 mb-2 grid shrink-0 grid-cols-[auto_1fr_auto] gap-1.5 bg-[#050505]/85 py-1.5 backdrop-blur-xl">
+      <main className="relative z-10 mx-auto w-full max-w-[30rem] shrink-0 overflow-hidden px-2">
+        <div
+          className="tabloid-scroll"
+          style={{
+            height: "calc(100dvh - env(safe-area-inset-top) - env(safe-area-inset-bottom) - 84px)",
+            overflowY: "auto",
+            WebkitOverflowScrolling: "touch"
+          }}
+        >
+        <header className="sticky top-0 z-30 mb-2 grid grid-cols-[auto_1fr_auto] gap-1.5 bg-[#050505]/85 py-1.5 backdrop-blur-xl">
           <motion.button
             whileTap={TAP_REBOUND}
             transition={TAP_TRANSITION}
@@ -2078,11 +2083,6 @@ export default function Home() {
             <RefreshCw className={`h-4 w-4 ${syncing ? "animate-spin" : ""}`} />
           </motion.button>
         </header>
-
-        <div
-          className="tabloid-scroll"
-          style={{ paddingBottom: "calc(env(safe-area-inset-bottom) + 84px)" }}
-        >
           <CeremonyBulletin
             pendingCount={pendingForMe.length}
             nextPending={nextPendingForMe}
