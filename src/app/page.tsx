@@ -1996,7 +1996,7 @@ export default function Home() {
   }
 
   return (
-    <motion.div animate={globalShake ? { scale: [1, 0.99, 1], filter: ["brightness(1)", "brightness(1.05)", "brightness(1)"] } : { scale: 1 }} transition={{ duration: 0.15 }} className={`tabloid-app bg-[#050505] ${uploadLoading || mutationBusyId ? "pointer-events-none" : ""}`}>
+    <motion.div animate={globalShake ? { scale: [1, 0.99, 1], filter: ["brightness(1)", "brightness(1.05)", "brightness(1)"] } : { scale: 1 }} transition={{ duration: 0.15 }} className={`tabloid-app ${uploadLoading || mutationBusyId ? "pointer-events-none" : ""}`}>
       <PaperBackdrop />
 
       <AnimatePresence>
@@ -2010,8 +2010,8 @@ export default function Home() {
         )}
       </AnimatePresence>
 
-      <main className="relative z-10 mx-auto flex min-h-0 w-full max-w-[30rem] flex-1 flex-col overflow-hidden">
-        <div className="tabloid-scroll px-2">
+      <main className="relative z-10 flex min-h-0 w-full flex-1 flex-col overflow-hidden">
+        <div className="tabloid-scroll mx-auto w-full max-w-[30rem] px-2">
         <header className="sticky top-0 z-30 mb-2 overflow-hidden bg-[#050505]/85 py-1.5 backdrop-blur-xl">
           <Ticker>
             CÉRÉMONIE LE 1ER DU MOIS / DANS {ceremonyCountdown.days}J {ceremonyCountdown.hours}H {ceremonyCountdown.mins}M / TOURNOI DU MOIS / {monthlyNominations.length} DOSSIERS EN JEU / 
