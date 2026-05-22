@@ -2221,7 +2221,7 @@ export default function Home() {
   }
 
   return (
-    <motion.div animate={globalShake ? { scale: [1, 0.99, 1], filter: ["brightness(1)", "brightness(1.05)", "brightness(1)"] } : { scale: 1 }} transition={{ duration: 0.15 }} className="tabloid-app flex min-h-screen flex-col justify-between bg-[#050505] pb-[calc(env(safe-area-inset-bottom)+58px)]">
+    <motion.div animate={globalShake ? { scale: [1, 0.99, 1], filter: ["brightness(1)", "brightness(1.05)", "brightness(1)"] } : { scale: 1 }} transition={{ duration: 0.15 }} className={`tabloid-app flex h-[100dvh] w-full flex-col bg-[#050505] overflow-hidden ${uploadLoading || mutationBusyId ? "pointer-events-none" : ""}`}>
       <PaperBackdrop />
 
       <AnimatePresence>
@@ -2235,7 +2235,7 @@ export default function Home() {
         )}
       </AnimatePresence>
 
-      <main className="relative z-10 mx-auto min-h-0 w-full max-w-[30rem] flex-1 overflow-y-auto overscroll-contain px-2 pb-3" style={{ paddingTop: "calc(env(safe-area-inset-top) + 5px)" }}>
+      <main className="relative z-10 mx-auto min-h-0 w-full max-w-[30rem] flex-1 overflow-y-auto overscroll-contain px-2" style={{ paddingTop: "calc(env(safe-area-inset-top) + 5px)", paddingBottom: "calc(env(safe-area-inset-bottom) + 84px)" }}>
         <header className="sticky top-0 z-30 mb-2 grid grid-cols-[1fr_auto] gap-1.5 bg-[#050505]/85 py-1.5 backdrop-blur-xl">
           <Ticker>
             CÉRÉMONIE LE 1ER DU MOIS / DANS {ceremonyCountdown.days}J {ceremonyCountdown.hours}H {ceremonyCountdown.mins}M / TOURNOI DU MOIS / {monthlyNominations.length} DOSSIERS EN JEU / 
@@ -2469,13 +2469,13 @@ export default function Home() {
                   <motion.button whileTap={TAP_REBOUND} transition={TAP_TRANSITION} onClick={() => void saveEditedNomination()} disabled={mutationBusyId === editingNominationId || !uploadReady} className="brutal-submit flex w-full items-center justify-center gap-2 disabled:opacity-50">
                     {mutationBusyId === editingNominationId ? <Loader2 className="h-6 w-6 animate-spin" /> : "Sauvegarder"}
                   </motion.button>
-                  <motion.button whileTap={TAP_REBOUND} transition={TAP_TRANSITION} onClick={cancelEditNomination} className="rounded-[10px] border border-white/10 bg-white/[0.06] px-3 text-xs font-black uppercase tracking-[0.1em] text-white" type="button">
+                  <motion.button whileTap={TAP_REBOUND} transition={TAP_TRANSITION} onClick={cancelEditNomination} className="rounded-[10px] border border-white/10 bg-white/[0.06] px-3 text-xs font-black uppercase tracking-[0.1em] text-white pointer-events-auto" type="button">
                     Annuler
                   </motion.button>
                 </div>
               ) : (
                 <motion.button whileTap={TAP_REBOUND} transition={TAP_TRANSITION} onClick={() => void uploadNomination()} disabled={uploadLoading || !uploadReady} className="brutal-submit flex w-full items-center justify-center gap-2 disabled:opacity-50">
-                  {uploadLoading ? <Loader2 className="h-6 w-6 animate-spin" /> : "Lancer le dossier"}
+                  {uploadLoading ? <span className="flex items-center gap-2 animate-pulse"><Loader2 className="h-6 w-6 animate-spin" /> TRANSMISSION EN COURS...</span> : "Lancer le dossier"}
                 </motion.button>
               )}
             </motion.section>
@@ -2526,12 +2526,12 @@ export default function Home() {
       </main>
 
       {tab !== "studio" && (
-        <motion.button initial={reduceMotion ? { opacity: 1 } : { opacity: 0, scale: 0.96, y: 8 }} animate={{ opacity: 1, scale: 1, y: 0 }} whileTap={TAP_REBOUND} transition={TAP_TRANSITION} onClick={() => switchTab("studio")} className="brutal-fab fixed right-5 z-40 flex h-12 w-12 items-center justify-center" style={{ bottom: "calc(env(safe-area-inset-bottom) + 76px)" }} aria-label="Lancer un dossier">
+        <motion.button initial={reduceMotion ? { opacity: 1 } : { opacity: 0, scale: 0.96, y: 8 }} animate={{ opacity: 1, scale: 1, y: 0 }} whileTap={TAP_REBOUND} transition={TAP_TRANSITION} onClick={() => switchTab("studio")} className="brutal-fab fixed right-5 z-40 flex h-12 w-12 items-center justify-center pointer-events-auto" style={{ bottom: "calc(env(safe-area-inset-bottom) + 76px)" }} aria-label="Lancer un dossier">
           <Plus className="h-6 w-6" />
         </motion.button>
       )}
 
-      <nav aria-label="Navigation principale" className="bottom-tabloid fixed bottom-0 left-0 right-0 z-40 px-2 pt-1.5" style={{ paddingBottom: "calc(env(safe-area-inset-bottom) + 8px)" }}>
+      <nav aria-label="Navigation principale" className="bottom-tabloid fixed bottom-0 left-0 right-0 z-50 px-2 pt-1.5 pointer-events-auto" style={{ paddingBottom: "calc(env(safe-area-inset-bottom) + 8px)" }}>
         <div className="mx-auto grid w-full max-w-[30rem] grid-cols-5 gap-1">
           {TAB_ITEMS.map((item) => {
             const Icon = item.icon;
