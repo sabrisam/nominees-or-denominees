@@ -1,0 +1,20 @@
+import { motion } from "framer-motion";
+import type { ReactNode } from "react";
+
+export function BrutalCard({
+  children,
+  className = "",
+  tone = "paper"
+}: {
+  children: ReactNode;
+  className?: string;
+  tone?: "paper" | "red" | "yellow" | "black";
+}) {
+  const toneClass = tone === "red" ? "brutal-card-red" : tone === "yellow" ? "brutal-card-yellow" : tone === "black" ? "brutal-card-black" : "";
+
+  return (
+    <motion.div whileTap={{ scale: 0.985 }} transition={{ type: "spring", stiffness: 520, damping: 24 }} className={`brutal-card ${toneClass} ${className}`}>
+      {children}
+    </motion.div>
+  );
+}
