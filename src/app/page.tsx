@@ -1746,6 +1746,7 @@ export default function Home() {
       showToast("success", "Rec prêt.");
     } catch (err) {
       clearPreparedMedia();
+      setStudioNotice(null);
       const message = err instanceof Error ? err.message : "Média impossible à préparer.";
       showToast("error", message);
     } finally {
@@ -1931,7 +1932,10 @@ export default function Home() {
 
       setMediaProgress(1);
       haptic(HAPTICS.success);
-      setStudioNotice(thumbnailUpload.provider === "supabase" || mediaUpload.provider === "supabase" ? SUPABASE_STORAGE_NOTICE : null);
+      setStudioNotice(null);
+      if (thumbnailUpload.provider === "supabase" || mediaUpload.provider === "supabase") {
+        showToast("info", SUPABASE_STORAGE_NOTICE);
+      }
       showToast("success", "Dossier lancé dans le club.");
       resetStudioDraft();
       switchTab("direct");
