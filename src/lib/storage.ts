@@ -235,8 +235,7 @@ export async function uploadMediaFile(
     uploadRes = await fetch(presignedUrl, {
       method: "PUT",
       headers: {
-        "Content-Type": contentType,
-        "x-amz-acl": "public-read"
+        "Content-Type": contentType
       },
       body: buffer,
       signal
