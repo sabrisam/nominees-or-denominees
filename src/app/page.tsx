@@ -1235,10 +1235,6 @@ export default function Home() {
   const [shakeId, setShakeId] = useState<string | null>(null);
   const [globalShake, setGlobalShake] = useState<number>(0);
 
-  const [showAccount, setShowAccount] = useState(false);
-  const [recoveryCode, setRecoveryCode] = useState("");
-  const [inputRecovery, setInputRecovery] = useState("");
-
   useEffect(() => {
     const onHaptic = () => setGlobalShake(Date.now());
     window.addEventListener("nod-haptic", onHaptic as any);
