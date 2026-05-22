@@ -1576,8 +1576,10 @@ export default function Home() {
     setThumbnailFile(null);
     setMediaKind(null);
     setMediaProgress(0);
+    setStudioNotice(null);
     setUrl(setPreviewUrlState, previewUrl, null);
     setUrl(setThumbnailPreviewUrlState, thumbnailPreviewUrl, null);
+    if (fileInputRef.current) fileInputRef.current.value = "";
   }, [previewUrl, thumbnailPreviewUrl]);
 
   const ensureRoom = useCallback(async () => {
@@ -1875,6 +1877,7 @@ export default function Home() {
   );
 
   const resetStudioDraft = useCallback(() => {
+    setStudioNotice(null);
     clearPreparedMedia();
     setTiktokerName("");
     setComment("");
