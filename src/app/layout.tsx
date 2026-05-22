@@ -1,4 +1,5 @@
 import type { Metadata, Viewport } from "next";
+import { PwaRoot } from "@/components/layout/PwaRoot";
 import "./globals.css";
 
 export const metadata: Metadata = {
@@ -39,7 +40,7 @@ export default function RootLayout({
   return (
     <html lang="fr">
       <body>
-        <div className="nod-viewport-host">{children}</div>
+        <PwaRoot>{children}</PwaRoot>
       </body>
     </html>
   );
