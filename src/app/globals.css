@@ -412,9 +412,9 @@ video {
   }
 
   .ticker-track {
-    display: inline-block;
+    display: inline-flex;
     white-space: nowrap;
-    padding: 0.3rem 0.5rem;
+    padding: 0.3rem 0;
     font-size: 0.52rem;
     font-weight: 900;
     text-transform: uppercase;
