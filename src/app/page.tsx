@@ -1943,7 +1943,8 @@ export default function Home() {
       void fetchNominations(true, activeRoomId);
     } catch (err) {
       const message = err instanceof Error ? err.message : "Échec de l'envoi.";
-      showToast("error", message);
+      setStudioNotice(null);
+      showToast("error", isStorageUnavailableMessage(message) ? STORAGE_UNAVAILABLE_NOTICE : message);
     } finally {
       setUploadLoading(false);
       setMediaProgress(0);
