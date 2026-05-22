@@ -2137,16 +2137,21 @@ export default function Home() {
                 </div>
                 <SectionTitle>{DIRECT_TITLE}</SectionTitle>
                 {feedItems.length === 0 ? (
-                  <BrutalCard className="p-3 text-center">
-                    <Camera className="mx-auto mb-2 h-8 w-8" />
-                    <p className="text-xl font-black uppercase leading-none">Aucun rec.</p>
-                  </BrutalCard>
+                  <motion.div layout initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }} exit={{ opacity: 0, scale: 0.95 }}>
+                    <BrutalCard className="p-4 text-center">
+                      <Camera className="mx-auto mb-2 h-8 w-8 text-zinc-600" />
+                      <p className="text-xl font-black uppercase leading-none text-zinc-500">Aucun rec.</p>
+                      <p className="mt-1 text-[9px] font-black uppercase text-zinc-600">Le club est vide</p>
+                    </BrutalCard>
+                  </motion.div>
                 ) : (
-                  <div className="grid grid-cols-2 gap-1.5">
-                    {feedItems.map((nomination, index) => (
-                      <NominationTile key={nomination.id} nomination={nomination} index={index} owned={ownsNomination(nomination)} onEdit={() => startEditNomination(nomination)} onRemove={() => void removeNomination(nomination)} busy={mutationBusyId === nomination.id} />
-                    ))}
-                  </div>
+                  <motion.div layout className="grid grid-cols-2 gap-1.5">
+                    <AnimatePresence mode="popLayout">
+                      {feedItems.map((nomination, index) => (
+                        <NominationTile key={nomination.id} nomination={nomination} index={index} owned={ownsNomination(nomination)} onEdit={() => startEditNomination(nomination)} onRemove={() => void removeNomination(nomination)} busy={mutationBusyId === nomination.id} />
+                      ))}
+                    </AnimatePresence>
+                  </motion.div>
                 )}
               </motion.div>
             </motion.section>
@@ -2156,10 +2161,15 @@ export default function Home() {
             <motion.section key="vote" {...pageTransition} drag={reduceMotion ? false : "x"} dragConstraints={{ left: 0, right: 0 }} onDragEnd={(_, info) => handleSectionDrag(info)} transition={{ duration: reduceMotion ? 0.01 : 0.26, type: "spring", stiffness: 230, damping: 25 }} className="space-y-1.5">
               <SectionTitle tone="yellow">{VOTE_TITLE}</SectionTitle>
               {pendingForMe.length === 0 ? (
-                <BrutalCard tone="yellow" className="p-3 text-center">
-                  <Check className="mx-auto mb-2 h-8 w-8" />
-                  <p className="text-2xl font-black uppercase leading-none">File vide.</p>
-                </BrutalCard>
+                <motion.div layout initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }} exit={{ opacity: 0, scale: 0.95 }}>
+                  <BrutalCard tone="yellow" className="p-5 text-center">
+                    <motion.div animate={{ rotate: [0, 8, -8, 0] }} transition={{ duration: 2, repeat: Infinity, ease: "easeInOut" }}>
+                      <Check className="mx-auto mb-3 h-10 w-10 text-[#d4af37]" />
+                    </motion.div>
+                    <p className="text-2xl font-black uppercase leading-none text-[#f0d889]">File vide.</p>
+                    <p className="mt-1.5 text-[10px] font-black uppercase text-[#d4af37]/70">Tous les dossiers ont été jugés</p>
+                  </BrutalCard>
+                </motion.div>
               ) : (
                 pendingForMe.map((nomination) => {
                   const category = getCategoryMeta(nomination.category_id);
