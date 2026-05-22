@@ -1279,9 +1279,6 @@ export default function Home() {
           if (storedPseudo !== nextPseudo) localStorage.setItem(PSEUDO_KEY, nextPseudo);
 
           setParticipant({ id: user.id, pseudo: nextPseudo });
-          exportAccountRecoveryCode(client).then((code: string | null) => {
-            if (code) setRecoveryCode(code);
-          });
         } else {
           const { error } = await client.auth.signInAnonymously();
           if (error) {
@@ -1300,20 +1297,6 @@ export default function Home() {
     };
     initParticipant();
   }, []);
-
-  const applyRecoveryToken = async () => {
-    if (!inputRecovery.trim() || !supabase) return;
-    setUploadLoading(true);
-    try {
-      const { error } = await supabase.auth.setSession({ refresh_token: inputRecovery.trim(), access_token: "" });
-      if (error) throw error;
-      window.location.reload();
-    } catch (err: any) {
-      showToast("error", err.message || "Code invalide.");
-    } finally {
-      setUploadLoading(false);
-    }
-  };
 
   useEffect(() => {
     const timer = window.setInterval(() => {
