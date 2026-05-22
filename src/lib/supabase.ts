@@ -2,44 +2,6 @@ import { createClient, type SupabaseClient } from "@supabase/supabase-js";
 
 const isBrowser = typeof window !== "undefined";
 
-const secureCookieAdapter = {
-  getItem: async (key: string) => {
-    if (!isBrowser) return null;
-    try {
-      const res = await fetch(`/api/auth/session?key=${encodeURIComponent(key)}`);
-      if (!res.ok) return null;
-      const data = await res.json();
-      return data.value;
-    } catch {
-      return null;
-    }
-  },
-  setItem: async (key: string, value: string) => {
-    if (!isBrowser) return;
-    try {
-      await fetch(`/api/auth/session`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ action: "set", key, value })
-      });
-    } catch (err) {
-      console.error("Failed to set session", err);
-    }
-  },
-  removeItem: async (key: string) => {
-    if (!isBrowser) return;
-    try {
-      await fetch(`/api/auth/session`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ action: "remove", key })
-      });
-    } catch (err) {
-      console.error("Failed to remove session", err);
-    }
-  }
-};
-
 let browserClient: SupabaseClient | null = null;
 
 export function getSupabaseBrowserClient() {
@@ -53,7 +15,7 @@ export function getSupabaseBrowserClient() {
   if (!browserClient) {
     browserClient = createClient(url, anonKey, {
       auth: {
-        storage: secureCookieAdapter,
+        storage: isBrowser ? window.localStorage : undefined,
         persistSession: true,
         autoRefreshToken: true,
         detectSessionInUrl: false
@@ -82,9 +44,9 @@ export async function ensureAnonymousSession(client: SupabaseClient) {
 export function exportAccountRecoveryCode(client: SupabaseClient): Promise<string | null> {
   return new Promise(async (resolve) => {
     const { data: { session } } = await client.auth.getSession();
-    if (session?.access_token) {
-      // Return the token as a string for recovery. In a real app this might be an encrypted backup.
-      resolve(session.access_token);
+    if (session?.refresh_token) {
+      // Return the refresh_token as a string for recovery.
+      resolve(session.refresh_token);
     } else {
       resolve(null);
     }
