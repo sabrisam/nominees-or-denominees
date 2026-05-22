@@ -334,6 +334,9 @@ function addToStarDistribution(distribution: StarDistribution, value: number) {
 }
 
 function haptic(pattern: number | readonly number[]) {
+  if (typeof window !== "undefined") {
+    window.dispatchEvent(new CustomEvent("nod-haptic", { detail: { pattern } }));
+  }
   if (typeof navigator === "undefined" || !("vibrate" in navigator)) return;
   try {
     navigator.vibrate(pattern as VibratePattern);
@@ -1456,6 +1459,14 @@ export default function Home() {
   const [voteBusyId, setVoteBusyId] = useState<string | null>(null);
   const [bootError, setBootError] = useState<string | null>(null);
   const [shakeId, setShakeId] = useState<string | null>(null);
+  const [globalShake, setGlobalShake] = useState<number>(0);
+
+  useEffect(() => {
+    const onHaptic = () => setGlobalShake(Date.now());
+    window.addEventListener("nod-haptic", onHaptic as any);
+    return () => window.removeEventListener("nod-haptic", onHaptic as any);
+  }, []);
+
   const fileInputRef = useRef<HTMLInputElement | null>(null);
   const channelRef = useRef<RealtimeChannel | null>(null);
 
@@ -2210,7 +2221,7 @@ export default function Home() {
   }
 
   return (
-    <div className="tabloid-app flex min-h-screen flex-col justify-between bg-[#050505] pb-[calc(env(safe-area-inset-bottom)+58px)]">
+    <motion.div animate={globalShake ? { scale: [1, 0.99, 1], filter: ["brightness(1)", "brightness(1.05)", "brightness(1)"] } : { scale: 1 }} transition={{ duration: 0.15 }} className="tabloid-app flex min-h-screen flex-col justify-between bg-[#050505] pb-[calc(env(safe-area-inset-bottom)+58px)]">
       <PaperBackdrop />
 
       <AnimatePresence>
