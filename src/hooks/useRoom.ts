@@ -3,13 +3,7 @@ import { getSupabaseBrowserClient, ensureAnonymousSession } from "@/lib/supabase
 
 const DEFAULT_ROOM_CODE = "NOD-CLUB";
 const ROOM_CODE_KEY = "nod_room_code";
-const USER_DEVICE_ID_KEY = "nod_user_device_id";
 const PSEUDO_KEY = "nod_pseudo";
-
-function makeSessionId() {
-  if (typeof crypto !== "undefined" && "randomUUID" in crypto) return crypto.randomUUID();
-  return `session-${Date.now()}-${Math.random().toString(36).slice(2, 12)}`;
-}
 
 function sanitizePseudo(value: string) {
   return value
@@ -38,26 +32,27 @@ export function useRoom() {
     
     async function initSession() {
       try {
-        const storedId = localStorage.getItem(USER_DEVICE_ID_KEY);
-        const nextId = storedId || makeSessionId();
-        const storedPseudo = sanitizePseudo(localStorage.getItem(PSEUDO_KEY) || "");
-        const nextPseudo = storedPseudo || `Joueur ${nextId.slice(0, 4).toUpperCase()}`;
-        
-        localStorage.setItem(USER_DEVICE_ID_KEY, nextId);
-        localStorage.setItem(PSEUDO_KEY, nextPseudo);
-        
         const client = getSupabaseBrowserClient();
         if (client) {
-          // Phase 1 Security: Anonymous Auth
-          await ensureAnonymousSession(client);
+          const user = await ensureAnonymousSession(client);
+          if (user && mounted) {
+            const storedPseudo = sanitizePseudo(localStorage.getItem(PSEUDO_KEY) || "");
+            const nextPseudo = storedPseudo || `Joueur ${user.id.slice(0, 4).toUpperCase()}`;
+            
+            if (storedPseudo !== nextPseudo) {
+              localStorage.setItem(PSEUDO_KEY, nextPseudo);
+            }
+            
+            setParticipant({ id: user.id, pseudo: nextPseudo });
+          }
         }
 
         if (mounted) {
-          setParticipant({ id: nextId, pseudo: nextPseudo });
-          
           const code = sanitizeRoomCode(localStorage.getItem(ROOM_CODE_KEY) || DEFAULT_ROOM_CODE);
           setRoomCode(code);
         }
+      } catch (err) {
+        console.error("useRoom init failed:", err);
       } finally {
         if (mounted) setBootingSession(false);
       }
