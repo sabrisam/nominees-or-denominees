@@ -101,18 +101,6 @@ type CategoryMeta = {
   icon: LucideIcon;
 };
 
-type SpacesUploadResult = {
-  key: string;
-  publicUrl: string;
-  uploadUrl: string;
-};
-
-type UploadReference = {
-  key: string;
-  publicUrl: string;
-  provider: "spaces" | "supabase";
-};
-
 type ScoreBoard = {
   tiktokerName: string;
   category?: CategoryMeta;
