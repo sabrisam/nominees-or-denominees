@@ -1965,20 +1965,23 @@ export default function Home() {
 
   if (bootingSession) {
     return (
-      <div className="tabloid-app flex items-center justify-center">
-        <PaperBackdrop />
-        <BrutalCard tone="yellow" className="flex h-20 w-20 items-center justify-center">
-          <Loader2 className="h-8 w-8 animate-spin text-black" />
-        </BrutalCard>
+      <div className="tabloid-app">
+        <div className="tabloid-stage flex items-center justify-center">
+          <PaperBackdrop />
+          <BrutalCard tone="yellow" className="flex h-20 w-20 items-center justify-center">
+            <Loader2 className="h-8 w-8 animate-spin text-black" />
+          </BrutalCard>
+        </div>
       </div>
     );
   }
 
   if (!participant) {
     return (
-      <div className="tabloid-app flex items-center justify-center">
-        <PaperBackdrop />
-        <BrutalCard tone="yellow" className="p-5 text-center">
+      <div className="tabloid-app">
+        <div className="tabloid-stage flex items-center justify-center">
+          <PaperBackdrop />
+          <BrutalCard tone="yellow" className="p-5 text-center">
           {bootError ? (
             <>
               <p className="mb-2 text-xl font-black uppercase leading-none text-red-600">Erreur Fatale</p>
