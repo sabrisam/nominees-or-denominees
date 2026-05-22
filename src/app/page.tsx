@@ -2167,7 +2167,7 @@ export default function Home() {
                         <span className="mt-1.5 text-[10px] font-black uppercase tracking-[0.12em] text-[#d4af37]">Vidéo ou capture libre</span>
                       </span>
                     )}
-                    <input ref={fileInputRef} type="file" accept="video/*,image/*" onChange={(event) => void prepareMedia(event.target.files?.[0] ?? null)} className="hidden" aria-label="Fichier média du dossier" />
+                    <input ref={fileInputRef} type="file" accept="video/*,image/*,.heic,.heif" onChange={(event) => void prepareMedia(event.target.files?.[0] ?? null)} className="hidden" aria-label="Fichier média du dossier" />
                   </motion.button>
                 )}
               </BrutalCard>
