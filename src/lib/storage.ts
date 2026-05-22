@@ -175,7 +175,7 @@ export async function extractVideoThumbnail(file: File) {
   }
 }
 
-/** Direct browser SDK upload to nod-media — no server routes. */
+/** Direct browser upload to DigitalOcean Spaces via Presigned URL. Supabase Storage is removed. */
 export async function uploadMediaFile(
   supabase: SupabaseClient,
   file: File,
@@ -183,8 +183,6 @@ export async function uploadMediaFile(
   signal?: AbortSignal
 ): Promise<UploadReference> {
   if (signal?.aborted) throw new DOMException("Upload annulé.", "AbortError");
-
-  const provider = process.env.NEXT_PUBLIC_STORAGE_PROVIDER || "supabase";
 
   // 1. Diagnostic: verify active session before upload
   const { data: sessionData } = await supabase.auth.getSession();
@@ -200,94 +198,52 @@ export async function uploadMediaFile(
   const typed = asTypedFile(file);
   const contentType = typed.type || resolveIosMediaType(typed);
   
-  // 3. Convert File to ArrayBuffer to bypass iOS WebKit native File stream bug
+  // 2. Convert File to ArrayBuffer to bypass iOS WebKit native File stream bug
   const buffer = await typed.arrayBuffer();
-  console.info(`[NOD Upload] Buffer prêt: ${buffer.byteLength} bytes. Provider: ${provider}`);
+  console.info(`[NOD Upload] Buffer prêt: ${buffer.byteLength} bytes. Provider: DO Spaces (Forced)`);
 
-  if (provider === "spaces") {
-    // ---- DIGITALOCEAN SPACES VIA PRESIGNED URL ----
-    // 1. Demander une URL pré-signée au serveur (contourne la limite de 4.5MB Vercel)
-    const presignRes = await fetch("/api/media/upload", {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        "Authorization": `Bearer ${token}`
-      },
-      body: JSON.stringify({
-        fileName: file.name,
-        fileType: contentType,
-        folder
-      }),
-      signal
-    });
+  // ---- DIGITALOCEAN SPACES VIA PRESIGNED URL ----
+  // 1. Demander une URL pré-signée au serveur (contourne la limite de 4.5MB Vercel)
+  const presignRes = await fetch("/api/media/upload", {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      "Authorization": `Bearer ${token}`
+    },
+    body: JSON.stringify({
+      fileName: file.name,
+      fileType: contentType,
+      folder
+    }),
+    signal
+  });
 
-    if (!presignRes.ok) {
-      const err = await presignRes.json().catch(() => ({}));
-      throw new Error(`Erreur Presigned URL: ${err.error || presignRes.statusText}`);
-    }
-
-    const { presignedUrl, publicUrl, key } = await presignRes.json();
-
-    // 2. Uploader directement vers DigitalOcean depuis le navigateur
-    console.info(`[NOD Upload Spaces] Envoi PUT direct de ${buffer.byteLength} bytes...`);
-    const uploadRes = await fetch(presignedUrl, {
-      method: "PUT",
-      headers: {
-        "Content-Type": contentType,
-        "x-amz-acl": "public-read"
-      },
-      body: buffer,
-      signal
-    });
-
-    if (!uploadRes.ok) {
-      console.error("[NOD Upload Spaces] Erreur PUT:", uploadRes.status, uploadRes.statusText);
-      throw new Error(`Échec de l'upload direct DO Spaces (${uploadRes.status})`);
-    }
-
-    console.info(`[NOD Upload Spaces] Succès: publicUrl=${publicUrl}`);
-    return { key, publicUrl, provider: "spaces" };
-
-  } else {
-    // ---- SUPABASE DIRECT UPLOAD (Fallback) ----
-    const bucket = SUPABASE_STORAGE_BUCKET;
-    const storagePath = storageKey(typed, folder);
-    
-    const { data, error } = await supabase.storage.from(bucket).upload(storagePath, buffer, {
-      cacheControl: "3600",
-      upsert: true,
-      contentType,
-      duplex: "half"
-    } as any);
-
-    if (signal?.aborted) throw new DOMException("Upload annulé.", "AbortError");
-
-    if (error || !data?.path) {
-      console.error("[NOD Upload] ERREUR SUPABASE COMPLÈTE:", {
-        message: error?.message,
-        statusCode: (error as any)?.statusCode,
-        error: (error as any)?.error,
-        cause: (error as any)?.cause,
-        stack: error?.stack?.slice(0, 300)
-      });
-      const detail = error?.message ? ` (${error.message})` : "";
-      throw new Error(`Échec de l'upload${detail}`);
-    }
-
-    const {
-      data: { publicUrl }
-    } = supabase.storage.from(bucket).getPublicUrl(data.path);
-
-    if (!publicUrl) throw new Error(STORAGE_UNAVAILABLE_NOTICE);
-
-    console.info(`[NOD Upload] Succès Supabase: publicUrl=${publicUrl}`);
-
-    return {
-      key: data.path,
-      publicUrl,
-      provider: "supabase"
-    };
+  if (!presignRes.ok) {
+    const err = await presignRes.json().catch(() => ({}));
+    throw new Error(`Erreur Presigned URL: ${err.error || presignRes.statusText}`);
   }
+
+  const { presignedUrl, publicUrl, key } = await presignRes.json();
+
+  // 2. Uploader directement vers DigitalOcean depuis le navigateur
+  console.info(`[NOD Upload Spaces] Envoi PUT direct de ${buffer.byteLength} bytes...`);
+  const uploadRes = await fetch(presignedUrl, {
+    method: "PUT",
+    headers: {
+      "Content-Type": contentType,
+      "x-amz-acl": "public-read"
+    },
+    body: buffer,
+    signal
+  });
+
+  if (!uploadRes.ok) {
+    console.error("[NOD Upload Spaces] Erreur PUT:", uploadRes.status, uploadRes.statusText);
+    throw new Error(`Échec de l'upload direct DO Spaces (${uploadRes.status})`);
+  }
+
+  console.info(`[NOD Upload Spaces] Succès: publicUrl=${publicUrl}`);
+  return { key, publicUrl, provider: "spaces" };
 }
 
 export function isStorageUnavailableMessage(message: string) {
