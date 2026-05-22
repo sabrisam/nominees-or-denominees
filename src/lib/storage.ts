@@ -184,14 +184,32 @@ export async function uploadMediaFile(
 ): Promise<UploadReference> {
   if (signal?.aborted) throw new DOMException("Upload annulé.", "AbortError");
 
+  // 1. Diagnostic: check bucket config
+  const bucket = SUPABASE_STORAGE_BUCKET;
+  console.info(`[NOD Upload] Début upload dans bucket="${bucket}" folder="${folder}" file="${file.name}" size=${file.size} type="${file.type}"`);
+
+  // 2. Diagnostic: verify active session before upload
+  const { data: sessionData } = await supabase.auth.getSession();
+  const uid = sessionData?.session?.user?.id ?? null;
+  const tokenPrefix = sessionData?.session?.access_token?.slice(0, 20) ?? null;
+  console.info(`[NOD Upload] Session: uid=${uid} token_prefix=${tokenPrefix}`);
+
+  if (!uid) {
+    const msg = "Upload refusé : aucune session authentifiée active. Active le Sign-In Anonyme sur Supabase.";
+    console.error(`[NOD Upload] ${msg}`);
+    throw new Error(msg);
+  }
+
   const typed = asTypedFile(file);
   const storagePath = storageKey(typed, folder);
   const contentType = typed.type || resolveIosMediaType(typed);
+  console.info(`[NOD Upload] storagePath="${storagePath}" contentType="${contentType}"`);
 
-  // Convert File to ArrayBuffer to bypass iOS WebKit native File stream bug
+  // 3. Convert File to ArrayBuffer to bypass iOS WebKit native File stream bug
   const buffer = await typed.arrayBuffer();
+  console.info(`[NOD Upload] Buffer prêt: ${buffer.byteLength} bytes`);
 
-  const { data, error } = await supabase.storage.from(SUPABASE_STORAGE_BUCKET).upload(storagePath, buffer, {
+  const { data, error } = await supabase.storage.from(bucket).upload(storagePath, buffer, {
     cacheControl: "3600",
     upsert: true,
     contentType,
@@ -201,15 +219,25 @@ export async function uploadMediaFile(
   if (signal?.aborted) throw new DOMException("Upload annulé.", "AbortError");
 
   if (error || !data?.path) {
-    console.error("[Supabase Storage Error]:", error);
-    throw new Error(STORAGE_UNAVAILABLE_NOTICE);
+    // Expose the full Supabase error object for diagnosis
+    console.error("[NOD Upload] ERREUR SUPABASE COMPLÈTE:", {
+      message: error?.message,
+      statusCode: (error as any)?.statusCode,
+      error: (error as any)?.error,
+      cause: (error as any)?.cause,
+      stack: error?.stack?.slice(0, 300)
+    });
+    const detail = error?.message ? ` (${error.message})` : "";
+    throw new Error(`Échec de l'upload${detail}`);
   }
 
   const {
     data: { publicUrl }
-  } = supabase.storage.from(SUPABASE_STORAGE_BUCKET).getPublicUrl(data.path);
+  } = supabase.storage.from(bucket).getPublicUrl(data.path);
 
   if (!publicUrl) throw new Error(STORAGE_UNAVAILABLE_NOTICE);
+
+  console.info(`[NOD Upload] Succès: publicUrl=${publicUrl}`);
 
   return {
     key: data.path,
