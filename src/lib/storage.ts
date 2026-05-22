@@ -188,11 +188,15 @@ export async function uploadMediaFile(
   const storagePath = storageKey(typed, folder);
   const contentType = typed.type || resolveIosMediaType(typed);
 
-  const { data, error } = await supabase.storage.from(SUPABASE_STORAGE_BUCKET).upload(storagePath, typed, {
+  // Convert File to ArrayBuffer to bypass iOS WebKit native File stream bug
+  const buffer = await typed.arrayBuffer();
+
+  const { data, error } = await supabase.storage.from(SUPABASE_STORAGE_BUCKET).upload(storagePath, buffer, {
     cacheControl: "3600",
     upsert: true,
-    contentType
-  });
+    contentType,
+    duplex: "half"
+  } as any);
 
   if (signal?.aborted) throw new DOMException("Upload annulé.", "AbortError");
 
