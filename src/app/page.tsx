@@ -2167,7 +2167,7 @@ export default function Home() {
                   const draftScores = cloneScores(scoreDraftById[nomination.id] ?? DEFAULT_DIMENSION_SCORES);
 
                   return (
-                    <motion.article key={nomination.id} animate={shakeId === nomination.id ? { x: [0, -8, 8, -5, 5, 0], scale: [1, 0.99, 1.01, 1] } : { x: 0, scale: 1 }} transition={{ duration: 0.42 }} className="brutal-card overflow-hidden">
+                    <motion.article layout key={nomination.id} animate={shakeId === nomination.id ? { x: [0, -8, 8, -5, 5, 0], scale: [1, 0.99, 1.01, 1] } : { x: 0, scale: 1 }} transition={{ duration: 0.42, layout: { type: "spring", stiffness: 350, damping: 30 } }} className="brutal-card overflow-hidden">
                       <div className="relative border-b border-[#d4af37]/20 bg-black">
                         <MediaFrame nomination={nomination} height="aspect-[9/16] max-h-[52svh]" />
                         <Sticker tone="yellow" className="absolute left-2 top-2 -rotate-2">
