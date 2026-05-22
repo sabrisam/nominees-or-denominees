@@ -5,6 +5,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import confetti from "canvas-confetti";
 import { getSupabaseBrowserClient } from "@/lib/supabase";
+import { Ticker } from "@/components/ui/Ticker";
 import { AnimatePresence, motion, type PanInfo, useReducedMotion } from "framer-motion";
 import {
   BadgeCheck,
@@ -2206,11 +2207,9 @@ export default function Home() {
 
       <main className="relative z-10 mx-auto min-h-0 w-full max-w-[30rem] flex-1 overflow-y-auto overscroll-contain px-2 pb-3" style={{ paddingTop: "calc(env(safe-area-inset-top) + 5px)" }}>
         <header className="sticky top-0 z-30 mb-2 grid grid-cols-[1fr_auto] gap-1.5 bg-[#050505]/85 py-1.5 backdrop-blur-xl">
-          <div className="ticker">
-            <span className="ticker-track">
-              CÉRÉMONIE LE 1ER DU MOIS / DANS {ceremonyCountdown.days}J {ceremonyCountdown.hours}H {ceremonyCountdown.mins}M / TOURNOI DU MOIS / {monthlyNominations.length} DOSSIERS EN JEU / CÉRÉMONIE LE 1ER DU MOIS / DANS {ceremonyCountdown.days}J {ceremonyCountdown.hours}H {ceremonyCountdown.mins}M
-            </span>
-          </div>
+          <Ticker>
+            CÉRÉMONIE LE 1ER DU MOIS / DANS {ceremonyCountdown.days}J {ceremonyCountdown.hours}H {ceremonyCountdown.mins}M / TOURNOI DU MOIS / {monthlyNominations.length} DOSSIERS EN JEU / 
+          </Ticker>
           <motion.button
             whileTap={TAP_REBOUND}
             transition={TAP_TRANSITION}
