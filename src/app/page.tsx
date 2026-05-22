@@ -1397,15 +1397,15 @@ export default function Home() {
         }
 
         if (error) {
-          console.error("[NOD Fetch] All attempts failed:", error);
+          console.error("[NOD Fetch] All attempts failed:", { code: error.code, message: error.message, details: (error as any).details });
           throw error;
         }
 
         const rows = ((data ?? []) as Record<string, unknown>[]).map(parseNomination);
         setNominations(rows);
-      } catch (err) {
+      } catch (err: any) {
         if (!silent) {
-          const message = err instanceof Error ? err.message : "Le direct refuse de répondre.";
+          const message = err?.message || (typeof err === 'string' ? err : "Le direct refuse de répondre.");
           showToast("error", message);
         }
       } finally {
