@@ -1877,7 +1877,8 @@ export default function Home() {
       // Prevent PostgreSQL "operator does not exist: uuid = text" if liveUid is not a valid UUID format
       const isUuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(liveUid);
       if (!isUuid) {
-        liveUid = "00000000-0000-0000-0000-000000000000"; // Safe empty UUID fallback
+        const isParticipantUuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(participant.id);
+        liveUid = isParticipantUuid ? participant.id : "00000000-0000-0000-0000-000000000000";
       }
       
       console.info("[NOD Insert] liveUid=", liveUid, "participant.id=", participant.id);
@@ -1936,7 +1937,7 @@ export default function Home() {
         thumbnail_storage_path: thumbnailUpload.key,
         media_kind: mediaKind,
         comment: cleanedComment,
-        submitted_by: participant.id,
+        submitted_by: liveUid,
         status: "pending",
         created_at: new Date().toISOString(),
         ratings: []
