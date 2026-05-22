@@ -2010,8 +2010,8 @@ export default function Home() {
         )}
       </AnimatePresence>
 
-      <main className="relative z-10 mx-auto flex min-h-0 w-full max-w-[30rem] flex-1 flex-col px-2">
-        <div className="tabloid-scroll">
+      <main className="relative z-10 mx-auto flex min-h-0 w-full max-w-[30rem] flex-1 flex-col overflow-hidden">
+        <div className="tabloid-scroll px-2">
         <header className="sticky top-0 z-30 mb-2 overflow-hidden bg-[#050505]/85 py-1.5 backdrop-blur-xl">
           <Ticker>
             CÉRÉMONIE LE 1ER DU MOIS / DANS {ceremonyCountdown.days}J {ceremonyCountdown.hours}H {ceremonyCountdown.mins}M / TOURNOI DU MOIS / {monthlyNominations.length} DOSSIERS EN JEU / 
