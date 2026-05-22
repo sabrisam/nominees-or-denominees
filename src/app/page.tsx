@@ -1750,7 +1750,6 @@ export default function Home() {
 
       showToast("success", "Dossier modifié.");
       setEditingNominationId(null);
-      setStudioNotice(null);
       resetStudioDraft();
       switchTab("direct");
       await channelRef.current?.send({ type: "broadcast", event: "nomination", payload: { id: editingNomination.id } });
