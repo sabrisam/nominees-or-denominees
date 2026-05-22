@@ -23,8 +23,11 @@
 }
 
 html,
-body {
+body,
+body > div,
+.tabloid-app {
   height: 100dvh !important;
+  max-height: 100dvh !important;
   width: 100vw !important;
   margin: 0 !important;
   padding: 0 !important;
@@ -32,6 +35,12 @@ body {
   position: fixed !important;
   top: 0;
   left: 0;
+  right: 0;
+  bottom: 0;
+}
+
+html,
+body {
   background: #050505;
 }
 
@@ -44,6 +53,11 @@ body {
   -moz-osx-font-smoothing: grayscale;
   -webkit-tap-highlight-color: transparent;
   overscroll-behavior: none;
+}
+
+.tabloid-app {
+  display: flex !important;
+  flex-direction: column !important;
 }
 
 button,
