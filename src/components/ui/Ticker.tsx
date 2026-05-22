@@ -2,12 +2,12 @@ import type { ReactNode } from "react";
 
 export function Ticker({ children }: { children: ReactNode }) {
   return (
-    <div className="ticker-container flex overflow-hidden whitespace-nowrap rounded-full border border-[rgba(212,175,55,0.24)] bg-[rgba(212,175,55,0.1)] text-[#f0d889]">
-      <div className="ticker-track flex animate-ticker-move will-change-transform">
-        <span className="inline-block whitespace-nowrap px-2 py-[0.3rem] text-[0.52rem] font-black uppercase tracking-[0.04em]">
+    <div className="ticker relative flex overflow-hidden whitespace-nowrap w-full">
+      <div className="ticker-track" style={{ display: "flex", width: "fit-content" }}>
+        <span className="inline-block whitespace-nowrap px-2">
           {children}
         </span>
-        <span className="inline-block whitespace-nowrap px-2 py-[0.3rem] text-[0.52rem] font-black uppercase tracking-[0.04em]" aria-hidden="true">
+        <span className="inline-block whitespace-nowrap px-2" aria-hidden="true">
           {children}
         </span>
       </div>
