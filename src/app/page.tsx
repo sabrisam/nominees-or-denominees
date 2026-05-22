@@ -1119,6 +1119,7 @@ function CeremonyBulletin({
   nextPending,
   leader,
   bestDossier,
+  currentUserId,
   onOpenVote,
   onOpenStudio,
   onOpenPalmares
@@ -1127,6 +1128,7 @@ function CeremonyBulletin({
   nextPending?: Nomination;
   leader: ScoreBoard | null;
   bestDossier?: Nomination;
+  currentUserId?: string;
   onOpenVote: () => void;
   onOpenStudio: () => void;
   onOpenPalmares: () => void;
@@ -1136,17 +1138,25 @@ function CeremonyBulletin({
 
   if (hasPending && nextPending) {
     const category = getCategoryMeta(nextPending.category_id);
+    const isMine = currentUserId && nextPending.submitted_by === currentUserId;
+
     return (
-      <BrutalCard tone="yellow" className="mb-2 p-2">
+      <BrutalCard tone={isMine ? "paper" : "yellow"} className="mb-2 p-2">
         <div className="grid grid-cols-[minmax(0,1fr)_auto] items-center gap-2">
           <div className="min-w-0">
-            <Sticker tone="yellow">{pendingCount > 1 ? `${pendingCount} dossiers à juger` : "Dossier à juger"}</Sticker>
+            <Sticker tone={isMine ? "paper" : "yellow"}>{isMine ? "Votre dossier" : pendingCount > 1 ? `${pendingCount} dossiers à juger` : "Dossier à juger"}</Sticker>
             <p className="tabloid-headline mt-1 text-[clamp(1.05rem,5.5vw,1.8rem)] leading-[0.84] text-white">{nextPending.tiktoker_name}</p>
-            <p className="mt-0.5 truncate text-[9px] font-black uppercase tracking-tighter text-[#d4af37]">{category.label} · ta note peut le nominer</p>
+            <p className="mt-0.5 truncate text-[9px] font-black uppercase tracking-tighter text-[#d4af37]">{category.label} · {isMine ? "en attente de vote" : "ta note peut le nominer"}</p>
           </div>
-          <motion.button type="button" whileTap={TAP_REBOUND} transition={TAP_TRANSITION} onClick={onOpenVote} className="brutal-action bg-[#d4af37] px-3 text-black">
-            Juger
-          </motion.button>
+          {isMine ? (
+            <div className="brutal-action bg-zinc-800/80 px-3 text-zinc-400">
+              Attente
+            </div>
+          ) : (
+            <motion.button type="button" whileTap={TAP_REBOUND} transition={TAP_TRANSITION} onClick={onOpenVote} className="brutal-action bg-[#d4af37] px-3 text-black">
+              Juger
+            </motion.button>
+          )}
         </div>
       </BrutalCard>
     );
