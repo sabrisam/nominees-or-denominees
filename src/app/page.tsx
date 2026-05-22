@@ -2393,6 +2393,95 @@ export default function Home() {
           })}
         </div>
       </nav>
+
+      <AnimatePresence>
+        {showAccount && (
+          <>
+            <motion.button
+              type="button"
+              key="account-backdrop"
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              transition={{ duration: 0.2 }}
+              aria-label="Fermer la sécurité du compte"
+              className="absolute inset-0 z-[90] bg-black/60"
+              onClick={() => {
+                haptic(HAPTICS.tap);
+                setShowAccount(false);
+              }}
+            />
+            <motion.div
+              key="account-sheet"
+              role="dialog"
+              aria-modal="true"
+              aria-labelledby="account-security-title"
+              initial={{ y: "100%" }}
+              animate={{ y: 0 }}
+              exit={{ y: "100%" }}
+              transition={{ type: "spring", damping: 30, stiffness: 300 }}
+              className="absolute bottom-0 left-0 right-0 z-[100] mx-auto w-full max-w-[30rem] px-2"
+              style={{ paddingBottom: "max(env(safe-area-inset-bottom), 12px)" }}
+            >
+              <BrutalCard className="w-full space-y-4 rounded-b-none p-4">
+                <div className="flex items-center justify-between">
+                  <h3 id="account-security-title" className="tabloid-headline text-2xl text-white">
+                    Sécurité du Compte
+                  </h3>
+                  <motion.button
+                    whileTap={TAP_REBOUND}
+                    transition={TAP_TRANSITION}
+                    onClick={() => {
+                      haptic(HAPTICS.tap);
+                      setShowAccount(false);
+                    }}
+                    className="brutal-icon-button"
+                    aria-label="Fermer"
+                  >
+                    <VolumeX className="h-4 w-4" />
+                  </motion.button>
+                </div>
+
+                <div className="space-y-1.5 rounded-[10px] border border-[#d4af37]/30 bg-[#d4af37]/10 p-3">
+                  <p className="text-[10px] font-black uppercase text-[#d4af37]">Ton Code de Récupération</p>
+                  <p className="text-xs text-zinc-300">Si tu effaces l&apos;application, utilise ce code pour restaurer tes scores :</p>
+                  <textarea
+                    readOnly
+                    value={recoveryCode}
+                    rows={3}
+                    className="brutal-input mt-1 w-full p-2 text-[10px] font-mono text-white opacity-80"
+                    onClick={(e) => {
+                      (e.target as HTMLTextAreaElement).select();
+                      void navigator.clipboard.writeText(recoveryCode);
+                      showToast("success", "Copié");
+                    }}
+                  />
+                </div>
+
+                <div className="space-y-1.5 border-t border-white/10 pt-4">
+                  <p className="text-[10px] font-black uppercase text-white">Restaurer un compte</p>
+                  <input
+                    type="text"
+                    placeholder="Coller le code ici..."
+                    value={inputRecovery}
+                    onChange={(e) => setInputRecovery(e.target.value)}
+                    className="brutal-input w-full p-2 text-xs"
+                  />
+                  <motion.button
+                    whileTap={TAP_REBOUND}
+                    transition={TAP_TRANSITION}
+                    disabled={!inputRecovery.trim() || uploadLoading}
+                    onClick={applyRecoveryToken}
+                    className="brutal-action mt-2 w-full bg-white text-black disabled:opacity-50"
+                  >
+                    Restaurer les données
+                  </motion.button>
+                </div>
+              </BrutalCard>
+            </motion.div>
+          </>
+        )}
+      </AnimatePresence>
     </motion.div>
   );
 }
