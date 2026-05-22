@@ -24,8 +24,7 @@
 
 html,
 body,
-body > div,
-.tabloid-app {
+body > div {
   height: 100vh !important;
   height: 100dvh !important;
   min-height: 100dvh !important;
@@ -58,12 +57,15 @@ body > div {
 }
 
 .tabloid-app {
+  position: relative !important;
   display: flex !important;
   flex-direction: column !important;
   flex: 1 1 auto !important;
   min-height: 0 !important;
   width: 100% !important;
   height: 100% !important;
+  overflow: hidden !important;
+  background: #050505;
 }
 
 .tabloid-stage {
