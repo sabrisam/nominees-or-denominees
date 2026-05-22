@@ -1,0 +1,131 @@
+import { motion } from "framer-motion";
+import { Check } from "lucide-react";
+import { BrutalCard } from "@/components/ui/BrutalCard";
+import { SectionTitle } from "@/components/ui/SectionTitle";
+import { MediaFrame } from "@/components/direct/MediaFrame";
+import { OwnershipBadge } from "@/components/direct/OwnershipBadge";
+import { Sticker } from "@/components/ui/Sticker";
+import { ScorePresetRail } from "@/components/studio/ScorePresetRail";
+import { DimensionScoreGrid } from "@/components/studio/DimensionScoreGrid";
+import { getCategoryMeta, cloneScores, scoreTotal } from "@/lib/scoring";
+import { haptic, HAPTICS, TAP_REBOUND, TAP_TRANSITION } from "@/lib/haptic";
+import { DEFAULT_DIMENSION_SCORES } from "@/constants/categories";
+import type { Nomination, DimensionScores } from "@/types";
+
+export interface VoteTabProps {
+  pendingForMe: Nomination[];
+  ownsNomination: (nomination: Nomination) => boolean;
+  scoreDraftById: Record<string, DimensionScores>;
+  setScoreDraftById: React.Dispatch<React.SetStateAction<Record<string, DimensionScores>>>;
+  reviewDraftById: Record<string, string>;
+  setReviewDraftById: React.Dispatch<React.SetStateAction<Record<string, string>>>;
+  applyRating: (nominationId: string) => Promise<void>;
+  voteBusyId: string | null;
+  shakeId: string | null;
+  reduceMotion: boolean;
+  handleSectionDrag: (info: any) => void;
+  pageTransition: any;
+}
+
+export function VoteTab({
+  pendingForMe,
+  ownsNomination,
+  scoreDraftById,
+  setScoreDraftById,
+  reviewDraftById,
+  setReviewDraftById,
+  applyRating,
+  voteBusyId,
+  shakeId,
+  reduceMotion,
+  handleSectionDrag,
+  pageTransition
+}: VoteTabProps) {
+  return (
+    <motion.section
+      key="vote"
+      {...pageTransition}
+      drag={reduceMotion ? false : "x"}
+      dragConstraints={{ left: 0, right: 0 }}
+      onDragEnd={(_, info) => handleSectionDrag(info)}
+      transition={{ duration: reduceMotion ? 0.01 : 0.26, type: "spring", stiffness: 230, damping: 25 }}
+      className="space-y-1.5"
+    >
+      <SectionTitle tone="yellow">À VOTER</SectionTitle>
+      {pendingForMe.length === 0 ? (
+        <motion.div layout initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }} exit={{ opacity: 0, scale: 0.95 }}>
+          <BrutalCard tone="yellow" className="p-5 text-center">
+            <motion.div animate={{ rotate: [0, 8, -8, 0] }} transition={{ duration: 2, repeat: Infinity, ease: "easeInOut" }}>
+              <Check className="mx-auto mb-3 h-10 w-10 text-[#d4af37]" />
+            </motion.div>
+            <p className="text-2xl font-black uppercase leading-none text-[#f0d889]">File vide.</p>
+            <p className="mt-1.5 text-[10px] font-black uppercase text-[#d4af37]/70">Tous les dossiers ont été jugés</p>
+          </BrutalCard>
+        </motion.div>
+      ) : (
+        pendingForMe.map((nomination) => {
+          const category = getCategoryMeta(nomination.category_id);
+          const Icon = category.icon;
+          const draftScores = cloneScores(scoreDraftById[nomination.id] ?? DEFAULT_DIMENSION_SCORES);
+
+          return (
+            <motion.article
+              layout
+              key={nomination.id}
+              animate={shakeId === nomination.id ? { x: [0, -8, 8, -5, 5, 0], scale: [1, 0.99, 1.01, 1] } : { x: 0, scale: 1 }}
+              transition={{ duration: 0.42, layout: { type: "spring", stiffness: 350, damping: 30 } }}
+              className="brutal-card overflow-hidden"
+            >
+              <div className="relative border-b border-[#d4af37]/20 bg-black">
+                <MediaFrame nomination={nomination} height="aspect-[9/16] max-h-[52svh]" />
+                <Sticker tone="yellow" className="absolute left-2 top-2 -rotate-2">
+                  À voter
+                </Sticker>
+                <OwnershipBadge owned={ownsNomination(nomination)} className="absolute right-2 top-2 rotate-2" />
+                <div className="absolute bottom-2 left-2 right-2 rounded-[10px] border border-[#d4af37]/35 bg-black/75 p-2 backdrop-blur-md">
+                  <p className="flex items-center gap-1 text-[8px] font-black uppercase tracking-[0.12em] text-[#d4af37]">
+                    <Icon className="h-3 w-3" /> {category.label}
+                  </p>
+                  <p className="tabloid-headline text-[clamp(1.22rem,6.2vw,2rem)] leading-[0.84] text-white">{nomination.tiktoker_name}</p>
+                </div>
+              </div>
+              <div className="space-y-1.5 p-2">
+                <p className="rounded-[10px] border border-white/10 bg-white/[0.04] p-2 text-xs font-medium leading-tight text-zinc-200">&quot;{nomination.comment}&quot;</p>
+                <ScorePresetRail
+                  value={draftScores}
+                  compact
+                  onSelect={(value) => setScoreDraftById((prev) => ({ ...prev, [nomination.id]: value }))}
+                  label="Profils rapides pour ce vote"
+                />
+                <DimensionScoreGrid
+                  value={draftScores}
+                  onChange={(value) => setScoreDraftById((prev) => ({ ...prev, [nomination.id]: value }))}
+                  compact
+                />
+                <textarea
+                  aria-label="Ta réaction sur ce dossier"
+                  value={reviewDraftById[nomination.id] ?? ""}
+                  onFocus={() => haptic(HAPTICS.tap)}
+                  onChange={(event) => setReviewDraftById((prev) => ({ ...prev, [nomination.id]: event.target.value }))}
+                  placeholder="Ta réaction sur ce dossier ?"
+                  rows={2}
+                  maxLength={180}
+                  className="brutal-input w-full resize-none p-2 text-xs font-black uppercase"
+                />
+                <motion.button
+                  whileTap={TAP_REBOUND}
+                  transition={TAP_TRANSITION}
+                  onClick={() => void applyRating(nomination.id)}
+                  disabled={voteBusyId === nomination.id}
+                  className="brutal-action w-full bg-[#d4af37] text-black disabled:opacity-50"
+                >
+                  Enregistrer la note · {scoreTotal(draftScores, nomination.category_ids)}/100
+                </motion.button>
+              </div>
+            </motion.article>
+          );
+        })
+      )}
+    </motion.section>
+  );
+}
