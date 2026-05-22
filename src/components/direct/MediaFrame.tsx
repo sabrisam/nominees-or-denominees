@@ -1,5 +1,6 @@
 import { useState, useEffect } from "react";
 import { Loader2 } from "lucide-react";
+import { motion, AnimatePresence } from "framer-motion";
 import { LEGACY_FLOWER_VIDEO_URL, FALLBACK_IMAGE_URL } from "@/constants/categories";
 import type { Nomination } from "@/types";
 
@@ -41,9 +42,9 @@ export function MediaFrame({
     return (
       <div className={`${height} relative flex w-full items-center justify-center bg-black`}>
         {nomination.thumbnail_url ? <img src={nomination.thumbnail_url} alt="" className="absolute inset-0 h-full w-full object-cover opacity-55" /> : null}
-        <div className="relative z-10 mx-3 rounded-full border border-[#d4af37]/60 bg-black/70 px-3 py-2 text-center text-[11px] font-bold uppercase tracking-[0.12em] leading-none text-[#f0d889]">
+        <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} className="relative z-10 mx-3 rounded-full border border-[#d4af37]/60 bg-black/70 px-3 py-2 text-center text-[11px] font-bold uppercase tracking-[0.12em] leading-none text-[#f0d889]">
           Rec à renvoyer depuis le Studio
-        </div>
+        </motion.div>
       </div>
     );
   }
@@ -51,12 +52,17 @@ export function MediaFrame({
   if (nomination.media_kind === "video") {
     return (
       <div className={`${height} relative w-full overflow-hidden bg-black`}>
-        {resolving && (
-          <div className="media-shimmer absolute inset-0 z-10 flex items-center justify-center" aria-hidden="true">
-            <Loader2 className="h-5 w-5 animate-spin text-[#d4af37]" />
-          </div>
-        )}
-        <video
+        <AnimatePresence>
+          {resolving && (
+            <motion.div initial={{ opacity: 1 }} exit={{ opacity: 0 }} transition={{ duration: 0.4 }} className="media-shimmer absolute inset-0 z-10 flex items-center justify-center bg-black" aria-hidden="true">
+              <Loader2 className="h-5 w-5 animate-spin text-[#d4af37]" />
+            </motion.div>
+          )}
+        </AnimatePresence>
+        <motion.video
+          initial={{ opacity: 0, scale: 1.05 }}
+          animate={{ opacity: resolving ? 0 : 1, scale: resolving ? 1.05 : 1 }}
+          transition={{ duration: 0.7, ease: [0.16, 1, 0.3, 1] }}
           src={nomination.media_url}
           poster={nomination.thumbnail_url ?? undefined}
           autoPlay
@@ -87,12 +93,17 @@ export function MediaFrame({
 
   return (
     <div className={`${height} relative w-full overflow-hidden bg-black`}>
-      {resolving && (
-        <div className="media-shimmer absolute inset-0 z-10 flex items-center justify-center" aria-hidden="true">
-          <Loader2 className="h-5 w-5 animate-spin text-[#d4af37]" />
-        </div>
-      )}
-      <img
+      <AnimatePresence>
+        {resolving && (
+          <motion.div initial={{ opacity: 1 }} exit={{ opacity: 0 }} transition={{ duration: 0.4 }} className="media-shimmer absolute inset-0 z-10 flex items-center justify-center bg-black" aria-hidden="true">
+            <Loader2 className="h-5 w-5 animate-spin text-[#d4af37]" />
+          </motion.div>
+        )}
+      </AnimatePresence>
+      <motion.img
+        initial={{ opacity: 0, scale: 1.05 }}
+        animate={{ opacity: resolving ? 0 : 1, scale: resolving ? 1.05 : 1 }}
+        transition={{ duration: 0.7, ease: [0.16, 1, 0.3, 1] }}
         src={nomination.media_url || nomination.thumbnail_url || FALLBACK_IMAGE_URL}
         alt=""
         onLoad={() => setResolving(false)}
