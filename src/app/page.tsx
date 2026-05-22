@@ -2364,7 +2364,10 @@ export default function Home() {
               const badge = item.id === "vote" ? pendingForMe.length : 0;
 
               return (
-                <motion.button key={item.id} type="button" whileTap={TAP_REBOUND} transition={TAP_TRANSITION} onClick={() => switchTab(item.id)} aria-current={active ? "page" : undefined} className={`relative flex flex-col items-center justify-center gap-0.5 rounded-[10px] border px-1 py-1.5 transition ${active ? "border-[#d4af37]/70 bg-[#d4af37]/18 text-[#f0d889]" : "border-white/10 bg-white/[0.045] text-zinc-400"}`}>
+                <motion.button key={item.id} type="button" whileTap={TAP_REBOUND} transition={TAP_TRANSITION} onClick={() => switchTab(item.id)} aria-current={active ? "page" : undefined} className={`relative flex flex-col items-center justify-center gap-0.5 rounded-[10px] border px-1 py-1.5 transition ${active ? "border-[#d4af37]/70 text-[#f0d889]" : "border-transparent bg-transparent hover:bg-white/5 text-zinc-400"}`}>
+                  {active && (
+                    <motion.div layoutId="navIndicator" className="absolute inset-0 rounded-[10px] bg-[#d4af37]/18 shadow-[inset_0_0_10px_rgba(212,175,55,0.1)]" transition={{ type: "spring", stiffness: 400, damping: 35 }} />
+                  )}
                   <Icon className="relative z-10 h-4 w-4" strokeWidth={1.5} />
                   <span className="relative z-10 text-[7.5px] font-black uppercase tracking-tighter">{item.label}</span>
                   {badge > 0 && (
