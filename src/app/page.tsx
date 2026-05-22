@@ -743,16 +743,18 @@ function MicroDimensionBars({ scores }: { scores: DimensionScores }) {
 function BrutalCard({
   children,
   className = "",
-  tone = "paper"
+  tone = "paper",
+  layout
 }: {
   children: ReactNode;
   className?: string;
   tone?: "paper" | "red" | "yellow" | "black";
+  layout?: boolean | string;
 }) {
   const toneClass = tone === "red" ? "brutal-card-red" : tone === "yellow" ? "brutal-card-yellow" : tone === "black" ? "brutal-card-black" : "";
 
   return (
-    <motion.div whileTap={{ scale: 0.985 }} transition={{ type: "spring", stiffness: 520, damping: 24 }} className={`brutal-card ${toneClass} ${className}`}>
+    <motion.div layout={layout} whileTap={{ scale: 0.985 }} transition={{ type: "spring", stiffness: 520, damping: 24 }} className={`brutal-card ${toneClass} ${className}`}>
       {children}
     </motion.div>
   );
@@ -968,7 +970,7 @@ function NominationTile({
   const categories = categorySummary(nomination.category_ids);
 
   return (
-    <BrutalCard tone={index % 3 === 0 ? "yellow" : "paper"} className="overflow-hidden">
+    <BrutalCard layout tone={index % 3 === 0 ? "yellow" : "paper"} className="overflow-hidden">
       <div className="media-cut relative aspect-[4/3] border-b border-[#d4af37]/20">
         <MediaFrame nomination={nomination} height="h-full" controls={false} />
         <OwnershipBadge owned={owned} className="absolute left-2 top-2" />
