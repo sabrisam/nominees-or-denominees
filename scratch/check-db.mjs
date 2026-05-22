@@ -24,41 +24,27 @@ if (!supabaseUrl || !supabaseKey) {
 
 const supabase = createClient(supabaseUrl, supabaseKey);
 
-async function checkNominations() {
-  console.log("Fetching recent nominations...");
-  const { data, error } = await supabase
-    .from('nominations')
-    .select('id, category_id, tiktoker_name, media_url, submitted_by, status, created_at')
-    .order('created_at', { ascending: false })
-    .limit(10);
-
-  if (error) {
-    console.error('Error fetching nominations:', error);
-  } else {
-    console.log('Recent Nominations:');
-    console.log(JSON.stringify(data, null, 2));
-  }
-}
-
-async function checkRatings() {
-  console.log("Fetching recent ratings...");
-  const { data, error } = await supabase
-    .from('ratings')
-    .select('id, nomination_id, voter_id, rating_stars, comment, created_at')
-    .order('created_at', { ascending: false })
-    .limit(10);
-
-  if (error) {
-    console.error('Error fetching ratings:', error);
-  } else {
-    console.log('Recent Ratings:');
-    console.log(JSON.stringify(data, null, 2));
-  }
-}
-
 async function run() {
-  await checkNominations();
-  await checkRatings();
+  const tables = ['rooms', 'categories', 'nominations', 'ratings', 'monthly_ceremonies'];
+  for (const table of tables) {
+    const { count, error } = await supabase
+      .from(table)
+      .select('*', { count: 'exact', head: true });
+    
+    if (error) {
+      console.error(`Error counting ${table}:`, error);
+    } else {
+      console.log(`Table ${table} has ${count} rows.`);
+    }
+  }
+
+  // List rooms if any
+  const { data: rooms } = await supabase.from('rooms').select('*');
+  console.log('Rooms:', rooms);
+
+  // List active categories
+  const { data: categories } = await supabase.from('categories').select('*').eq('active', true);
+  console.log('Active Categories:', categories?.map(c => ({ id: c.id, label: c.label, mood: c.mood })));
 }
 
 run();
