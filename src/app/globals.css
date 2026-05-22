@@ -26,9 +26,11 @@ html,
 body,
 body > div,
 .tabloid-app {
+  height: 100% !important;
+  height: 100vh !important;
   height: 100dvh !important;
-  max-height: 100dvh !important;
-  width: 100vw !important;
+  min-height: -webkit-fill-available !important;
+  width: 100% !important;
   margin: 0 !important;
   padding: 0 !important;
   overflow: hidden !important;
@@ -56,18 +58,15 @@ body {
   flex-direction: column !important;
 }
 
-/* Structural content scroll — safe-area framing (outside Tailwind layer) */
 .tabloid-scroll {
-  display: flex;
-  flex-direction: column;
+  position: relative;
   flex: 1;
   overflow-y: auto !important;
   -webkit-overflow-scrolling: touch;
   padding-top: env(safe-area-inset-top) !important;
-  padding-bottom: calc(env(safe-area-inset-bottom) + 90px) !important;
+  padding-bottom: calc(env(safe-area-inset-bottom) + 84px) !important;
 }
 
-/* Fixed absolute nav dock */
 .bottom-tabloid {
   position: absolute !important;
   bottom: 0 !important;
@@ -77,7 +76,7 @@ body {
   background: rgba(18, 18, 18, 0.86) !important;
   backdrop-filter: blur(20px) !important;
   -webkit-backdrop-filter: blur(20px) !important;
-  padding-bottom: calc(env(safe-area-inset-bottom) + 8px) !important;
+  padding-bottom: env(safe-area-inset-bottom) !important;
 }
 
 .toast-stack {
@@ -92,7 +91,7 @@ body {
 }
 
 .brutal-fab-dock {
-  bottom: calc(env(safe-area-inset-bottom) + 90px);
+  bottom: calc(env(safe-area-inset-bottom) + 84px);
 }
 
 button,
