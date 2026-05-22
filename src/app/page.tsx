@@ -1994,27 +1994,33 @@ export default function Home() {
             </>
           )}
         </BrutalCard>
+        </div>
       </div>
     );
   }
 
   return (
-    <motion.div animate={globalShake ? { scale: [1, 0.99, 1], filter: ["brightness(1)", "brightness(1.05)", "brightness(1)"] } : { scale: 1 }} transition={{ duration: 0.15 }} className={`tabloid-app ${uploadLoading || mutationBusyId ? "pointer-events-none" : ""}`}>
-      <PaperBackdrop />
+    <div className="tabloid-app">
+      <motion.div
+        animate={globalShake ? { scale: [1, 0.99, 1], filter: ["brightness(1)", "brightness(1.05)", "brightness(1)"] } : { scale: 1 }}
+        transition={{ duration: 0.15 }}
+        className={`tabloid-stage ${uploadLoading || mutationBusyId ? "pointer-events-none" : ""}`}
+      >
+        <PaperBackdrop />
 
-      <AnimatePresence>
-        {toast && (
-          <motion.div initial={{ opacity: 0, y: -18 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -14 }} className="toast-stack">
-            <div role="status" aria-live="polite" className={`flex items-center gap-2 rounded-[10px] border px-3 py-2 text-[11px] font-black uppercase tracking-[0.04em] shadow-[0_14px_36px_rgba(0,0,0,0.45)] backdrop-blur-xl ${toast.tone === "success" ? "border-[#d4af37]/60 bg-[#d4af37]/20 text-[#f0d889]" : toast.tone === "error" ? "border-red-400/40 bg-red-950/80 text-red-100" : "border-white/10 bg-black/80 text-white"}`}>
-              {toast.tone === "success" ? <Check className="h-4 w-4" /> : toast.tone === "error" ? <ShieldAlert className="h-4 w-4" /> : <Sparkles className="h-4 w-4" />}
-              <span>{toast.message}</span>
-            </div>
-          </motion.div>
-        )}
-      </AnimatePresence>
+        <AnimatePresence>
+          {toast && (
+            <motion.div initial={{ opacity: 0, y: -18 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -14 }} className="toast-stack">
+              <div role="status" aria-live="polite" className={`flex items-center gap-2 rounded-[10px] border px-3 py-2 text-[11px] font-black uppercase tracking-[0.04em] shadow-[0_14px_36px_rgba(0,0,0,0.45)] backdrop-blur-xl ${toast.tone === "success" ? "border-[#d4af37]/60 bg-[#d4af37]/20 text-[#f0d889]" : toast.tone === "error" ? "border-red-400/40 bg-red-950/80 text-red-100" : "border-white/10 bg-black/80 text-white"}`}>
+                {toast.tone === "success" ? <Check className="h-4 w-4" /> : toast.tone === "error" ? <ShieldAlert className="h-4 w-4" /> : <Sparkles className="h-4 w-4" />}
+                <span>{toast.message}</span>
+              </div>
+            </motion.div>
+          )}
+        </AnimatePresence>
 
-      <main className="relative z-10 flex min-h-0 w-full flex-1 flex-col overflow-hidden">
-        <div className="tabloid-scroll mx-auto w-full max-w-[30rem] px-2">
+        <main className="tabloid-main">
+          <div className="tabloid-scroll mx-auto w-full max-w-[30rem] px-2">
         <header className="sticky top-0 z-30 mb-2 overflow-hidden bg-[#050505]/85 py-1.5 backdrop-blur-xl">
           <Ticker>
             CÉRÉMONIE LE 1ER DU MOIS / DANS {ceremonyCountdown.days}J {ceremonyCountdown.hours}H {ceremonyCountdown.mins}M / TOURNOI DU MOIS / {monthlyNominations.length} DOSSIERS EN JEU / 
