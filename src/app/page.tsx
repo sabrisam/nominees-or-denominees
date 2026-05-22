@@ -1479,7 +1479,11 @@ export default function Home() {
 
   const pendingForMe = useMemo(() => {
     if (!participant) return [];
-    return nominations.filter((nomination) => nomination.status === "pending" && !nomination.ratings.some((rating) => rating.voter_id === participant.id));
+    return nominations.filter((nomination) => 
+      nomination.status === "pending" && 
+      nomination.submitted_by !== participant.id &&
+      !nomination.ratings.some((rating) => rating.voter_id === participant.id)
+    );
   }, [nominations, participant]);
 
   const qualified = useMemo(() => nominations.filter((nomination) => nomination.status !== "pending"), [nominations]);
