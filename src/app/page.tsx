@@ -2289,36 +2289,37 @@ export default function Home() {
           )}
 
         </AnimatePresence>
-        </div>
-      </main>
+          </div>
+        </main>
 
-      {tab !== "studio" && (
-        <motion.button initial={reduceMotion ? { opacity: 1 } : { opacity: 0, scale: 0.96, y: 8 }} animate={{ opacity: 1, scale: 1, y: 0 }} whileTap={TAP_REBOUND} transition={TAP_TRANSITION} onClick={() => switchTab("studio")} className="brutal-fab brutal-fab-dock absolute right-5 z-40 flex h-12 w-12 items-center justify-center pointer-events-auto" aria-label="Lancer un dossier">
-          <Plus className="h-6 w-6" />
-        </motion.button>
-      )}
+        {tab !== "studio" && (
+          <motion.button initial={reduceMotion ? { opacity: 1 } : { opacity: 0, scale: 0.96, y: 8 }} animate={{ opacity: 1, scale: 1, y: 0 }} whileTap={TAP_REBOUND} transition={TAP_TRANSITION} onClick={() => switchTab("studio")} className="brutal-fab brutal-fab-dock absolute right-5 z-40 flex h-12 w-12 items-center justify-center pointer-events-auto" aria-label="Lancer un dossier">
+            <Plus className="h-6 w-6" />
+          </motion.button>
+        )}
 
-      <nav aria-label="Navigation principale" className="bottom-tabloid px-2 pt-1.5 pointer-events-auto">
-        <div className="mx-auto grid w-full max-w-[30rem] grid-cols-5 gap-1">
-          {TAB_ITEMS.map((item) => {
-            const Icon = item.icon;
-            const active = tab === item.id;
-            const badge = item.id === "vote" ? pendingForMe.length : 0;
+        <nav aria-label="Navigation principale" className="bottom-tabloid px-2 pt-1.5 pointer-events-auto">
+          <div className="mx-auto grid w-full max-w-[30rem] grid-cols-5 gap-1">
+            {TAB_ITEMS.map((item) => {
+              const Icon = item.icon;
+              const active = tab === item.id;
+              const badge = item.id === "vote" ? pendingForMe.length : 0;
 
-            return (
-              <motion.button key={item.id} type="button" whileTap={TAP_REBOUND} transition={TAP_TRANSITION} onClick={() => switchTab(item.id)} aria-current={active ? "page" : undefined} className={`relative flex flex-col items-center justify-center gap-0.5 rounded-[10px] border px-1 py-1.5 transition ${active ? "border-[#d4af37]/70 bg-[#d4af37]/18 text-[#f0d889]" : "border-white/10 bg-white/[0.045] text-zinc-400"}`}>
-                <Icon className="relative z-10 h-4 w-4" strokeWidth={1.5} />
-                <span className="relative z-10 text-[7.5px] font-black uppercase tracking-tighter">{item.label}</span>
-                {badge > 0 && (
-                  <span className="absolute right-0 top-0 z-20 inline-flex h-4 min-w-[16px] items-center justify-center rounded-full border border-[#d4af37]/80 bg-[#d4af37] px-1 text-[8px] font-black text-black">
-                    {badge > 9 ? "9+" : badge}
-                  </span>
-                )}
-              </motion.button>
-            );
-          })}
-        </div>
-      </nav>
-    </motion.div>
+              return (
+                <motion.button key={item.id} type="button" whileTap={TAP_REBOUND} transition={TAP_TRANSITION} onClick={() => switchTab(item.id)} aria-current={active ? "page" : undefined} className={`relative flex flex-col items-center justify-center gap-0.5 rounded-[10px] border px-1 py-1.5 transition ${active ? "border-[#d4af37]/70 bg-[#d4af37]/18 text-[#f0d889]" : "border-white/10 bg-white/[0.045] text-zinc-400"}`}>
+                  <Icon className="relative z-10 h-4 w-4" strokeWidth={1.5} />
+                  <span className="relative z-10 text-[7.5px] font-black uppercase tracking-tighter">{item.label}</span>
+                  {badge > 0 && (
+                    <span className="absolute right-0 top-0 z-20 inline-flex h-4 min-w-[16px] items-center justify-center rounded-full border border-[#d4af37]/80 bg-[#d4af37] px-1 text-[8px] font-black text-black">
+                      {badge > 9 ? "9+" : badge}
+                    </span>
+                  )}
+                </motion.button>
+              );
+            })}
+          </div>
+        </nav>
+      </motion.div>
+    </div>
   );
 }
