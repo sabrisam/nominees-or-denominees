@@ -9,7 +9,9 @@ import {
   STORAGE_UNAVAILABLE_NOTICE,
   compressImageToWebp,
   extractVideoThumbnail,
+  isImageMedia,
   isStorageUnavailableMessage,
+  isVideoMedia,
   uploadMediaFile
 } from "@/lib/storage";
 import { Ticker } from "@/components/ui/Ticker";
@@ -1216,7 +1218,6 @@ export default function Home() {
   const [previewUrl, setPreviewUrlState] = useState<string | null>(null);
   const [thumbnailPreviewUrl, setThumbnailPreviewUrlState] = useState<string | null>(null);
   const [mediaProgress, setMediaProgress] = useState(0);
-  const [studioNotice, setStudioNotice] = useState<string | null>(null);
   const [isPreparingMedia, setIsPreparingMedia] = useState(false);
   const [tiktokerName, setTiktokerName] = useState("");
   const [catId, setCatId] = useState(CATEGORIES[0].id);
@@ -1321,7 +1322,6 @@ export default function Home() {
     setThumbnailFile(null);
     setMediaKind(null);
     setMediaProgress(0);
-    setStudioNotice(null);
     setUrl(setPreviewUrlState, previewUrl, null);
     setUrl(setThumbnailPreviewUrlState, thumbnailPreviewUrl, null);
     if (fileInputRef.current) fileInputRef.current.value = "";
@@ -1659,7 +1659,7 @@ export default function Home() {
       setComment(nomination.comment);
       setSelectedCategoryIds(nomination.category_ids);
       setCatId(primaryCategoryId(nomination.category_ids));
-      setStudioNotice("MODE MODIF : auteur seulement.");
+      showToast("info", "Mode modif : auteur seulement.");
       switchTab("studio");
     },
     [clearPreparedMedia, ownsNomination, showToast, switchTab]
@@ -1668,7 +1668,6 @@ export default function Home() {
   const cancelEditNomination = useCallback(() => {
     haptic(HAPTICS.tap);
     setEditingNominationId(null);
-    setStudioNotice(null);
     resetStudioDraft();
   }, [resetStudioDraft]);
 
