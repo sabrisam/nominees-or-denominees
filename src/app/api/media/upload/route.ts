@@ -67,15 +67,24 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ ok: false, error: "Non autorisé" }, { status: 401 });
     }
 
-    const configuredBucket = process.env.DO_SPACES_BUCKET;
-    const configuredEndpoint = process.env.DO_SPACES_ENDPOINT;
-    const configuredRegion = process.env.DO_SPACES_REGION;
+    const configuredBucket = process.env.DO_SPACES_BUCKET || process.env.SPACES_BUCKET;
+    const configuredEndpoint = process.env.DO_SPACES_ENDPOINT || process.env.NEXT_PUBLIC_SPACES_ENDPOINT;
+    const configuredRegion = process.env.DO_SPACES_REGION || process.env.SPACES_REGION;
     
     const fallbackRegion = configuredRegion && !isPlaceholder(configuredRegion) ? configuredRegion : DEFAULT_REGION;
     const bucket = configuredBucket && !isPlaceholder(configuredBucket) ? configuredBucket : DEFAULT_BUCKET;
     const endpoint = configuredEndpoint && !isPlaceholder(configuredEndpoint) ? configuredEndpoint : `https://${fallbackRegion}.digitaloceanspaces.com`;
-    const accessKeyId = getRequiredEnv("DO_SPACES_KEY");
-    const secretAccessKey = getRequiredEnv("DO_SPACES_SECRET");
+    
+    const accessKeyId = process.env.DO_SPACES_KEY || process.env.SPACES_KEY || "";
+    if (!accessKeyId || isPlaceholder(accessKeyId)) {
+      throw new Error("Variable manquante: DO_SPACES_KEY ou SPACES_KEY");
+    }
+    
+    const secretAccessKey = process.env.DO_SPACES_SECRET || process.env.SPACES_SECRET || "";
+    if (!secretAccessKey || isPlaceholder(secretAccessKey)) {
+      throw new Error("Variable manquante: DO_SPACES_SECRET ou SPACES_SECRET");
+    }
+    
     const region = getRegion(endpoint, bucket);
     
     const key = `${folder}/${new Date().getUTCFullYear()}-${String(new Date().getUTCMonth() + 1).padStart(2, "0")}/${crypto.randomUUID()}-${fileName.replace(/[^a-zA-Z0-9.-]/g, "_")}`;
