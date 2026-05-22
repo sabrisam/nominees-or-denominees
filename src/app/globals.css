@@ -23,15 +23,20 @@
 }
 
 html {
+  height: 100vh;
   height: 100dvh;
+  min-height: -webkit-fill-available;
   background: var(--midnight);
   -webkit-tap-highlight-color: transparent;
   overscroll-behavior: none;
   overflow: hidden;
+  position: relative;
 }
 
 body {
+  height: 100vh;
   height: 100dvh;
+  min-height: -webkit-fill-available;
   margin: 0;
   background: var(--midnight);
   color: var(--cream);
@@ -41,6 +46,7 @@ body {
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
   overflow: hidden;
+  position: relative;
 }
 
 button,
@@ -82,7 +88,9 @@ video {
 @layer components {
   .tabloid-app {
     position: relative;
+    height: 100vh;
     height: 100dvh;
+    min-height: -webkit-fill-available;
     overflow: hidden;
     background:
       radial-gradient(circle at 50% -10%, rgba(212, 175, 55, 0.22), transparent 30rem),
