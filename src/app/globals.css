@@ -26,11 +26,10 @@ html,
 body,
 body > div,
 .tabloid-app {
-  height: 100% !important;
   height: 100vh !important;
   height: 100dvh !important;
-  min-height: -webkit-fill-available !important;
-  width: 100% !important;
+  min-height: 100dvh !important;
+  width: 100vw !important;
   margin: 0 !important;
   padding: 0 !important;
   overflow: hidden !important;
@@ -38,7 +37,7 @@ body > div,
   top: 0;
   left: 0;
   right: 0;
-  bottom: 0;
+  bottom: 0 !important;
   background: #050505;
 }
 
@@ -53,18 +52,50 @@ body {
   overscroll-behavior: none;
 }
 
-.tabloid-app {
+body > div {
   display: flex !important;
   flex-direction: column !important;
 }
 
+.tabloid-app {
+  display: flex !important;
+  flex-direction: column !important;
+  flex: 1 1 auto !important;
+  min-height: 0 !important;
+  width: 100% !important;
+  height: 100% !important;
+}
+
+.tabloid-stage {
+  display: flex;
+  flex: 1 1 auto;
+  flex-direction: column;
+  min-height: 0;
+  width: 100%;
+  height: 100%;
+  overflow: hidden;
+  position: relative;
+}
+
+.tabloid-main {
+  display: flex;
+  flex: 1 1 auto;
+  flex-direction: column;
+  min-height: 0;
+  width: 100%;
+  overflow: hidden;
+  position: relative;
+  z-index: 10;
+}
+
 .tabloid-scroll {
   position: relative;
-  flex: 1;
+  flex: 1 1 auto;
+  min-height: 0;
   overflow-y: auto !important;
   -webkit-overflow-scrolling: touch;
   padding-top: env(safe-area-inset-top) !important;
-  padding-bottom: calc(env(safe-area-inset-bottom) + 84px) !important;
+  padding-bottom: 72px !important;
 }
 
 .bottom-tabloid {
@@ -73,10 +104,10 @@ body {
   left: 0 !important;
   right: 0 !important;
   z-index: 50;
-  background: rgba(18, 18, 18, 0.86) !important;
+  padding-bottom: calc(env(safe-area-inset-bottom) + 4px) !important;
+  background: rgba(18, 18, 18, 0.9) !important;
   backdrop-filter: blur(20px) !important;
   -webkit-backdrop-filter: blur(20px) !important;
-  padding-bottom: env(safe-area-inset-bottom) !important;
 }
 
 .toast-stack {
@@ -91,7 +122,7 @@ body {
 }
 
 .brutal-fab-dock {
-  bottom: calc(env(safe-area-inset-bottom) + 84px);
+  bottom: calc(env(safe-area-inset-bottom) + 72px);
 }
 
 button,

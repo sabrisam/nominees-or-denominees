@@ -39,7 +39,7 @@ export default function RootLayout({
   return (
     <html lang="fr">
       <body>
-        <div>{children}</div>
+        <div className="nod-viewport-host">{children}</div>
       </body>
     </html>
   );
