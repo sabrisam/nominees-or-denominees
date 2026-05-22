@@ -4,13 +4,13 @@
 
 import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import confetti from "canvas-confetti";
-import { getSupabaseBrowserClient, ensureAnonymousSession, exportAccountRecoveryCode } from "@/lib/supabase";
+import { getSupabaseBrowserClient, ensureAnonymousSession } from "@/lib/supabase";
 import {
   STORAGE_UNAVAILABLE_NOTICE,
   compressImageToWebp,
   extractVideoThumbnail,
   isStorageUnavailableMessage,
-  uploadFileOrFallback
+  uploadMediaFile
 } from "@/lib/storage";
 import { Ticker } from "@/components/ui/Ticker";
 import { AnimatePresence, motion, type PanInfo, useReducedMotion } from "framer-motion";
@@ -33,9 +33,7 @@ import {
   Sparkles,
   Trophy,
   UploadCloud,
-  Zap,
-  Key,
-  VolumeX
+  Zap
 } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
 import type { RealtimeChannel, SupabaseClient } from "@supabase/supabase-js";
