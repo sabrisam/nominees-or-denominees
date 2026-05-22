@@ -1826,10 +1826,10 @@ export default function Home() {
       const activeRoomId = roomId ?? (await ensureRoom());
       if (!activeRoomId) throw new Error("Salon introuvable.");
 
-      const thumbnailUpload = await uploadFileOrFallback(supabase, thumbnailFile, "miniatures");
+      const thumbnailUpload = await uploadMediaFile(supabase, thumbnailFile, "miniatures");
       setMediaProgress(mediaKind === "video" ? 0.45 : 0.82);
 
-      const mediaUpload = mediaKind === "video" ? await uploadFileOrFallback(supabase, preparedFile, "videos") : thumbnailUpload;
+      const mediaUpload = mediaKind === "video" ? await uploadMediaFile(supabase, preparedFile, "videos") : thumbnailUpload;
       setMediaProgress(0.82);
 
       const nominationInsert = {
