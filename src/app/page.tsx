@@ -1673,18 +1673,17 @@ export default function Home() {
 
   const prepareMedia = async (nextFile: File | null) => {
     if (!nextFile) return;
-    if (!nextFile.type.startsWith("video/") && !nextFile.type.startsWith("image/")) {
+    if (!isImageMedia(nextFile) && !isVideoMedia(nextFile)) {
       showToast("error", "Choisis une vidéo, une photo ou une capture.");
       return;
     }
 
     setIsPreparingMedia(true);
     setMediaProgress(0);
-    setStudioNotice(null);
     clearPreparedMedia();
 
     try {
-      if (nextFile.type.startsWith("image/")) {
+      if (isImageMedia(nextFile)) {
         const compressed = await compressImageToWebp(nextFile);
         setPreparedFile(compressed);
         setThumbnailFile(compressed);
@@ -1708,12 +1707,10 @@ export default function Home() {
       showToast("success", "Rec prêt.");
     } catch (err) {
       clearPreparedMedia();
-      setStudioNotice(null);
       const message = err instanceof Error ? err.message : "Média impossible à préparer.";
       showToast("error", message);
     } finally {
       setIsPreparingMedia(false);
-      setStudioNotice(null);
     }
   };
 
