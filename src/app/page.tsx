@@ -1461,6 +1461,10 @@ export default function Home() {
   const [shakeId, setShakeId] = useState<string | null>(null);
   const [globalShake, setGlobalShake] = useState<number>(0);
 
+  const [showAccount, setShowAccount] = useState(false);
+  const [recoveryCode, setRecoveryCode] = useState("");
+  const [inputRecovery, setInputRecovery] = useState("");
+
   useEffect(() => {
     const onHaptic = () => setGlobalShake(Date.now());
     window.addEventListener("nod-haptic", onHaptic as any);
@@ -1505,9 +1509,17 @@ export default function Home() {
           if (storedPseudo !== nextPseudo) localStorage.setItem(PSEUDO_KEY, nextPseudo);
 
           setParticipant({ id: user.id, pseudo: nextPseudo });
+          exportAccountRecoveryCode(client).then(code => {
+            if (code) setRecoveryCode(code);
+          });
         } else {
           const { error } = await client.auth.signInAnonymously();
-          setBootError(error?.message || "Échec authentification anonyme. Activez-le sur Supabase.");
+          if (error) {
+            setBootError(error.message || "Échec authentification anonyme.");
+          } else {
+            // Wait for next effect run or reload
+            window.location.reload();
+          }
         }
       } catch (err) {
         console.error(err);
@@ -1518,6 +1530,20 @@ export default function Home() {
     };
     initParticipant();
   }, []);
+
+  const applyRecoveryToken = async () => {
+    if (!inputRecovery.trim() || !supabase) return;
+    setUploadLoading(true);
+    try {
+      const { error } = await supabase.auth.setSession({ refresh_token: inputRecovery.trim(), access_token: "" });
+      if (error) throw error;
+      window.location.reload();
+    } catch (err: any) {
+      showToast("error", err.message || "Code invalide.");
+    } finally {
+      setUploadLoading(false);
+    }
+  };
 
   useEffect(() => {
     const timer = window.setInterval(() => {
@@ -2236,7 +2262,19 @@ export default function Home() {
       </AnimatePresence>
 
       <main className="relative z-10 mx-auto min-h-0 w-full max-w-[30rem] flex-1 overflow-y-auto overscroll-contain px-2" style={{ paddingTop: "calc(env(safe-area-inset-top) + 5px)", paddingBottom: "calc(env(safe-area-inset-bottom) + 84px)" }}>
-        <header className="sticky top-0 z-30 mb-2 grid grid-cols-[1fr_auto] gap-1.5 bg-[#050505]/85 py-1.5 backdrop-blur-xl">
+        <header className="sticky top-0 z-30 mb-2 grid grid-cols-[auto_1fr_auto] gap-1.5 bg-[#050505]/85 py-1.5 backdrop-blur-xl">
+          <motion.button
+            whileTap={TAP_REBOUND}
+            transition={TAP_TRANSITION}
+            onClick={() => {
+              haptic(HAPTICS.tap);
+              setShowAccount(true);
+            }}
+            className="brutal-icon-button"
+            aria-label="Mon compte"
+          >
+            <Key className="h-4 w-4" />
+          </motion.button>
           <Ticker>
             CÉRÉMONIE LE 1ER DU MOIS / DANS {ceremonyCountdown.days}J {ceremonyCountdown.hours}H {ceremonyCountdown.mins}M / TOURNOI DU MOIS / {monthlyNominations.length} DOSSIERS EN JEU / 
           </Ticker>
@@ -2521,6 +2559,33 @@ export default function Home() {
 
               <CategoryRaceBoard races={categoryRaces} />
             </motion.section>
+          )}
+
+          {showAccount && (
+            <motion.div initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }} exit={{ opacity: 0, scale: 0.95 }} className="fixed inset-0 z-[100] flex flex-col justify-end bg-black/80 px-2 pb-5 pt-20 backdrop-blur-md sm:items-center sm:justify-center">
+              <BrutalCard className="w-full max-w-sm space-y-4 p-4">
+                <div className="flex items-center justify-between">
+                  <h3 className="tabloid-headline text-2xl text-white">Sécurité du Compte</h3>
+                  <motion.button whileTap={TAP_REBOUND} onClick={() => setShowAccount(false)} className="brutal-icon-button">
+                    <VolumeX className="h-4 w-4" />
+                  </motion.button>
+                </div>
+                
+                <div className="space-y-1.5 rounded-[10px] border border-[#d4af37]/30 bg-[#d4af37]/10 p-3">
+                  <p className="text-[10px] font-black uppercase text-[#d4af37]">Ton Code de Récupération</p>
+                  <p className="text-xs text-zinc-300">Si tu effaces l'application, utilise ce code pour restaurer tes scores :</p>
+                  <textarea readOnly value={recoveryCode} rows={3} className="brutal-input mt-1 w-full p-2 text-[10px] font-mono text-white opacity-80" onClick={(e) => { (e.target as HTMLTextAreaElement).select(); navigator.clipboard.writeText(recoveryCode); showToast("success", "Copié"); }} />
+                </div>
+
+                <div className="space-y-1.5 border-t border-white/10 pt-4">
+                  <p className="text-[10px] font-black uppercase text-white">Restaurer un compte</p>
+                  <input type="text" placeholder="Coller le code ici..." value={inputRecovery} onChange={(e) => setInputRecovery(e.target.value)} className="brutal-input w-full p-2 text-xs" />
+                  <motion.button whileTap={TAP_REBOUND} disabled={!inputRecovery.trim() || uploadLoading} onClick={applyRecoveryToken} className="brutal-action mt-2 w-full bg-white text-black disabled:opacity-50">
+                    Restaurer les données
+                  </motion.button>
+                </div>
+              </BrutalCard>
+            </motion.div>
           )}
         </AnimatePresence>
       </main>
