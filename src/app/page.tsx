@@ -2020,44 +2020,12 @@ export default function Home() {
         )}
       </AnimatePresence>
 
-      <main className="relative z-10 mx-auto w-full max-w-[30rem] shrink-0 overflow-hidden px-2">
-        <div
-          className="tabloid-scroll"
-          style={{
-            height: "calc(100dvh - env(safe-area-inset-top) - env(safe-area-inset-bottom) - 84px)",
-            overflowY: "auto",
-            WebkitOverflowScrolling: "touch"
-          }}
-        >
-        <header className="sticky top-0 z-30 mb-2 grid grid-cols-[auto_1fr_auto] gap-1.5 bg-[#050505]/85 py-1.5 backdrop-blur-xl">
-          <motion.button
-            whileTap={TAP_REBOUND}
-            transition={TAP_TRANSITION}
-            onClick={() => {
-              haptic(HAPTICS.tap);
-              setShowAccount(true);
-            }}
-            className="brutal-icon-button"
-            aria-label="Mon compte"
-          >
-            <Key className="h-4 w-4" />
-          </motion.button>
+      <main className="relative z-10 mx-auto flex min-h-0 w-full max-w-[30rem] flex-1 flex-col px-2">
+        <div className="tabloid-scroll">
+        <header className="sticky top-0 z-30 mb-2 overflow-hidden bg-[#050505]/85 py-1.5 backdrop-blur-xl">
           <Ticker>
             CÉRÉMONIE LE 1ER DU MOIS / DANS {ceremonyCountdown.days}J {ceremonyCountdown.hours}H {ceremonyCountdown.mins}M / TOURNOI DU MOIS / {monthlyNominations.length} DOSSIERS EN JEU / 
           </Ticker>
-          <motion.button
-            whileTap={TAP_REBOUND}
-            transition={TAP_TRANSITION}
-            onClick={() => {
-              haptic(HAPTICS.tap);
-              void fetchNominations();
-            }}
-            disabled={syncing || !supabase}
-            className="brutal-icon-button disabled:opacity-50"
-            aria-label="Rafraîchir le direct"
-          >
-            <RefreshCw className={`h-4 w-4 ${syncing ? "animate-spin" : ""}`} />
-          </motion.button>
         </header>
           <CeremonyBulletin
             pendingCount={pendingForMe.length}
