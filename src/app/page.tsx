@@ -4,7 +4,7 @@
 
 import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import confetti from "canvas-confetti";
-import { getSupabaseBrowserClient, ensureAnonymousSession } from "@/lib/supabase";
+import { getSupabaseBrowserClient, ensureAnonymousSession, exportAccountRecoveryCode } from "@/lib/supabase";
 import { Ticker } from "@/components/ui/Ticker";
 import { AnimatePresence, motion, type PanInfo, useReducedMotion } from "framer-motion";
 import { usePalmares } from "@/hooks/usePalmares";
@@ -26,7 +26,9 @@ import {
   Sparkles,
   Trophy,
   UploadCloud,
-  Zap
+  Zap,
+  Key,
+  VolumeX
 } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
 import type { RealtimeChannel, SupabaseClient } from "@supabase/supabase-js";
@@ -1509,7 +1511,7 @@ export default function Home() {
           if (storedPseudo !== nextPseudo) localStorage.setItem(PSEUDO_KEY, nextPseudo);
 
           setParticipant({ id: user.id, pseudo: nextPseudo });
-          exportAccountRecoveryCode(client).then(code => {
+          exportAccountRecoveryCode(client).then((code: string | null) => {
             if (code) setRecoveryCode(code);
           });
         } else {
