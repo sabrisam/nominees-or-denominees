@@ -3,7 +3,6 @@ import type { UploadReference } from "@/types";
 
 export const STORAGE_UNAVAILABLE_NOTICE = "Stockage indisponible : échec du transfert serveur.";
 
-/** Client-only bucket — no /api/media/upload or Spaces presign. */
 const SUPABASE_STORAGE_BUCKET = "nod-media";
 
 function sanitizeStorageFileName(value: string) {
@@ -26,6 +25,34 @@ function mediaMonthKey(date = new Date()) {
 
 function storageKey(file: File, folder: "videos" | "miniatures") {
   return `${folder}/${mediaMonthKey()}/${crypto.randomUUID()}-${sanitizeStorageFileName(file.name)}`;
+}
+
+/** iOS Photo Library often yields empty MIME — normalize before upload/decode. */
+export function resolveIosMediaType(file: File): string {
+  const declared = file.type.trim().toLowerCase();
+  if (declared) return declared;
+
+  const ext = file.name.split(".").pop()?.toLowerCase() ?? "";
+  const byExt: Record<string, string> = {
+    heic: "image/heic",
+    heif: "image/heif",
+    jpg: "image/jpeg",
+    jpeg: "image/jpeg",
+    png: "image/png",
+    webp: "image/webp",
+    gif: "image/gif",
+    mp4: "video/mp4",
+    mov: "video/quicktime",
+    m4v: "video/mp4"
+  };
+
+  return byExt[ext] ?? "application/octet-stream";
+}
+
+export function asTypedFile(file: File): File {
+  const type = resolveIosMediaType(file);
+  if (file.type === type) return file;
+  return new File([file], file.name, { type, lastModified: file.lastModified });
 }
 
 export function waitForMediaEvent(target: HTMLMediaElement, eventName: string, timeoutMs = 15000) {
@@ -80,7 +107,8 @@ export function scaledSize(width: number, height: number, maxLongEdge: number, m
 }
 
 export async function compressImageToWebp(file: File) {
-  const bitmap = await createImageBitmap(file);
+  const typed = asTypedFile(file);
+  const bitmap = await createImageBitmap(typed);
   try {
     const size = scaledSize(bitmap.width, bitmap.height, 1440, 1080);
     const canvas = document.createElement("canvas");
@@ -99,7 +127,8 @@ export async function compressImageToWebp(file: File) {
 }
 
 export async function extractVideoThumbnail(file: File) {
-  const objectUrl = URL.createObjectURL(file);
+  const typed = asTypedFile(file);
+  const objectUrl = URL.createObjectURL(typed);
   const video = document.createElement("video");
 
   try {
@@ -138,7 +167,7 @@ export async function extractVideoThumbnail(file: File) {
   }
 }
 
-/** Direct browser SDK upload — no server routes. */
+/** Direct browser SDK upload to nod-media — no server routes. */
 export async function uploadMediaFile(
   supabase: SupabaseClient,
   file: File,
@@ -147,12 +176,14 @@ export async function uploadMediaFile(
 ): Promise<UploadReference> {
   if (signal?.aborted) throw new DOMException("Upload annulé.", "AbortError");
 
-  const storagePath = storageKey(file, folder);
+  const typed = asTypedFile(file);
+  const storagePath = storageKey(typed, folder);
+  const contentType = typed.type || resolveIosMediaType(typed);
 
-  const { data, error } = await supabase.storage.from(SUPABASE_STORAGE_BUCKET).upload(storagePath, file, {
+  const { data, error } = await supabase.storage.from(SUPABASE_STORAGE_BUCKET).upload(storagePath, typed, {
     cacheControl: "3600",
     upsert: true,
-    contentType: file.type
+    contentType
   });
 
   if (signal?.aborted) throw new DOMException("Upload annulé.", "AbortError");
