@@ -1241,6 +1241,18 @@ export default function Home() {
     return () => window.removeEventListener("nod-haptic", onHaptic as any);
   }, []);
 
+  useEffect(() => {
+    const shell = shellRef.current;
+    if (!shell || !globalShake) return;
+
+    shell.classList.remove("tabloid-haptic-pulse");
+    void shell.offsetWidth;
+    shell.classList.add("tabloid-haptic-pulse");
+
+    const timer = window.setTimeout(() => shell.classList.remove("tabloid-haptic-pulse"), 160);
+    return () => window.clearTimeout(timer);
+  }, [globalShake]);
+
   const fileInputRef = useRef<HTMLInputElement | null>(null);
   const channelRef = useRef<RealtimeChannel | null>(null);
   const shellRef = useRef<HTMLDivElement | null>(null);
