@@ -2084,6 +2084,7 @@ export default function Home() {
             nextPending={nextPendingForMe}
             leader={ultimateWinner}
             bestDossier={paparazziOr}
+            currentUserId={liveUid || undefined}
             onOpenVote={() => switchTab("vote")}
             onOpenStudio={() => switchTab("studio")}
             onOpenPalmares={() => switchTab("palmares")}
