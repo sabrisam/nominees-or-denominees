@@ -94,6 +94,7 @@ export async function POST(request: NextRequest) {
       Bucket: bucket,
       Key: key,
       ContentType: fileType,
+      ACL: "public-read",
     });
 
     // L'URL signée est valide 10 minutes (600 secondes)
