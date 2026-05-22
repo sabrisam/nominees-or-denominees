@@ -1622,7 +1622,6 @@ export default function Home() {
   );
 
   const resetStudioDraft = useCallback(() => {
-    setStudioNotice(null);
     clearPreparedMedia();
     setTiktokerName("");
     setComment("");

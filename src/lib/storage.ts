@@ -55,6 +55,14 @@ export function asTypedFile(file: File): File {
   return new File([file], file.name, { type, lastModified: file.lastModified });
 }
 
+export function isImageMedia(file: File) {
+  return resolveIosMediaType(file).startsWith("image/");
+}
+
+export function isVideoMedia(file: File) {
+  return resolveIosMediaType(file).startsWith("video/");
+}
+
 export function waitForMediaEvent(target: HTMLMediaElement, eventName: string, timeoutMs = 15000) {
   return new Promise<void>((resolve, reject) => {
     const timer = window.setTimeout(() => {
