@@ -5,6 +5,9 @@
 :root {
   color-scheme: dark;
   background: #050505;
+  --app-height: 100dvh;
+  --app-width: 100%;
+  --tabloid-nav-offset: 3.75rem;
   --midnight: #050505;
   --panel: rgba(18, 18, 18, 0.86);
   --panel-strong: rgba(8, 8, 8, 0.96);
