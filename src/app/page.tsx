@@ -1939,8 +1939,8 @@ export default function Home() {
       switchTab("direct");
       await channelRef.current?.send({ type: "broadcast", event: "nomination", payload: { id: nominationId } });
       void fetchNominations(true, activeRoomId);
-    } catch (err) {
-      const message = err instanceof Error ? err.message : "Échec de l'envoi.";
+    } catch (err: any) {
+      const message = err?.message || (typeof err === 'string' ? err : "Échec de l'envoi.");
       showToast("error", isStorageUnavailableMessage(message) ? STORAGE_UNAVAILABLE_NOTICE : message);
     } finally {
       setUploadLoading(false);
