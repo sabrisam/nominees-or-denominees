@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { PutObjectCommand, S3Client } from "@aws-sdk/client-s3";
-import { createClient } from "@supabase/supabase-js";
+import { getSignedUrl } from "@aws-sdk/s3-request-presigner";
 
 export const dynamic = "force-dynamic";
 export const runtime = "nodejs";
@@ -22,7 +22,7 @@ function getRequiredEnv(name: string) {
 }
 
 function getRegion(endpoint: string, bucket: string) {
-  if (process.env.SPACES_REGION && !isPlaceholder(process.env.SPACES_REGION)) return process.env.SPACES_REGION;
+  if (process.env.DO_SPACES_REGION && !isPlaceholder(process.env.DO_SPACES_REGION)) return process.env.DO_SPACES_REGION;
 
   try {
     const host = new URL(endpoint).hostname;
@@ -54,38 +54,34 @@ function buildPublicUrl(endpoint: string, bucket: string, key: string) {
 
 export async function POST(request: NextRequest) {
   try {
-    const formData = await request.formData();
-    const file = formData.get("file") as File | null;
-    const folder = formData.get("folder") as string | null;
+    const { fileName, fileType, folder } = await request.json();
 
-    if (!file || !folder || !ALLOWED_FOLDERS.has(folder)) {
+    if (!fileName || !fileType || !folder || !ALLOWED_FOLDERS.has(folder)) {
       return NextResponse.json({ ok: false, error: "Requête invalide" }, { status: 400 });
     }
 
     const providerConfig = process.env.NEXT_PUBLIC_STORAGE_PROVIDER || "supabase";
     
-    // We'll trust the auth check via middleware or we can verify the session here.
-    // For maximum security in Next.js Serverless Route:
+    // Pour une sécurité maximale, vérifier l'authentification Supabase.
+    // L'agent iOS passera le token dans le header Authorization.
     const authHeader = request.headers.get("Authorization");
     if (!authHeader) {
       return NextResponse.json({ ok: false, error: "Non autorisé" }, { status: 401 });
     }
 
-    const buffer = Buffer.from(await file.arrayBuffer());
-
     if (providerConfig === "spaces") {
-      const configuredBucket = process.env.SPACES_BUCKET;
-      const configuredEndpoint = process.env.NEXT_PUBLIC_SPACES_ENDPOINT;
-      const configuredRegion = process.env.SPACES_REGION;
+      const configuredBucket = process.env.DO_SPACES_BUCKET;
+      const configuredEndpoint = process.env.DO_SPACES_ENDPOINT;
+      const configuredRegion = process.env.DO_SPACES_REGION;
       
       const fallbackRegion = configuredRegion && !isPlaceholder(configuredRegion) ? configuredRegion : DEFAULT_REGION;
       const bucket = configuredBucket && !isPlaceholder(configuredBucket) ? configuredBucket : DEFAULT_BUCKET;
       const endpoint = configuredEndpoint && !isPlaceholder(configuredEndpoint) ? configuredEndpoint : `https://${fallbackRegion}.digitaloceanspaces.com`;
-      const accessKeyId = getRequiredEnv("SPACES_KEY");
-      const secretAccessKey = getRequiredEnv("SPACES_SECRET");
+      const accessKeyId = getRequiredEnv("DO_SPACES_KEY");
+      const secretAccessKey = getRequiredEnv("DO_SPACES_SECRET");
       const region = getRegion(endpoint, bucket);
       
-      const key = `${folder}/${new Date().getUTCFullYear()}-${String(new Date().getUTCMonth() + 1).padStart(2, "0")}/${crypto.randomUUID()}-${file.name.replace(/[^a-zA-Z0-9.-]/g, "_")}`;
+      const key = `${folder}/${new Date().getUTCFullYear()}-${String(new Date().getUTCMonth() + 1).padStart(2, "0")}/${crypto.randomUUID()}-${fileName.replace(/[^a-zA-Z0-9.-]/g, "_")}`;
 
       const client = new S3Client({
         region,
@@ -100,43 +96,26 @@ export async function POST(request: NextRequest) {
       const command = new PutObjectCommand({
         Bucket: bucket,
         Key: key,
-        ContentType: file.type,
-        Body: buffer
+        ContentType: fileType,
+        ACL: "public-read", // Facultatif, mais assure que l'objet soit lisible sans cache
       });
 
-      await client.send(command);
+      // L'URL signée est valide 10 minutes (600 secondes)
+      const presignedUrl = await getSignedUrl(client, command, { expiresIn: 600 });
 
       const publicUrl = process.env.NEXT_PUBLIC_SPACES_PUBLIC_URL
         ? `${process.env.NEXT_PUBLIC_SPACES_PUBLIC_URL.replace(/\/+$/, "")}/${key}`
         : buildPublicUrl(endpoint, bucket, key);
 
-      return NextResponse.json({ ok: true, key, publicUrl, provider: "spaces" });
+      return NextResponse.json({ ok: true, key, publicUrl, presignedUrl, provider: "spaces" });
       
     } else {
-      // Supabase path
-      const supabaseUrl = getRequiredEnv("NEXT_PUBLIC_SUPABASE_URL");
-      const serviceRoleKey = getRequiredEnv("SUPABASE_SERVICE_ROLE_KEY");
-      const supabaseStorageBucket = process.env.NEXT_PUBLIC_SUPABASE_STORAGE_BUCKET || "nod-media";
-
-      const supabase = createClient(supabaseUrl, serviceRoleKey);
-      
-      const key = `${folder}/${new Date().getUTCFullYear()}-${String(new Date().getUTCMonth() + 1).padStart(2, "0")}/${crypto.randomUUID()}-${file.name.replace(/[^a-zA-Z0-9.-]/g, "_")}`;
-
-      const { error } = await supabase.storage.from(supabaseStorageBucket).upload(key, buffer, {
-        contentType: file.type,
-        upsert: false
-      });
-
-      if (error) {
-        throw new Error(error.message);
-      }
-
-      const { data: { publicUrl } } = supabase.storage.from(supabaseStorageBucket).getPublicUrl(key);
-
-      return NextResponse.json({ ok: true, key, publicUrl, provider: "supabase" });
+      // Le client est censé utiliser supabase.storage...upload() directement
+      // Cette route ne doit être appelée que pour générer des presigned URLs Spaces.
+      return NextResponse.json({ ok: false, error: "Utilisez le client Supabase pour l'upload direct." }, { status: 400 });
     }
   } catch (error) {
-    console.error("[UPLOAD_ERROR]", error);
-    return NextResponse.json({ ok: false, error: "Erreur lors du dépôt média." }, { status: 500 });
+    console.error("[PRESIGN_ERROR]", error);
+    return NextResponse.json({ ok: false, error: "Erreur lors de la génération de l'URL de dépôt." }, { status: 500 });
   }
 }
