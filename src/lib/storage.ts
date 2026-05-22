@@ -138,14 +138,24 @@ export async function extractVideoThumbnail(file: File) {
   }
 }
 
-async function uploadFileToSupabaseStorage(supabase: SupabaseClient, file: File, folder: "videos" | "miniatures") {
-  const key = storageKey(file, folder);
+/** Direct browser SDK upload — no server routes. */
+export async function uploadMediaFile(
+  supabase: SupabaseClient,
+  file: File,
+  folder: "videos" | "miniatures",
+  signal?: AbortSignal
+): Promise<UploadReference> {
+  if (signal?.aborted) throw new DOMException("Upload annulé.", "AbortError");
 
-  const { error, data } = await supabase.storage.from(SUPABASE_STORAGE_BUCKET).upload(key, file, {
+  const storagePath = storageKey(file, folder);
+
+  const { data, error } = await supabase.storage.from(SUPABASE_STORAGE_BUCKET).upload(storagePath, file, {
     cacheControl: "3600",
     upsert: true,
     contentType: file.type
   });
+
+  if (signal?.aborted) throw new DOMException("Upload annulé.", "AbortError");
 
   if (error || !data?.path) {
     console.error("[Supabase Storage Error]:", error);
@@ -160,28 +170,13 @@ async function uploadFileToSupabaseStorage(supabase: SupabaseClient, file: File,
 
   return {
     key: data.path,
-    publicUrl
+    publicUrl,
+    provider: "supabase"
   };
 }
 
-export async function uploadFileOrFallback(
-  supabase: SupabaseClient,
-  file: File,
-  folder: "videos" | "miniatures",
-  signal?: AbortSignal
-): Promise<UploadReference> {
-  if (signal?.aborted) throw new DOMException("Upload annulé.", "AbortError");
-
-  try {
-    const uploaded = await uploadFileToSupabaseStorage(supabase, file, folder);
-    if (signal?.aborted) throw new DOMException("Upload annulé.", "AbortError");
-    return { ...uploaded, provider: "supabase" };
-  } catch (err) {
-    if (signal?.aborted) throw err;
-    console.error("[Upload Exception]:", err);
-    throw new Error(STORAGE_UNAVAILABLE_NOTICE);
-  }
-}
+/** @deprecated Use uploadMediaFile — kept for any stale imports. */
+export const uploadFileOrFallback = uploadMediaFile;
 
 export function isStorageUnavailableMessage(message: string) {
   return message.toLowerCase().includes("stockage indisponible");
