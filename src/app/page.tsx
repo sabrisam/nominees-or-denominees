@@ -7,6 +7,7 @@ import confetti from "canvas-confetti";
 import { getSupabaseBrowserClient } from "@/lib/supabase";
 import { Ticker } from "@/components/ui/Ticker";
 import { AnimatePresence, motion, type PanInfo, useReducedMotion } from "framer-motion";
+import { usePalmares } from "@/hooks/usePalmares";
 import {
   BadgeCheck,
   Brain,
@@ -1668,7 +1669,7 @@ export default function Home() {
   const ultimateWinner = useMemo(() => buildScoreBoard(nominations)[0] ?? null, [nominations]);
   const paparazziOr = useMemo(() => bestSubmission(nominations), [nominations]);
   const nextPendingForMe = pendingForMe[0];
-  const palmaresRows = useMemo(() => buildPalmaresRows(nominations), [nominations]);
+  const { palmaresRows, isLoading: isLoadingPalmares } = usePalmares(supabase, roomCode);
   const categoryRaces = useMemo(() => buildCategoryRaces(nominations), [nominations]);
 
   const editingNomination = useMemo(() => nominations.find((nomination) => nomination.id === editingNominationId) ?? null, [nominations, editingNominationId]);
