@@ -40,15 +40,3 @@ export async function ensureAnonymousSession(client: SupabaseClient) {
   
   return user;
 }
-
-export function exportAccountRecoveryCode(client: SupabaseClient): Promise<string | null> {
-  return new Promise(async (resolve) => {
-    const { data: { session } } = await client.auth.getSession();
-    if (session?.refresh_token) {
-      // Return the refresh_token as a string for recovery.
-      resolve(session.refresh_token);
-    } else {
-      resolve(null);
-    }
-  });
-}
