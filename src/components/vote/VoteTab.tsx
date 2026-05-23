@@ -137,8 +137,8 @@ export function VoteTab({
                 category.mood === "positive"
                   ? "EL FAKHR"
                   : category.mood === "critical"
-                  ? "EL HECHMA"
-                  : category.label;
+                    ? "EL HECHMA"
+                    : category.label;
               const Icon = category.icon;
               const draftScores = cloneScores(
                 scoreDraftById[nomination.id] ?? DEFAULT_DIMENSION_SCORES,
