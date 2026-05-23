@@ -11,6 +11,7 @@ import {
   type ReactNode,
 } from "react";
 import confetti from "canvas-confetti";
+import { theme } from "@/lib/tokens";
 import {
   getSupabaseBrowserClient,
   ensureAnonymousSession,
@@ -287,35 +288,35 @@ const RATING_DIMENSIONS: Array<{
     label: "Rire",
     shortLabel: "RIR",
     emoji: "😂",
-    color: "#facc15",
+    color: theme.colors.yellow,
   },
   {
     key: "surprise",
     label: "Surprise",
     shortLabel: "SUR",
     emoji: "🤯",
-    color: "#38bdf8",
+    color: theme.colors.sky,
   },
   {
     key: "gene",
     label: "Gêne",
     shortLabel: "GÊN",
     emoji: "🤦",
-    color: "#f43f5e",
+    color: theme.colors.rose,
   },
   {
     key: "fierte",
     label: "Fierté",
     shortLabel: "FIE",
     emoji: "✊",
-    color: "#d4af37",
+    color: theme.colors.champagne,
   },
   {
     key: "interet",
     label: "Intérêt",
     shortLabel: "INT",
     emoji: "🤔",
-    color: "#a78bfa",
+    color: theme.colors.violet,
   },
 ];
 const DEFAULT_DIMENSION_SCORES: DimensionScores = {
@@ -874,7 +875,11 @@ function isLegacyDemoMedia(url: string) {
 }
 
 function studioBurst() {
-  const colors = ["#d4af37", "#c0c0c0", "#39FF14"];
+  const colors = [
+    theme.colors.champagne,
+    theme.colors.silver,
+    theme.colors.electricGreen,
+  ];
   void confetti({
     particleCount: 140,
     spread: 100,
@@ -890,8 +895,13 @@ function studioBurst() {
 function voteBurst(points: number) {
   const elite = points >= 80;
   const colors = elite
-    ? ["#d4af37", "#f0d889", "#ffffff", "#050505"]
-    : ["#d4af37", "#8a6f24", "#f5f1e8"];
+    ? [
+        theme.colors.champagne,
+        theme.colors.champagneSoft,
+        theme.colors.white,
+        theme.colors.void,
+      ]
+    : [theme.colors.champagne, theme.colors.bronze, theme.colors.cream];
 
   void confetti({
     particleCount: elite ? 118 : 72,
@@ -2169,7 +2179,7 @@ export default function Home() {
               exit={{ scale: 0.9, y: -20 }}
               className="max-w-md space-y-4"
             >
-              <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-full border-4 border-[#39FF14] bg-[#39FF14]/10 text-[#39FF14] shadow-[0_0_20px_rgba(57,255,20,0.3)]">
+              <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-full border-4 border-electricGreen bg-electricGreen/10 text-electricGreen shadow-electricGlow">
                 <Check className="h-8 w-8 stroke-[3]" />
               </div>
 

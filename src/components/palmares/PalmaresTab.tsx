@@ -10,6 +10,7 @@ import {
 } from "lucide-react";
 import { BrutalCard } from "../ui/BrutalCard";
 import { getCategoryMeta } from "@/lib/scoring";
+import { theme } from "@/lib/tokens";
 import type { PalmaresRow, Tab } from "@/types";
 import { useState, useMemo } from "react";
 import { RATING_DIMENSIONS } from "@/constants/categories";
@@ -241,7 +242,7 @@ export function PalmaresTab({
                   </span>
                 </div>
                 <div className="rounded-[8px] border border-white/5 bg-void/30 p-2 text-center">
-                  <Activity className="mx-auto mb-1 h-3.5 w-3.5 text-[#a78bfa]" />
+                  <Activity className="mx-auto mb-1 h-3.5 w-3.5 text-violet" />
                   <span className="block text-[14px] font-serif font-black leading-none text-white">
                     {selectedRow.votes}
                   </span>
@@ -273,10 +274,7 @@ export function PalmaresTab({
                 </h3>
 
                 <div className="relative w-48 h-48 select-none">
-                  <svg
-                    viewBox="0 0 200 200"
-                    className="w-full h-full text-champagne"
-                  >
+                  <svg viewBox="0 0 200 200" className="w-full h-full">
                     {/* Concentric grids representing ratings 1-5 */}
                     {[14, 28, 42, 56, 70].map((radius, rIndex) => {
                       const points = RATING_DIMENSIONS.map((_, i) => {
@@ -290,7 +288,7 @@ export function PalmaresTab({
                           key={`grid-${radius}`}
                           points={points}
                           fill="none"
-                          stroke="currentColor"
+                          stroke={theme.colors.champagne}
                           strokeWidth="0.5"
                           strokeOpacity={rIndex === 4 ? 0.3 : 0.12}
                           strokeDasharray={rIndex < 4 ? "2,2" : undefined}
@@ -310,7 +308,7 @@ export function PalmaresTab({
                           y1="100"
                           x2={x}
                           y2={y}
-                          stroke="currentColor"
+                          stroke={theme.colors.champagne}
                           strokeWidth="0.5"
                           strokeOpacity="0.2"
                         />
@@ -321,7 +319,7 @@ export function PalmaresTab({
                     <polygon
                       points={getRadarPath(selectedRow)}
                       fill="rgba(212, 175, 55, 0.14)"
-                      stroke="currentColor"
+                      stroke={theme.colors.champagne}
                       strokeWidth="1.5"
                       className="transition-all duration-500 ease-out"
                     />
@@ -344,8 +342,8 @@ export function PalmaresTab({
                           cx={x}
                           cy={y}
                           r="3.5"
-                          fill="currentColor"
-                          stroke="var(--void)"
+                          fill={theme.colors.champagne}
+                          stroke={theme.colors.void}
                           strokeWidth="1"
                           className="transition-all duration-500 ease-out"
                         />
@@ -409,14 +407,14 @@ export function PalmaresTab({
                         {categoryShare.map((cat, i) => {
                           const colors = [
                             "bg-champagne",
-                            "bg-[#a78bfa]",
-                            "bg-[#38bdf8]",
-                            "bg-[#facc15]",
-                            "bg-[#f43f5e]",
-                            "bg-[#22c55e]",
-                            "bg-[#ea580c]",
-                            "bg-[#06b6d4]",
-                            "bg-[#14b8a6]",
+                            "bg-violet",
+                            "bg-sky",
+                            "bg-yellow",
+                            "bg-rose",
+                            "bg-emerald",
+                            "bg-orange",
+                            "bg-cyan",
+                            "bg-teal",
                           ];
                           const col = colors[i % colors.length];
                           return (
@@ -436,14 +434,14 @@ export function PalmaresTab({
                           const meta = getCategoryMeta(cat.id);
                           const colors = [
                             "border-champagne text-champagne",
-                            "border-[#a78bfa] text-[#a78bfa]",
-                            "border-[#38bdf8] text-[#38bdf8]",
-                            "border-[#facc15] text-[#facc15]",
-                            "border-[#f43f5e] text-[#f43f5e]",
-                            "border-[#22c55e] text-[#22c55e]",
-                            "border-[#ea580c] text-[#ea580c]",
-                            "border-[#06b6d4] text-[#06b6d4]",
-                            "border-[#14b8a6] text-[#14b8a6]",
+                            "border-violet text-violet",
+                            "border-sky text-sky",
+                            "border-yellow text-yellow",
+                            "border-rose text-rose",
+                            "border-emerald text-emerald",
+                            "border-orange text-orange",
+                            "border-cyan text-cyan",
+                            "border-teal text-teal",
                           ];
                           const borderCol = colors[i % colors.length];
                           return (
@@ -507,7 +505,7 @@ export function PalmaresTab({
                         }}
                         className={`w-full max-w-[1.75rem] rounded-t-[4px] border-t border-l border-r transition ${
                           active
-                            ? "border-champagne bg-champagne/35 shadow-[0_0_12px_rgba(212,175,55,0.25)]"
+                            ? "border-champagne bg-champagne/35 shadow-champagne"
                             : "border-white/10 bg-white/5 hover:border-white/30"
                         }`}
                       />

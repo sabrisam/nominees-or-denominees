@@ -1,5 +1,5 @@
 import type { Config } from "tailwindcss";
-import { theme as designTheme } from "./src/lib/tokens";
+import { theme } from "./src/lib/tokens";
 
 const config: Config = {
   content: [
@@ -10,15 +10,36 @@ const config: Config = {
   theme: {
     extend: {
       colors: {
-        void: designTheme.colors.void,
-        monolith: designTheme.colors.monolith,
-        champagne: designTheme.colors.champagne,
-        champagneSoft: designTheme.colors.champagneSoft,
-        cream: designTheme.colors.cream,
+        void: theme.colors.void,
+        monolith: theme.colors.monolith,
+        cream: theme.colors.cream,
+        champagne: theme.colors.champagne,
+        champagneSoft: theme.colors.champagneSoft,
+        muted: theme.colors.muted,
+        danger: theme.colors.danger,
+        success: theme.colors.success,
+        bronze: theme.colors.bronze,
+        electricGreen: theme.colors.electricGreen,
+        silver: theme.colors.silver,
+        yellow: theme.colors.yellow,
+        sky: theme.colors.sky,
+        rose: theme.colors.rose,
+        violet: theme.colors.violet,
+        orange: theme.colors.orange,
+        cyan: theme.colors.cyan,
+        teal: theme.colors.teal,
       },
       boxShadow: {
         amber: "0 20px 60px rgba(217, 119, 6, 0.25)",
-        brutal: designTheme.shadows.brutal,
+        brutal: theme.shadows.brutal,
+        champagne: theme.shadows.champagneGlow,
+        electricGlow: theme.shadows.electricGlow,
+        fab: theme.shadows.fab,
+      },
+      fontFamily: {
+        sans: ["var(--font-body)"],
+        serif: ["var(--font-serif)"],
+        display: ["var(--font-display)"],
       },
     },
   },

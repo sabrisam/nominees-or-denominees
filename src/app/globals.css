@@ -4,40 +4,46 @@
 
 :root {
   color-scheme: dark;
-  background: #050505;
+  background: var(--color-void);
   --app-height: 100dvh;
   --tab-nav-offset: 64px;
 
   /* ── Open Design · Brutalist-Experimental palette (OKLch) ──────────────── */
-  /* bg      : oklch(98% 0.004 240) → mapped to #050505 (pure ink canvas)    */
-  /* surface : oklch(100% 0 0)       → mapped to #0c0c0c                     */
-  /* fg      : oklch(15% 0.02 100)   → mapped to #f5f1e8 (cream)             */
-  /* muted   : oklch(40% 0.02 100)   → mapped to #9a9387                     */
-  /* border  : oklch(15% 0.02 100)   → full-strength fg (tabloid rule)       */
-  /* accent  : oklch(60% 0.22 25)    → hot champagne gold #d4af37            */
-  --od-bg: oklch(4% 0.004 240);
-  --od-surface: oklch(7% 0.002 240);
-  --od-fg: oklch(96% 0.006 88);
-  --od-muted: oklch(48% 0.012 88);
-  --od-border: oklch(4% 0.02 100);
-  --od-accent: oklch(75% 0.12 85);
-
-  --void: #050505;
-  --monolith: #0c0c0c;
-  --champagne: #d4af37;
-  --champagne-soft: #f0d889;
-  --cream: #f5f1e8;
+  --color-void: oklch(4% 0.004 240);
+  --color-monolith: oklch(7% 0.002 240);
+  --color-cream: oklch(96% 0.006 88);
+  --color-muted: oklch(48% 0.012 88);
+  --color-border: oklch(4% 0.02 100);
+  --color-champagne: oklch(75% 0.12 85);
+  --color-champagne-soft: color-mix(
+    in srgb,
+    var(--color-champagne) 65%,
+    rgb(255 255 255) 35%
+  );
+  --color-bronze: color-mix(
+    in srgb,
+    var(--color-champagne) 72%,
+    rgb(0 0 0) 28%
+  );
 
   /* ── Legacy aliases (backward compat) ─────────────────────────────────── */
-  --midnight: var(--void);
+  --midnight: var(--color-void);
   --panel: rgba(18, 18, 18, 0.86);
   --panel-strong: rgba(8, 8, 8, 0.96);
-  --gold: var(--champagne);
-  --gold-soft: var(--champagne-soft);
-  --muted: #9a9387;
+  --gold: var(--color-champagne);
+  --gold-soft: var(--color-champagne-soft);
+  --cream: var(--color-cream);
+  --muted: var(--color-muted);
   --line: rgba(212, 175, 55, 0.24);
   --line-strong: rgba(212, 175, 55, 0.5);
-  --danger: #a93535;
+  --danger: oklch(28% 0.28 42);
+
+  --font-body:
+    "SF Pro Text", "Avenir Next", "Helvetica Neue", system-ui, sans-serif;
+  --font-display:
+    Impact, "Arial Narrow", "Avenir Next Condensed", "SF Pro Condensed",
+    sans-serif;
+  --font-serif: Georgia, serif;
 
   /* ── Open Design · Brutalist Posture Rules ─────────────────────────────── */
   /* tracking-[-0.05em], leading-[0.85], zero border-radius on hard elements */
@@ -85,7 +91,7 @@ textarea {
 
 html {
   height: var(--app-height, 100dvh);
-  background: var(--void);
+  background: var(--color-void);
 }
 
 body {
@@ -96,11 +102,10 @@ body {
   padding: 0;
   overflow: hidden;
   overscroll-behavior: none;
-  background: var(--void);
+  background: var(--color-void);
   color: var(--cream);
   font-size: 14px;
-  font-family:
-    "SF Pro Text", "Avenir Next", "Helvetica Neue", system-ui, sans-serif;
+  font-family: var(--font-body);
   text-rendering: geometricPrecision;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
@@ -128,7 +133,7 @@ body > div {
   width: 100%;
   height: 100%;
   overflow: hidden;
-  background: var(--void);
+  background: var(--color-void);
 }
 
 .tabloid-app.tabloid-haptic-pulse {
@@ -225,18 +230,32 @@ select:focus-visible {
 }
 
 video {
-  background: #000000;
+  background: rgb(0 0 0);
 }
 
 ::selection {
   background: var(--gold);
-    color: var(--void);
+  color: var(--color-void);
+}
+
+@layer components {
+  .tabloid-app {
+    background:
+      radial-gradient(
+        circle at 50% -10%,
+        rgba(212, 175, 55, 0.22),
+        transparent 30rem
+      ),
+      radial-gradient(
+        circle at 10% 18%,
+        rgba(240, 216, 137, 0.1),
+        transparent 18rem
       ),
       linear-gradient(
         180deg,
-        var(--void) 0%,
-        var(--monolith) 48%,
-        var(--void) 100%
+        var(--color-void) 0%,
+        var(--color-monolith) 48%,
+        var(--color-void) 100%
       );
     color: var(--cream);
   }
@@ -284,9 +303,7 @@ video {
 
   .tabloid-headline,
   .masthead-title {
-    font-family:
-      Impact, "Arial Narrow", "Avenir Next Condensed", "SF Pro Condensed",
-      sans-serif;
+    font-family: var(--font-display);
     font-weight: 900;
     text-transform: uppercase;
     letter-spacing: -0.05em;
@@ -295,9 +312,7 @@ video {
 
   .rank-number {
     display: inline-block;
-    font-family:
-      Impact, "Arial Narrow", "Avenir Next Condensed", "SF Pro Condensed",
-      sans-serif;
+    font-family: var(--font-display);
     font-weight: 900;
     letter-spacing: -0.08em;
     text-transform: uppercase;
@@ -345,7 +360,7 @@ video {
       var(--panel);
     box-shadow:
       inset 0 1px 0 rgba(255, 255, 255, 0.08),
-      8px 8px 0px 0px #000000;
+      8px 8px 0px 0px rgb(0 0 0);
     overflow: hidden;
   }
 
@@ -452,8 +467,13 @@ video {
 
   .brutal-submit {
     min-height: 2.85rem;
-    background: linear-gradient(135deg, var(--champagne), var(--champagne-soft) 52%, rgb(156 116 37));
-    color: var(--void);
+    background: linear-gradient(
+      135deg,
+      var(--color-champagne),
+      var(--color-champagne-soft) 52%,
+      var(--color-bronze)
+    );
+    color: rgb(9 8 7);
     font-size: 0.76rem;
     letter-spacing: 0.06em;
   }
@@ -461,15 +481,19 @@ video {
   .brutal-fab {
     border: 1px solid rgba(212, 175, 55, 0.7);
     border-radius: 16px;
-    background: linear-gradient(135deg, var(--champagne), var(--champagne-soft));
-    color: var(--void);
+    background: linear-gradient(
+      135deg,
+      var(--color-champagne),
+      var(--color-champagne-soft)
+    );
+    color: var(--color-void);
     box-shadow: 0 14px 34px rgba(212, 175, 55, 0.22);
   }
 
   .media-cut {
     position: relative;
     overflow: hidden;
-    background: #000000;
+    background: rgb(0 0 0);
   }
 
   .media-cut::after {
@@ -485,7 +509,12 @@ video {
   }
 
   .media-shimmer {
-    background: linear-gradient(110deg, var(--monolith) 0%, #1a1a1a 45%, var(--monolith) 100%);
+    background: linear-gradient(
+      110deg,
+      var(--color-monolith) 0%,
+      rgb(26 26 26) 45%,
+      var(--color-monolith) 100%
+    );
     background-size: 200% 100%;
   }
 
@@ -548,7 +577,12 @@ video {
   .stat-bar-fill {
     height: 100%;
     border-radius: inherit;
-    background: linear-gradient(90deg, rgb(156 116 37), var(--champagne), var(--champagne-soft));
+    background: linear-gradient(
+      90deg,
+      var(--color-bronze),
+      var(--color-champagne),
+      var(--color-champagne-soft)
+    );
   }
 
   .score-preset-rail {
@@ -578,15 +612,13 @@ video {
 
 /* ── Editorial posture enforcements (Open Design anti-slop) ──────────── */
 .od-display {
-  font-family: "Times New Roman", "Iowan Old Style", Georgia, serif;
-  font-weight: 900;
+  font-family: var(--font-serif);
   letter-spacing: var(--od-tracking);
   line-height: var(--od-leading);
 }
 
 .od-label {
-  font-family: "SF Pro Text", "Avenir Next", system-ui, sans-serif;
-  font-weight: 900;
+  font-family: var(--font-body);
   text-transform: uppercase;
   letter-spacing: 0.12em;
 }

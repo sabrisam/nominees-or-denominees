@@ -201,7 +201,7 @@ export function DirectTab({
     >
       {/* Brutal Header Cover */}
       <motion.div {...revealItem}>
-        <BrutalCard className="relative overflow-hidden p-3.5 bg-monolith border-champagne/20 shadow-[8px_8px_0px_0px_#000000]">
+        <BrutalCard className="relative overflow-hidden p-3.5 bg-monolith border-champagne/20 shadow-brutal">
           <div className="flex items-center justify-between gap-3">
             <p className="mb-1 text-[7.5px] font-black uppercase tracking-[0.2em] text-champagne font-sans">
               Club live
