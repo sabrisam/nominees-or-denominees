@@ -246,7 +246,12 @@ video {
         rgba(240, 216, 137, 0.1),
         transparent 18rem
       ),
-      linear-gradient(180deg, var(--void) 0%, var(--monolith) 48%, var(--void) 100%);
+      linear-gradient(
+        180deg,
+        var(--void) 0%,
+        var(--monolith) 48%,
+        var(--void) 100%
+      );
     color: var(--cream);
   }
 
