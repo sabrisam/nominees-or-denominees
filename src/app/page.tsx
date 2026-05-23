@@ -25,14 +25,44 @@ import {
   isVideoMedia,
   uploadMediaFile,
 } from "@/lib/storage";
+import {
+  isRecord,
+  toText,
+  toNumber,
+  clampDimension,
+  clampRating,
+  cloneScores,
+  normalizedCategoryId,
+  scoreForCategory,
+  scoreTotal,
+  scoreAverage,
+  ratingImpactPoints,
+  ratingImpactScore,
+  addScores,
+  createStarDistribution,
+  addToStarDistribution,
+  sameScores,
+  getCategoryMeta,
+  categorySummary,
+  normalizeCategoryIds,
+  primaryCategoryId,
+  statusFromRatings,
+  statusLabel,
+  averageRating,
+  totalPoints,
+  averageImpact,
+  parseRating,
+  makeRatingFromDraft,
+  parseNomination,
+} from "@/lib/scoring";
 import { Ticker } from "@/components/ui/Ticker";
 import { BrutalCard } from "@/components/ui/BrutalCard";
 import { CeremonyBulletin } from "@/components/direct/CeremonyBulletin";
-import { DirectTab } from "@/components/direct/DirectTab";
-import { VoteTab } from "@/components/vote/VoteTab";
-import { StudioTab } from "@/components/studio/StudioTab";
-import { PalmaresTab } from "@/components/palmares/PalmaresTab";
-import { WinnersTab } from "@/components/winners/WinnersTab";
+import { DirectTab } from "@/components/tabs/DirectTab";
+import { VoteTab } from "@/components/tabs/VoteTab";
+import { StudioTab } from "@/components/tabs/StudioTab";
+import { PalmaresTab } from "@/components/tabs/PalmaresTab";
+import { WinnersTab } from "@/components/tabs/WinnersTab";
 import {
   AnimatePresence,
   motion,
