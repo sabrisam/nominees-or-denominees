@@ -167,10 +167,13 @@ export function StudioTab({
                   >)}
                 />
               ) : (
-                <img
+                <Image
                   src={previewUrl}
                   alt=""
-                  className="absolute inset-0 h-full w-full object-cover"
+                  fill
+                  unoptimized
+                  sizes="100vw"
+                  className="object-cover"
                 />
               )
             ) : (

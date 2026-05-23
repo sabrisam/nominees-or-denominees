@@ -405,7 +405,7 @@ export function PalmaresTab({
 
                   {categoryShare.length === 0 ? (
                     <p className="text-[10px] font-black uppercase tracking-tight text-zinc-500 py-6 text-center font-sans">
-                      Aucune catégorie enregistrée.
+                      Aucune catégorie enregistrée
                     </p>
                   ) : (
                     <div className="space-y-2 pt-1 w-full">
