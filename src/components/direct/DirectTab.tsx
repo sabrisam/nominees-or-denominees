@@ -82,6 +82,7 @@ export function DirectTab({
   allNominations,
   ceremonyCountdown,
   palmaresRows,
+  activeMemberCount,
   switchTab,
 }: {
   feedItems: Nomination[];
