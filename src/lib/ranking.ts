@@ -67,8 +67,7 @@ export function buildRankingMemoryGrid(nominations: Nomination[]) {
     const key = canonicalName.toLowerCase();
     const current = rows.get(key) ?? {
       tiktokerName: canonicalName,
-      avatarUrl:
-        nomination.thumbnail_url || nomination.media_url || "",
+      avatarUrl: nomination.thumbnail_url || nomination.media_url || "",
       points: 0,
       votes: 0,
       average: 0,
