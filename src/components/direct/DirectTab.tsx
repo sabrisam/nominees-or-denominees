@@ -215,7 +215,7 @@ export function DirectTab({
           <div className="paper-tear -mt-[4px]" />
           <div className="rounded-[10px] border border-[#d4af37]/20 bg-[#050505]/75 px-2 py-1 text-white mt-1">
             <p className="text-[8px] font-black uppercase tracking-[0.14em] text-zinc-400 font-sans">
-              Le club des recs du mois
+              Le club des SCREENs du mois
             </p>
           </div>
         </BrutalCard>
@@ -288,7 +288,7 @@ export function DirectTab({
             <BrutalCard className="p-6 text-center border-[#d4af37]/10 bg-[#0c0c0c]">
               <Camera className="mx-auto mb-2 h-8 w-8 text-zinc-700" />
               <p className="text-xl font-black uppercase leading-none text-zinc-500 font-serif">
-                Aucun rec
+                Aucun SCREEN
               </p>
               <p className="mt-1 text-[9px] font-black uppercase text-zinc-600 font-sans">
                 Le club est vide

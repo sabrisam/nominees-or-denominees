@@ -22,10 +22,24 @@ import type {
   CategoryRaceRow,
 } from "@/types";
 
+type RankingMemoryRow = {
+  tiktokerName: string;
+  avatarUrl: string;
+  points: number;
+  votes: number;
+  average: number;
+  totalDossiers: number;
+  acceptedDossiers: number;
+  starDistribution: StarDistribution;
+  categoryCounts: Record<string, number>;
+  dimensionTotals: DimensionScores;
+};
+
 type RankingCacheEntry = {
   scoreBoard: Map<string, ScoreBoard[]>;
   palmaresRows?: PalmaresRow[];
   categoryRaces?: CategoryRace[];
+  memoryGrid?: Map<string, RankingMemoryRow>;
 };
 
 const rankingCache = new WeakMap<Nomination[], RankingCacheEntry>();
@@ -37,6 +51,64 @@ function getRankingCacheEntry(nominations: Nomination[]) {
     rankingCache.set(nominations, entry);
   }
   return entry;
+}
+
+export function buildRankingMemoryGrid(nominations: Nomination[]) {
+  const entry = getRankingCacheEntry(nominations);
+  if (entry.memoryGrid) return entry.memoryGrid;
+
+  const rows = new Map<string, RankingMemoryRow>();
+  const monthly = nominations.filter((nomination) =>
+    isCurrentMonth(nomination.created_at),
+  );
+
+  for (const nomination of monthly) {
+    const canonicalName = nomination.tiktoker_name.trim();
+    const key = canonicalName.toLowerCase();
+    const current = rows.get(key) ?? {
+      tiktokerName: canonicalName,
+      avatarUrl:
+        nomination.thumbnail_url || nomination.media_url || "",
+      points: 0,
+      votes: 0,
+      average: 0,
+      totalDossiers: 0,
+      acceptedDossiers: 0,
+      starDistribution: createStarDistribution(),
+      categoryCounts: {},
+      dimensionTotals: cloneScores({
+        rire: 0,
+        surprise: 0,
+        gene: 0,
+        fierte: 0,
+        interet: 0,
+      }),
+    };
+
+    current.totalDossiers += 1;
+    if (nomination.status !== "pending") current.acceptedDossiers += 1;
+    for (const categoryId of nomination.category_ids) {
+      current.categoryCounts[categoryId] =
+        (current.categoryCounts[categoryId] ?? 0) + 1;
+    }
+
+    for (const rating of nomination.ratings) {
+      current.points += ratingImpactPoints(rating, nomination.category_ids);
+      current.votes += 1;
+      addToStarDistribution(
+        current.starDistribution,
+        ratingImpactScore(rating, nomination.category_ids),
+      );
+      addScores(current.dimensionTotals, rating.scores);
+    }
+
+    current.average =
+      current.votes > 0 ? current.points / current.votes / 20 : 0;
+    rows.set(key, current);
+  }
+
+  entry.memoryGrid = rows;
+  return rows;
 }
 
 export function isCurrentMonth(dateValue: string) {

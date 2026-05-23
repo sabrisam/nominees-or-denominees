@@ -97,20 +97,11 @@ export function PalmaresTab({
         <BrutalCard className="p-6 text-center border-white/5 bg-black/50">
           <Trophy className="mx-auto mb-2 h-8 w-8 text-[#d4af37]" />
           <p className="tabloid-headline text-2xl leading-none text-white">
-            AUCUN CLASSEMENT
+            AUCUN PROFIL ÉVALUÉ POUR L'INSTANT
           </p>
           <p className="mx-auto mt-1 max-w-[15rem] text-[10px] font-semibold uppercase tracking-tighter text-zinc-500">
-            Le palmarès commencera dès le premier dossier évalué.
+            Le palmarès se mettra à jour après le premier SCREEN noté.
           </p>
-          <motion.button
-            type="button"
-            whileTap={TAP_REBOUND}
-            transition={TAP_TRANSITION}
-            onClick={() => switchTab("studio")}
-            className="brutal-action mt-4 bg-[#d4af37] px-4 py-1.5 text-black font-black uppercase tracking-tight"
-          >
-            Lancer un dossier
-          </motion.button>
         </BrutalCard>
       </motion.section>
     );

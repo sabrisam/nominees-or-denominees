@@ -1306,9 +1306,7 @@ export default function Home() {
   const directFilterCounts = useMemo<Record<DirectFilter, number>>(
     () => ({
       all: nominations.length,
-      pending: nominations.filter(
-        (nomination) => nomination.status === "pending",
-      ).length,
+      pending: pendingForMe.length,
       qualified: qualified.length,
       elite: eliteDossiers.length,
       mine: participant
@@ -1317,7 +1315,13 @@ export default function Home() {
           ).length
         : 0,
     }),
-    [eliteDossiers.length, nominations, participant, qualified.length],
+    [
+      eliteDossiers.length,
+      nominations,
+      participant,
+      pendingForMe.length,
+      qualified.length,
+    ],
   );
   const monthlyNominations = useMemo(
     () =>
