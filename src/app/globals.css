@@ -22,13 +22,18 @@
   --od-border: oklch(4% 0.02 100);
   --od-accent: oklch(75% 0.12 85);
 
+  --void: #050505;
+  --monolith: #0c0c0c;
+  --champagne: #d4af37;
+  --champagne-soft: #f0d889;
+  --cream: #f5f1e8;
+
   /* ── Legacy aliases (backward compat) ─────────────────────────────────── */
-  --midnight: #050505;
+  --midnight: var(--void);
   --panel: rgba(18, 18, 18, 0.86);
   --panel-strong: rgba(8, 8, 8, 0.96);
-  --gold: #d4af37;
-  --gold-soft: #f0d889;
-  --cream: #f5f1e8;
+  --gold: var(--champagne);
+  --gold-soft: var(--champagne-soft);
   --muted: #9a9387;
   --line: rgba(212, 175, 55, 0.24);
   --line-strong: rgba(212, 175, 55, 0.5);
