@@ -273,7 +273,7 @@ export function PalmaresTab({
                 </h3>
 
                 <div className="relative w-48 h-48 select-none">
-                  <svg viewBox="0 0 200 200" className="w-full h-full">
+                  <svg viewBox="0 0 200 200" className="w-full h-full text-champagne">
                     {/* Concentric grids representing ratings 1-5 */}
                     {[14, 28, 42, 56, 70].map((radius, rIndex) => {
                       const points = RATING_DIMENSIONS.map((_, i) => {
@@ -287,7 +287,7 @@ export function PalmaresTab({
                           key={`grid-${radius}`}
                           points={points}
                           fill="none"
-                          stroke="#d4af37"
+                          stroke="currentColor"
                           strokeWidth="0.5"
                           strokeOpacity={rIndex === 4 ? 0.3 : 0.12}
                           strokeDasharray={rIndex < 4 ? "2,2" : undefined}
@@ -307,7 +307,7 @@ export function PalmaresTab({
                           y1="100"
                           x2={x}
                           y2={y}
-                          stroke="#d4af37"
+                          stroke="currentColor"
                           strokeWidth="0.5"
                           strokeOpacity="0.2"
                         />
@@ -318,7 +318,7 @@ export function PalmaresTab({
                     <polygon
                       points={getRadarPath(selectedRow)}
                       fill="rgba(212, 175, 55, 0.14)"
-                      stroke="#d4af37"
+                      stroke="currentColor"
                       strokeWidth="1.5"
                       className="transition-all duration-500 ease-out"
                     />
@@ -341,8 +341,8 @@ export function PalmaresTab({
                           cx={x}
                           cy={y}
                           r="3.5"
-                          fill="#d4af37"
-                          stroke="#050505"
+                          fill="currentColor"
+                          stroke="var(--void)"
                           strokeWidth="1"
                           className="transition-all duration-500 ease-out"
                         />
