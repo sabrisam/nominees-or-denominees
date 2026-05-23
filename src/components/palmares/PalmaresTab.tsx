@@ -145,8 +145,16 @@ export function PalmaresTab({
       </div>
 
       {/* SELECTED CELEBRITY PROFILE DETAIL */}
-      {selectedRow && (
-        <div className="space-y-3">
+      <AnimatePresence mode="wait">
+        {selectedRow && (
+          <motion.div
+            key={selectedRow.tiktokerName}
+            initial={{ opacity: 0, y: 6 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: -6 }}
+            transition={{ type: "spring", stiffness: 380, damping: 32 }}
+            className="space-y-3"
+          >
           {/* Main profile card */}
           <BrutalCard tone="black" className="p-4 bg-[#0c0c0c] border-[#d4af37]/20">
             <div className="flex items-center gap-3">
@@ -419,8 +427,9 @@ export function PalmaresTab({
               })}
             </div>
           </BrutalCard>
-        </div>
-      )}
+          </motion.div>
+        )}
+      </AnimatePresence>
     </motion.section>
   );
 }

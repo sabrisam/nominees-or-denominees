@@ -244,19 +244,28 @@ export function DirectTab({
               <p className="mt-1 text-[9px] font-black uppercase text-zinc-600 font-sans">Le club est vide</p>
             </BrutalCard>
           ) : (
+            <AnimatePresence mode="popLayout">
             <div className="flex flex-col gap-3">
               {mixedFeed.map((item) => {
                 if (item.type === "nomination" && item.nomination) {
                   return (
-                    <NominationCard
+                    <motion.div
                       key={item.feedId}
-                      nomination={item.nomination}
-                      owned={ownsNomination(item.nomination)}
-                      onEdit={() => startEditNomination(item.nomination!)}
-                      onRemove={() => void removeNomination(item.nomination!)}
-                      onVote={() => switchTab("vote")}
-                      busy={mutationBusyId === item.nomination.id}
-                    />
+                      layout
+                      initial={{ opacity: 0, y: 10 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      exit={{ opacity: 0, scale: 0.96 }}
+                      transition={{ layout: { type: "spring", stiffness: 380, damping: 32 }, duration: 0.22 }}
+                    >
+                      <NominationCard
+                        nomination={item.nomination}
+                        owned={ownsNomination(item.nomination)}
+                        onEdit={() => startEditNomination(item.nomination!)}
+                        onRemove={() => void removeNomination(item.nomination!)}
+                        onVote={() => switchTab("vote")}
+                        busy={mutationBusyId === item.nomination.id}
+                      />
+                    </motion.div>
                   );
                 }
 
@@ -265,26 +274,35 @@ export function DirectTab({
                   const Icon = meta.icon;
                   const slogan = CATEGORY_SLOGANS[item.adCategory] ?? CATEGORY_SLOGANS["le-zin-du-mois"];
                   return (
-                    <BrutalCard key={item.feedId} tone="black" className="border-dashed border-[#d4af37]/20 bg-[#0c0c0c] p-4">
-                      <div className="flex items-start gap-3">
-                        <div className="flex h-9 w-9 shrink-0 items-center justify-center bg-[#d4af37]/10 text-[#d4af37] border border-[#d4af37]/30 rounded-[10px]">
-                          <Icon className="h-5 w-5" />
+                    <motion.div
+                      key={item.feedId}
+                      layout
+                      initial={{ opacity: 0, y: 8 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      exit={{ opacity: 0 }}
+                      transition={{ layout: { type: "spring", stiffness: 380, damping: 32 }, duration: 0.2 }}
+                    >
+                      <BrutalCard tone="black" className="border-dashed border-[#d4af37]/20 bg-[#0c0c0c] p-4">
+                        <div className="flex items-start gap-3">
+                          <div className="flex h-9 w-9 shrink-0 items-center justify-center bg-[#d4af37]/10 text-[#d4af37] border border-[#d4af37]/30 rounded-[10px]">
+                            <Icon className="h-5 w-5" />
+                          </div>
+                          <div className="space-y-2">
+                            <p className="text-[10.5px] font-black uppercase tracking-wide leading-tight text-[#f0d889] font-serif">
+                              {slogan}
+                            </p>
+                            <motion.button
+                              whileTap={TAP_REBOUND}
+                              transition={TAP_TRANSITION}
+                              onClick={() => switchTab("studio")}
+                              className="brutal-action bg-white/5 border border-white/10 text-white text-[8px] font-black tracking-wider uppercase px-2.5 py-1 font-sans"
+                            >
+                              LANCER LE DOSSIER →
+                            </motion.button>
+                          </div>
                         </div>
-                        <div className="space-y-2">
-                          <p className="text-[10.5px] font-black uppercase tracking-wide leading-tight text-[#f0d889] font-serif">
-                            {slogan}
-                          </p>
-                          <motion.button
-                            whileTap={TAP_REBOUND}
-                            transition={TAP_TRANSITION}
-                            onClick={() => switchTab("studio")}
-                            className="brutal-action bg-white/5 border border-white/10 text-white text-[8px] font-black tracking-wider uppercase px-2.5 py-1 font-sans"
-                          >
-                            LANCER LE DOSSIER →
-                          </motion.button>
-                        </div>
-                      </div>
-                    </BrutalCard>
+                      </BrutalCard>
+                    </motion.div>
                   );
                 }
 
@@ -355,6 +373,7 @@ export function DirectTab({
                 return null;
               })}
             </div>
+          </AnimatePresence>
           )
         ) : (
           feedItems.length === 0 ? (
@@ -364,19 +383,29 @@ export function DirectTab({
               <p className="mt-1 text-[9px] font-black uppercase text-zinc-600 font-sans">Le flux est vide</p>
             </BrutalCard>
           ) : (
+            <AnimatePresence mode="popLayout">
             <div className="flex flex-col gap-3">
               {feedItems.map((nomination) => (
-                <NominationCard
+                <motion.div
                   key={nomination.id}
-                  nomination={nomination}
-                  owned={ownsNomination(nomination)}
-                  onEdit={() => startEditNomination(nomination)}
-                  onRemove={() => void removeNomination(nomination)}
-                  onVote={() => switchTab("vote")}
-                  busy={mutationBusyId === nomination.id}
-                />
+                  layout
+                  initial={{ opacity: 0, y: 10 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  exit={{ opacity: 0, scale: 0.96 }}
+                  transition={{ layout: { type: "spring", stiffness: 380, damping: 32 }, duration: 0.22 }}
+                >
+                  <NominationCard
+                    nomination={nomination}
+                    owned={ownsNomination(nomination)}
+                    onEdit={() => startEditNomination(nomination)}
+                    onRemove={() => void removeNomination(nomination)}
+                    onVote={() => switchTab("vote")}
+                    busy={mutationBusyId === nomination.id}
+                  />
+                </motion.div>
               ))}
             </div>
+          </AnimatePresence>
           )
         )}
       </motion.div>
