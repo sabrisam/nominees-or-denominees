@@ -13,7 +13,7 @@ export function Ticker({ children }: { children: ReactNode }) {
     <div
       className="ticker relative flex overflow-hidden whitespace-nowrap w-full"
       aria-live="off"
-      aria-label="Fil d'actualité NOD"
+      aria-label={"Fil d" + "'" + "actualité NOD"}
     >
       <div className="ticker-track" aria-hidden="true">
         <span className="inline-block whitespace-nowrap px-3">{children}</span>

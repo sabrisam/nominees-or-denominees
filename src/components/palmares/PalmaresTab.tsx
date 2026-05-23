@@ -1,3 +1,4 @@
+import Image from "next/image";
 import { motion, AnimatePresence } from "framer-motion";
 import {
   Trophy,
@@ -152,12 +153,15 @@ export function PalmaresTab({
                   : "border-white/10 bg-monolith text-zinc-400 hover:border-white/20"
               }`}
             >
-              <div className="h-5 w-5 rounded-full border border-champagne/40 bg-void overflow-hidden shrink-0">
+              <div className="relative h-5 w-5 rounded-full border border-champagne/40 bg-void overflow-hidden shrink-0">
                 {row.avatarUrl ? (
-                  <img
+                  <Image
                     src={row.avatarUrl}
                     alt=""
-                    className="h-full w-full object-cover"
+                    fill
+                    unoptimized
+                    sizes="20px"
+                    className="object-cover"
                   />
                 ) : (
                   <span className="flex h-full w-full items-center justify-center text-[7px] font-black text-champagneSoft font-sans">
@@ -195,10 +199,13 @@ export function PalmaresTab({
               <div className="flex items-center gap-3">
                 <div className="relative h-14 w-14 overflow-hidden rounded-full border-2 border-champagne bg-void shrink-0">
                   {selectedRow.avatarUrl ? (
-                    <img
+                    <Image
                       src={selectedRow.avatarUrl}
                       alt=""
-                      className="h-full w-full object-cover"
+                      fill
+                      unoptimized
+                      sizes="56px"
+                      className="object-cover"
                     />
                   ) : (
                     <span className="flex h-full w-full items-center justify-center text-xs font-black text-champagneSoft font-sans">

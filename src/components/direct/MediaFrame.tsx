@@ -1,3 +1,4 @@
+import Image from "next/image";
 import { useState, useEffect } from "react";
 import { Loader2 } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
@@ -17,6 +18,8 @@ function haptic(pattern: number | readonly number[]) {
     // iOS Safari ignore souvent cette API
   }
 }
+
+const MotionImage = motion(Image);
 
 function isLegacyDemoMedia(url: string) {
   return url === LEGACY_FLOWER_VIDEO_URL;
@@ -48,10 +51,13 @@ export function MediaFrame({
         className={`${height} relative flex w-full items-center justify-center bg-black`}
       >
         {nomination.thumbnail_url ? (
-          <img
+          <Image
             src={nomination.thumbnail_url}
             alt=""
-            className="absolute inset-0 h-full w-full object-cover opacity-55"
+            fill
+            unoptimized
+            sizes="100vw"
+            className="object-cover opacity-55"
           />
         ) : null}
         <motion.div
@@ -134,7 +140,7 @@ export function MediaFrame({
           </motion.div>
         )}
       </AnimatePresence>
-      <motion.img
+      <MotionImage
         initial={{ opacity: 0, scale: 1.05 }}
         animate={{ opacity: resolving ? 0 : 1, scale: resolving ? 1.05 : 1 }}
         transition={{ duration: 0.7, ease: [0.16, 1, 0.3, 1] }}
@@ -142,12 +148,15 @@ export function MediaFrame({
           nomination.media_url || nomination.thumbnail_url || FALLBACK_IMAGE_URL
         }
         alt=""
-        onLoad={() => setResolving(false)}
+        fill
+        unoptimized
+        sizes="100vw"
+        onLoadingComplete={() => setResolving(false)}
         onError={() => {
           setResolving(false);
           setMediaFailed(true);
         }}
-        className="prestige-media block h-full w-full bg-black object-cover"
+        className="prestige-media object-cover"
       />
     </div>
   );

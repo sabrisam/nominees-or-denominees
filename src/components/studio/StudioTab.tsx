@@ -1,3 +1,4 @@
+import Image from "next/image";
 import { motion } from "framer-motion";
 import { UploadCloud, Loader2 } from "lucide-react";
 import { BrutalCard } from "../ui/BrutalCard";
@@ -277,7 +278,7 @@ export function StudioTab({
       />
 
       <div className="flex items-center justify-between gap-3 text-[10px] font-black uppercase tracking-[0.1em] text-champagne/80">
-        <span>Besoin d'un punchline IA ?</span>
+        <span>Besoin d{`"'"`}un punchline IA ?</span>
         <button
           type="button"
           className="rounded-[10px] border border-champagne/30 bg-champagne/10 px-3 py-1 text-champagneSoft transition hover:bg-champagne/15"

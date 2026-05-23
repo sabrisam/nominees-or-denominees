@@ -1,3 +1,4 @@
+import Image from "next/image";
 import { motion } from "framer-motion";
 import { BrutalCard } from "@/components/ui/BrutalCard";
 import { MicroDimensionBars } from "@/components/ui/MicroDimensionBars";
@@ -34,7 +35,7 @@ export function CategoryRaceBoard({ races }: { races: CategoryRace[] }) {
 
             <div className="divide-y divide-white/10">
               {rows.length === 0 ? (
-                <div className="px-2 py-2 text-center text-xs font-semibold text-zinc-500">Aucun nommé pour l&apos;instant.</div>
+                <div className="px-2 py-2 text-center text-xs font-semibold text-zinc-500">Aucun nommé pour l&apos;instant</div>
               ) : (
                 rows.map((row, index) => (
                   <motion.div
@@ -46,8 +47,19 @@ export function CategoryRaceBoard({ races }: { races: CategoryRace[] }) {
                   >
                     <div className="grid grid-cols-[1rem_2rem_minmax(0,1fr)_auto] items-center gap-2">
                       <p className="rank-number text-[1.1rem] leading-none text-champagne">{index + 1}</p>
-                      <div className="h-8 w-8 overflow-hidden rounded-full border border-champagne/45 bg-champagne/10">
-                        {row.avatarUrl ? <img src={row.avatarUrl} alt="" className="h-full w-full object-cover" /> : <span className="flex h-full w-full items-center justify-center text-[9px] font-black text-champagneSoft">{initialsFor(row.tiktokerName)}</span>}
+                      <div className="relative h-8 w-8 overflow-hidden rounded-full border border-champagne/45 bg-champagne/10">
+                        {row.avatarUrl ? (
+                          <Image
+                            src={row.avatarUrl}
+                            alt=""
+                            fill
+                            unoptimized
+                            sizes="32px"
+                            className="object-cover"
+                          />
+                        ) : (
+                          <span className="flex h-full w-full items-center justify-center text-[9px] font-black text-champagneSoft">{initialsFor(row.tiktokerName)}</span>
+                        )}
                       </div>
                       <div className="min-w-0">
                         <p className="truncate text-xs font-black leading-none tracking-tighter text-white">@{row.tiktokerName}</p>
