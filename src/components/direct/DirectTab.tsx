@@ -469,10 +469,10 @@ export function DirectTab({
           <BrutalCard className="p-6 text-center border-[#d4af37]/20 bg-[#0c0c0c]">
             <Camera className="mx-auto mb-2 h-8 w-8 text-zinc-700" />
             <p className="text-xl font-black uppercase leading-none text-zinc-500 font-serif">
-              Aucun rec
+              AUCUN SCREEN
             </p>
             <p className="mt-1 text-[9px] font-black uppercase text-zinc-600 font-sans">
-              Le flux est vide
+              LE FLUX EST VIDE
             </p>
           </BrutalCard>
         ) : (
