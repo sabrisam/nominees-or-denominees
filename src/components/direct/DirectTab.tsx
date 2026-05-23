@@ -102,6 +102,7 @@ export function DirectTab({
   allNominations: Nomination[];
   ceremonyCountdown: { days: number; hours: number; mins: number };
   palmaresRows: PalmaresRow[];
+  activeMemberCount: number;
   switchTab: (t: Tab) => void;
 }) {
   // Submitter stats to identify top Paparazzi
