@@ -8,7 +8,10 @@ const config: Config = {
     "./src/app/**/*.{js,ts,jsx,tsx,mdx}",
   ],
   theme: {
-    extend: theme,
+    extend: {
+      ...theme,
+      boxShadow: theme.shadows,
+    },
   },
   plugins: [],
 };
