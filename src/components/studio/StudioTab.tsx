@@ -193,8 +193,10 @@ export function StudioTab({
               ref={fileInputRef}
               type="file"
               accept="video/*,image/*,.heic,.heif"
+              data-max-size="26214400"
+              data-allowed-types="image/*,video/*"
               onChange={(event) =>
-                void prepareMedia(event.target.files?.[0] ?? null)
+                void handleSelectedFile(event.target.files?.[0] ?? null)
               }
               className="hidden font-sans"
               aria-label="Fichier média du dossier"
