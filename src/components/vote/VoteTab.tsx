@@ -175,7 +175,7 @@ export function VoteTab({
                     {/* Catégorie badge */}
                     <span className="absolute left-2 top-2 -rotate-2 inline-flex items-center gap-1 rounded-[8px] border px-2 py-0.5 text-[8px] font-black uppercase tracking-[0.1em] leading-none border-[#d4af37]/60 bg-black/70 text-[#f0d889] backdrop-blur-sm font-sans">
                       <Icon className="h-2.5 w-2.5" />
-                      {tacticalTag}
+                      {categoryLabel}
                     </span>
 
                     <OwnershipBadge
