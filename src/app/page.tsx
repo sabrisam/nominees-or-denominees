@@ -1281,6 +1281,7 @@ export default function Home() {
     () => buildRankingMemoryGrid(nominations),
     [nominations],
   );
+  const activeMemberCount = rankingGrid.size;
 
   const qualified = useMemo(
     () => nominations.filter((nomination) => nomination.status !== "pending"),
