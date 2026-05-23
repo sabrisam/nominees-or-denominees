@@ -1,4 +1,5 @@
 import type { Config } from "tailwindcss";
+import { theme as designTheme } from "./src/lib/tokens";
 
 const config: Config = {
   content: [
@@ -8,8 +9,16 @@ const config: Config = {
   ],
   theme: {
     extend: {
+      colors: {
+        void: designTheme.colors.void,
+        monolith: designTheme.colors.monolith,
+        champagne: designTheme.colors.champagne,
+        champagneSoft: designTheme.colors.champagneSoft,
+        cream: designTheme.colors.cream,
+      },
       boxShadow: {
-        amber: "0 20px 60px rgba(217, 119, 6, 0.25)"
+        amber: "0 20px 60px rgba(217, 119, 6, 0.25)",
+        brutal: designTheme.shadows.brutal,
       }
     }
   },
