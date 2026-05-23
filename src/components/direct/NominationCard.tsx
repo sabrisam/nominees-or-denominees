@@ -2,11 +2,21 @@ import { motion } from "framer-motion";
 import { BrutalCard } from "../ui/BrutalCard";
 import { MediaFrame } from "./MediaFrame";
 import { OwnershipBadge } from "./OwnershipBadge";
-import { getCategoryMeta, averageRating, averageImpact, categorySummary } from "@/lib/scoring";
+import {
+  getCategoryMeta,
+  averageRating,
+  averageImpact,
+  categorySummary,
+} from "@/lib/scoring";
 import type { Nomination } from "@/types";
 
 const TAP_REBOUND = { scale: 0.965, rotate: -0.35 };
-const TAP_TRANSITION = { type: "spring", stiffness: 900, damping: 32, mass: 0.42 } as const;
+const TAP_TRANSITION = {
+  type: "spring",
+  stiffness: 900,
+  damping: 32,
+  mass: 0.42,
+} as const;
 
 export function NominationCard({
   nomination,
@@ -15,7 +25,7 @@ export function NominationCard({
   onEdit,
   onRemove,
   onVote,
-  busy = false
+  busy = false,
 }: {
   nomination: Nomination;
   index?: number;
@@ -34,15 +44,25 @@ export function NominationCard({
 
   return (
     <motion.div
+      layout
+      style={{ willChange: "transform" }}
       whileHover={{ scale: 1.012 }}
       whileTap={{ scale: 0.99 }}
       transition={{ type: "spring", stiffness: 400, damping: 25 }}
       className="w-full"
     >
-      <BrutalCard layout tone={isElite ? "yellow" : "black"} className="overflow-hidden border-[#d4af37]/20 bg-[#0c0c0c]">
+      <BrutalCard
+        layout
+        tone={isElite ? "yellow" : "black"}
+        className="overflow-hidden border-[#d4af37]/20 bg-[#0c0c0c]"
+      >
         <div className="relative aspect-[16/10] w-full border-b border-[#d4af37]/20 bg-[#050505]">
-          <MediaFrame nomination={nomination} height="h-full w-full" controls={false} />
-          
+          <MediaFrame
+            nomination={nomination}
+            height="h-full w-full"
+            controls={false}
+          />
+
           <div className="absolute left-2 top-2 z-10 flex gap-1">
             <OwnershipBadge owned={owned} />
             {isElite && (
@@ -52,11 +72,13 @@ export function NominationCard({
             )}
           </div>
 
-          <span className={`absolute bottom-2 right-2 z-10 inline-flex rounded-[8px] border px-2 py-0.5 text-[8px] font-black uppercase tracking-[0.1em] leading-none ${
-            nomination.status === "pending"
-              ? "border-yellow-500/40 bg-yellow-500/10 text-yellow-400"
-              : "border-emerald-500/40 bg-emerald-500/10 text-emerald-400"
-          }`}>
+          <span
+            className={`absolute bottom-2 right-2 z-10 inline-flex rounded-[8px] border px-2 py-0.5 text-[8px] font-black uppercase tracking-[0.1em] leading-none ${
+              nomination.status === "pending"
+                ? "border-yellow-500/40 bg-yellow-500/10 text-yellow-400"
+                : "border-emerald-500/40 bg-emerald-500/10 text-emerald-400"
+            }`}
+          >
             {nomination.status === "pending" ? "À VOTER" : "NOMINÉ"}
           </span>
         </div>
@@ -68,7 +90,8 @@ export function NominationCard({
                 @{nomination.tiktoker_name}
               </p>
               <p className="mt-1 line-clamp-2 font-serif text-[10.5px] leading-tight text-zinc-400">
-                &ldquo;{nomination.comment || "Pas de contexte renseigné."}&rdquo;
+                &ldquo;{nomination.comment || "Pas de contexte renseigné"}
+                &rdquo;
               </p>
             </div>
             {nomination.status === "pending" && !owned && onVote && (
@@ -90,11 +113,17 @@ export function NominationCard({
               {categories}
             </span>
             <div className="flex items-center gap-1.5 font-serif text-zinc-500">
-              <span className="font-serif">{nomination.ratings.length} NOTES</span>
+              <span className="font-serif">
+                {nomination.ratings.length} NOTES
+              </span>
               <span>·</span>
-              <span className="text-[#f0d889] font-serif">{impact || "-"} INDICE</span>
+              <span className="text-[#f0d889] font-serif">
+                {impact || "-"} INDICE
+              </span>
               <span>·</span>
-              <span className="text-white font-serif">{rating ? `${rating.toFixed(1)}★` : "-"}</span>
+              <span className="text-white font-serif">
+                {rating ? `${rating.toFixed(1)}★` : "-"}
+              </span>
             </div>
           </div>
 

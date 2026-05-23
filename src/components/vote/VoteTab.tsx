@@ -11,7 +11,12 @@ import { DEFAULT_DIMENSION_SCORES } from "@/constants/categories";
 import type { Nomination, DimensionScores } from "@/types";
 
 const TAP_REBOUND = { scale: 0.965, rotate: -0.35 };
-const TAP_TRANSITION = { type: "spring", stiffness: 900, damping: 32, mass: 0.42 } as const;
+const TAP_TRANSITION = {
+  type: "spring",
+  stiffness: 900,
+  damping: 32,
+  mass: 0.42,
+} as const;
 
 /**
  * Critique 5-dimensionnelle (inspirée du protocole Open Design) appliquée à chaque vote :
@@ -37,13 +42,19 @@ export function VoteTab({
   ownsNomination,
   handleSectionDrag,
   reduceMotion,
-  pageTransition
+  pageTransition,
 }: {
   pendingForMe: Nomination[];
   scoreDraftById: Record<string, DimensionScores>;
-  setScoreDraftById: (updater: (prev: Record<string, DimensionScores>) => Record<string, DimensionScores>) => void;
+  setScoreDraftById: (
+    updater: (
+      prev: Record<string, DimensionScores>,
+    ) => Record<string, DimensionScores>,
+  ) => void;
   reviewDraftById: Record<string, string>;
-  setReviewDraftById: (updater: (prev: Record<string, string>) => Record<string, string>) => void;
+  setReviewDraftById: (
+    updater: (prev: Record<string, string>) => Record<string, string>,
+  ) => void;
   applyRating: (id: string) => Promise<void>;
   voteBusyId: string | null;
   shakeId: string | null;
@@ -59,7 +70,12 @@ export function VoteTab({
       drag={reduceMotion ? false : "x"}
       dragConstraints={{ left: 0, right: 0 }}
       onDragEnd={(_, info) => handleSectionDrag(info)}
-      transition={{ duration: reduceMotion ? 0.01 : 0.26, type: "spring", stiffness: 230, damping: 25 }}
+      transition={{
+        duration: reduceMotion ? 0.01 : 0.26,
+        type: "spring",
+        stiffness: 230,
+        damping: 25,
+      }}
       className="space-y-1.5"
     >
       {/* Header Tabloid */}
@@ -79,7 +95,10 @@ export function VoteTab({
           animate={{ opacity: 1, scale: 1 }}
           exit={{ opacity: 0, scale: 0.95 }}
         >
-          <BrutalCard tone="yellow" className="p-5 text-center bg-[#0c0c0c] border-[#d4af37]/20">
+          <BrutalCard
+            tone="yellow"
+            className="p-5 text-center bg-[#0c0c0c] border-[#d4af37]/20"
+          >
             <motion.div
               animate={{ rotate: [0, 8, -8, 0] }}
               transition={{ duration: 2, repeat: Infinity, ease: "easeInOut" }}
@@ -87,7 +106,7 @@ export function VoteTab({
               <Check className="mx-auto mb-3 h-10 w-10 text-[#d4af37]" />
             </motion.div>
             <p className="text-2xl font-black uppercase leading-none text-[#f0d889] font-serif">
-              File&nbsp;propre.
+              File&nbsp;propre
             </p>
             <p className="mt-1.5 text-[10px] font-black uppercase text-[#d4af37]/70 font-sans">
               Tous les dossiers ont été jugés — reviens vite
@@ -106,7 +125,8 @@ export function VoteTab({
           <div className="flex items-center gap-2 px-0.5">
             <span className="h-2 w-2 rounded-full bg-[#d4af37] animate-pulse" />
             <p className="text-[9.5px] font-black uppercase tracking-[0.18em] text-[#d4af37]/80 font-sans">
-              {pendingForMe.length} dossier{pendingForMe.length > 1 ? "s" : ""} à juger
+              {pendingForMe.length} dossier{pendingForMe.length > 1 ? "s" : ""}{" "}
+              à juger
             </p>
           </div>
 
@@ -114,8 +134,13 @@ export function VoteTab({
             {pendingForMe.map((nomination) => {
               const category = getCategoryMeta(nomination.category_id);
               const Icon = category.icon;
-              const draftScores = cloneScores(scoreDraftById[nomination.id] ?? DEFAULT_DIMENSION_SCORES);
-              const currentScore = scoreTotal(draftScores, nomination.category_ids);
+              const draftScores = cloneScores(
+                scoreDraftById[nomination.id] ?? DEFAULT_DIMENSION_SCORES,
+              );
+              const currentScore = scoreTotal(
+                draftScores,
+                nomination.category_ids,
+              );
 
               return (
                 <motion.article
@@ -124,19 +149,27 @@ export function VoteTab({
                   initial={{ opacity: 0, y: 12, scale: 0.97 }}
                   animate={
                     shakeId === nomination.id
-                      ? { x: [0, -10, 10, -6, 6, 0], scale: [1, 0.99, 1.01, 1], opacity: 1, y: 0 }
+                      ? {
+                          x: [0, -10, 10, -6, 6, 0],
+                          scale: [1, 0.99, 1.01, 1],
+                          opacity: 1,
+                          y: 0,
+                        }
                       : { x: 0, scale: 1, opacity: 1, y: 0 }
                   }
                   exit={{ opacity: 0, scale: 0.95, y: -8 }}
                   transition={{
                     duration: 0.42,
-                    layout: { type: "spring", stiffness: 380, damping: 32 }
+                    layout: { type: "spring", stiffness: 380, damping: 32 },
                   }}
                   className="brutal-card overflow-hidden"
                 >
                   {/* Media + overlay info */}
                   <div className="relative border-b border-[#d4af37]/20 bg-[#050505]">
-                    <MediaFrame nomination={nomination} height="aspect-[9/16] max-h-[52svh]" />
+                    <MediaFrame
+                      nomination={nomination}
+                      height="aspect-[9/16] max-h-[52svh]"
+                    />
 
                     {/* Catégorie badge */}
                     <span className="absolute left-2 top-2 -rotate-2 inline-flex items-center gap-1 rounded-[8px] border px-2 py-0.5 text-[8px] font-black uppercase tracking-[0.1em] leading-none border-[#d4af37]/60 bg-black/70 text-[#f0d889] backdrop-blur-sm font-sans">
@@ -144,7 +177,10 @@ export function VoteTab({
                       {category.label}
                     </span>
 
-                    <OwnershipBadge owned={ownsNomination(nomination)} className="absolute right-2 top-2 rotate-2" />
+                    <OwnershipBadge
+                      owned={ownsNomination(nomination)}
+                      className="absolute right-2 top-2 rotate-2"
+                    />
 
                     {/* TikToker name overlay */}
                     <div className="absolute bottom-2 left-2 right-2 rounded-[10px] border border-[#d4af37]/30 bg-black/75 p-2 backdrop-blur-md">
@@ -168,7 +204,10 @@ export function VoteTab({
                       value={draftScores}
                       compact
                       onSelect={(value) =>
-                        setScoreDraftById((prev) => ({ ...prev, [nomination.id]: value }))
+                        setScoreDraftById((prev) => ({
+                          ...prev,
+                          [nomination.id]: value,
+                        }))
                       }
                       label="Profils rapides pour ce vote"
                     />
@@ -177,7 +216,10 @@ export function VoteTab({
                     <DimensionScoreGrid
                       value={draftScores}
                       onChange={(value) =>
-                        setScoreDraftById((prev) => ({ ...prev, [nomination.id]: value }))
+                        setScoreDraftById((prev) => ({
+                          ...prev,
+                          [nomination.id]: value,
+                        }))
                       }
                       compact
                     />
@@ -189,7 +231,7 @@ export function VoteTab({
                       onChange={(event) =>
                         setReviewDraftById((prev) => ({
                           ...prev,
-                          [nomination.id]: event.target.value
+                          [nomination.id]: event.target.value,
                         }))
                       }
                       placeholder="Ta réaction sur ce dossier ?"
@@ -208,12 +250,14 @@ export function VoteTab({
                           currentScore >= 80
                             ? "text-[#f0d889]"
                             : currentScore >= 60
-                            ? "text-[#d4af37]"
-                            : "text-zinc-400"
+                              ? "text-[#d4af37]"
+                              : "text-zinc-400"
                         }`}
                       >
                         {currentScore}
-                        <span className="text-[9px] text-zinc-500 font-sans">/100</span>
+                        <span className="text-[9px] text-zinc-500 font-sans">
+                          /100
+                        </span>
                       </span>
                     </div>
 
@@ -229,7 +273,11 @@ export function VoteTab({
                         <>
                           <motion.span
                             animate={{ rotate: 360 }}
-                            transition={{ duration: 0.8, repeat: Infinity, ease: "linear" }}
+                            transition={{
+                              duration: 0.8,
+                              repeat: Infinity,
+                              ease: "linear",
+                            }}
                             className="inline-block"
                           >
                             ⏳

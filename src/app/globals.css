@@ -15,12 +15,12 @@
   /* muted   : oklch(40% 0.02 100)   → mapped to #9a9387                     */
   /* border  : oklch(15% 0.02 100)   → full-strength fg (tabloid rule)       */
   /* accent  : oklch(60% 0.22 25)    → hot champagne gold #d4af37            */
-  --od-bg:      oklch(4% 0.004 240);
+  --od-bg: oklch(4% 0.004 240);
   --od-surface: oklch(7% 0.002 240);
-  --od-fg:      oklch(96% 0.006 88);
-  --od-muted:   oklch(48% 0.012 88);
-  --od-border:  oklch(4% 0.02 100);
-  --od-accent:  oklch(75% 0.12 85);
+  --od-fg: oklch(96% 0.006 88);
+  --od-muted: oklch(48% 0.012 88);
+  --od-border: oklch(4% 0.02 100);
+  --od-accent: oklch(75% 0.12 85);
 
   /* ── Legacy aliases (backward compat) ─────────────────────────────────── */
   --midnight: #050505;
@@ -38,8 +38,8 @@
   /* tracking-[-0.05em], leading-[0.85], zero border-radius on hard elements */
   --od-tracking: -0.05em;
   --od-leading: 0.85;
-  --od-radius-hard: 2px;    /* Brutalist: near-zero radius                   */
-  --od-radius-soft: 10px;   /* Soft elements: inputs, pills                  */
+  --od-radius-hard: 2px; /* Brutalist: near-zero radius                   */
+  --od-radius-soft: 10px; /* Soft elements: inputs, pills                  */
 }
 
 *::-webkit-scrollbar {
@@ -94,7 +94,8 @@ body {
   background: #050505;
   color: var(--cream);
   font-size: 14px;
-  font-family: "SF Pro Text", "Avenir Next", "Helvetica Neue", system-ui, sans-serif;
+  font-family:
+    "SF Pro Text", "Avenir Next", "Helvetica Neue", system-ui, sans-serif;
   text-rendering: geometricPrecision;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
@@ -228,8 +229,16 @@ video {
 @layer components {
   .tabloid-app {
     background:
-      radial-gradient(circle at 50% -10%, rgba(212, 175, 55, 0.22), transparent 30rem),
-      radial-gradient(circle at 10% 18%, rgba(240, 216, 137, 0.1), transparent 18rem),
+      radial-gradient(
+        circle at 50% -10%,
+        rgba(212, 175, 55, 0.22),
+        transparent 30rem
+      ),
+      radial-gradient(
+        circle at 10% 18%,
+        rgba(240, 216, 137, 0.1),
+        transparent 18rem
+      ),
       linear-gradient(180deg, #050505 0%, #0b0a08 48%, #050505 100%);
     color: var(--cream);
   }
@@ -247,8 +256,16 @@ video {
     position: absolute;
     inset: -20%;
     background:
-      repeating-linear-gradient(110deg, rgba(212, 175, 55, 0.13) 0 1px, transparent 1px 14px),
-      repeating-radial-gradient(circle at 50% 0%, rgba(245, 241, 232, 0.08) 0 1px, transparent 1px 8px);
+      repeating-linear-gradient(
+        110deg,
+        rgba(212, 175, 55, 0.13) 0 1px,
+        transparent 1px 14px
+      ),
+      repeating-radial-gradient(
+        circle at 50% 0%,
+        rgba(245, 241, 232, 0.08) 0 1px,
+        transparent 1px 8px
+      );
     opacity: 0.28;
     transform: perspective(700px) rotateX(52deg) translateY(-16rem);
     transform-origin: top center;
@@ -269,7 +286,9 @@ video {
 
   .tabloid-headline,
   .masthead-title {
-    font-family: Impact, "Arial Narrow", "Avenir Next Condensed", "SF Pro Condensed", sans-serif;
+    font-family:
+      Impact, "Arial Narrow", "Avenir Next Condensed", "SF Pro Condensed",
+      sans-serif;
     font-weight: 900;
     text-transform: uppercase;
     letter-spacing: -0.045em;
@@ -278,7 +297,9 @@ video {
 
   .rank-number {
     display: inline-block;
-    font-family: Impact, "Arial Narrow", "Avenir Next Condensed", "SF Pro Condensed", sans-serif;
+    font-family:
+      Impact, "Arial Narrow", "Avenir Next Condensed", "SF Pro Condensed",
+      sans-serif;
     font-weight: 900;
     letter-spacing: -0.08em;
     text-transform: uppercase;
@@ -289,7 +310,12 @@ video {
   .paper-tear {
     height: 1px;
     margin-block: 0.42rem;
-    background: linear-gradient(90deg, transparent, rgba(212, 175, 55, 0.88), transparent);
+    background: linear-gradient(
+      90deg,
+      transparent,
+      rgba(212, 175, 55, 0.88),
+      transparent
+    );
   }
 
   .jagged-sticker {
@@ -313,7 +339,11 @@ video {
     border: 1px solid var(--line);
     border-radius: 10px;
     background:
-      linear-gradient(145deg, rgba(255, 255, 255, 0.08), rgba(255, 255, 255, 0.025)),
+      linear-gradient(
+        145deg,
+        rgba(255, 255, 255, 0.08),
+        rgba(255, 255, 255, 0.025)
+      ),
       var(--panel);
     box-shadow:
       inset 0 1px 0 rgba(255, 255, 255, 0.08),
@@ -328,7 +358,13 @@ video {
     position: absolute;
     inset: 0;
     border-radius: inherit;
-    background: linear-gradient(120deg, rgba(212, 175, 55, 0.16), transparent 28%, transparent 72%, rgba(245, 241, 232, 0.06));
+    background: linear-gradient(
+      120deg,
+      rgba(212, 175, 55, 0.16),
+      transparent 28%,
+      transparent 72%,
+      rgba(245, 241, 232, 0.06)
+    );
     opacity: 0.5;
   }
 
@@ -339,13 +375,21 @@ video {
 
   .brutal-card-red {
     border-color: rgba(169, 53, 53, 0.55);
-    background: linear-gradient(145deg, rgba(169, 53, 53, 0.32), rgba(14, 10, 10, 0.92));
+    background: linear-gradient(
+      145deg,
+      rgba(169, 53, 53, 0.32),
+      rgba(14, 10, 10, 0.92)
+    );
     color: var(--cream);
   }
 
   .brutal-card-yellow {
     border-color: rgba(212, 175, 55, 0.58);
-    background: linear-gradient(145deg, rgba(212, 175, 55, 0.2), rgba(12, 12, 12, 0.92));
+    background: linear-gradient(
+      145deg,
+      rgba(212, 175, 55, 0.2),
+      rgba(12, 12, 12, 0.92)
+    );
     color: var(--cream);
   }
 
@@ -442,11 +486,11 @@ video {
   }
 
   .media-shimmer {
-    background:
-      linear-gradient(110deg, rgba(212, 175, 55, 0.08), rgba(240, 216, 137, 0.24), rgba(212, 175, 55, 0.08)),
-      radial-gradient(circle at 50% 20%, rgba(212, 175, 55, 0.18), transparent 18rem),
-      #050505;
-    background-size: 220% 100%, 100% 100%, 100% 100%;
+    background: linear-gradient(110deg, #0c0c0c 0%, #1a1a1a 45%, #0c0c0c 100%);
+    background-size: 200% 100%;
+  }
+
+  .animate-shimmer {
     animation: shimmer-sweep 1.35s linear infinite;
   }
 
@@ -535,7 +579,7 @@ video {
 
 /* ── Editorial posture enforcements (Open Design anti-slop) ──────────── */
 .od-display {
-  font-family: 'Times New Roman', 'Iowan Old Style', Georgia, serif;
+  font-family: "Times New Roman", "Iowan Old Style", Georgia, serif;
   font-weight: 900;
   letter-spacing: var(--od-tracking);
   line-height: var(--od-leading);
@@ -550,10 +594,16 @@ video {
 
 @keyframes shimmer-sweep {
   from {
-    background-position: 220% 0, 0 0, 0 0;
+    background-position:
+      220% 0,
+      0 0,
+      0 0;
   }
   to {
-    background-position: -120% 0, 0 0, 0 0;
+    background-position:
+      -120% 0,
+      0 0,
+      0 0;
   }
 }
 

@@ -2,9 +2,19 @@
 
 /* eslint-disable @next/next/no-img-element */
 
-import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from "react";
+import {
+  useCallback,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+  type ReactNode,
+} from "react";
 import confetti from "canvas-confetti";
-import { getSupabaseBrowserClient, ensureAnonymousSession } from "@/lib/supabase";
+import {
+  getSupabaseBrowserClient,
+  ensureAnonymousSession,
+} from "@/lib/supabase";
 import {
   STORAGE_UNAVAILABLE_NOTICE,
   compressImageToWebp,
@@ -12,7 +22,7 @@ import {
   isImageMedia,
   isStorageUnavailableMessage,
   isVideoMedia,
-  uploadMediaFile
+  uploadMediaFile,
 } from "@/lib/storage";
 import { Ticker } from "@/components/ui/Ticker";
 import { BrutalCard } from "@/components/ui/BrutalCard";
@@ -22,8 +32,18 @@ import { VoteTab } from "@/components/vote/VoteTab";
 import { StudioTab } from "@/components/studio/StudioTab";
 import { PalmaresTab } from "@/components/palmares/PalmaresTab";
 import { WinnersTab } from "@/components/winners/WinnersTab";
-import { AnimatePresence, motion, type PanInfo, useReducedMotion } from "framer-motion";
+import {
+  AnimatePresence,
+  motion,
+  type PanInfo,
+  useReducedMotion,
+} from "framer-motion";
 import { usePalmares } from "@/hooks/usePalmares";
+import {
+  buildScoreBoard,
+  bestSubmission,
+  buildCategoryRaces,
+} from "@/lib/ranking";
 import {
   BadgeCheck,
   Brain,
@@ -41,7 +61,7 @@ import {
   Sparkles,
   Trophy,
   UploadCloud,
-  Zap
+  Zap,
 } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
 import type { RealtimeChannel, SupabaseClient } from "@supabase/supabase-js";
@@ -165,11 +185,17 @@ const VOTE_TITLE = "À VOTER";
 const STUDIO_TITLE = "STUDIO";
 const PALMARES_TITLE = "PALMARÈS";
 const WINNERS_TITLE = "TROPHÉES";
-const LEGACY_FLOWER_VIDEO_URL = "https://interactive-examples.mdn.mozilla.net/media/cc0-videos/flower.mp4";
+const LEGACY_FLOWER_VIDEO_URL =
+  "https://interactive-examples.mdn.mozilla.net/media/cc0-videos/flower.mp4";
 const FALLBACK_IMAGE_URL =
   "data:image/svg+xml;charset=utf-8,%3Csvg%20xmlns='http://www.w3.org/2000/svg'%20width='1080'%20height='1440'%20viewBox='0%200%201080%201440'%3E%3Crect%20width='1080'%20height='1440'%20fill='%23000000'/%3E%3Crect%20x='64'%20y='64'%20width='952'%20height='1312'%20fill='%23f2efe3'%20stroke='%23000000'%20stroke-width='24'/%3E%3Crect%20x='112'%20y='112'%20width='856'%20height='240'%20fill='%23e11d48'/%3E%3Ctext%20x='540'%20y='248'%20text-anchor='middle'%20font-family='Impact,%20sans-serif'%20font-size='118'%20fill='%23ffffff'%3ENOD%3C/text%3E%3Ctext%20x='540'%20y='690'%20text-anchor='middle'%20font-family='Impact,%20sans-serif'%20font-size='104'%20fill='%23000000'%3EDOSSIER%3C/text%3E%3Ctext%20x='540'%20y='810'%20text-anchor='middle'%20font-family='Impact,%20sans-serif'%20font-size='104'%20fill='%23000000'%3EEN%20DIRECT%3C/text%3E%3Crect%20x='248'%20y='936'%20width='584'%20height='132'%20fill='%23b5f42b'%20stroke='%23000000'%20stroke-width='18'/%3E%3Ctext%20x='540'%20y='1028'%20text-anchor='middle'%20font-family='Impact,%20sans-serif'%20font-size='64'%20fill='%23000000'%3EA%20VOTER%3C/text%3E%3C/svg%3E";
 const TAP_REBOUND = { scale: 0.965, rotate: -0.35 };
-const TAP_TRANSITION = { type: "spring", stiffness: 900, damping: 32, mass: 0.42 } as const;
+const TAP_TRANSITION = {
+  type: "spring",
+  stiffness: 900,
+  damping: 32,
+  mass: 0.42,
+} as const;
 const HAPTICS = {
   tap: 10,
   option: 14,
@@ -177,22 +203,49 @@ const HAPTICS = {
   media: 18,
   success: [15, 30, 10],
   remove: [25, 60],
-  error: 100
+  error: 100,
 } as const;
 
 const CATEGORIES: CategoryMeta[] = [
-  { id: "le-zin-du-mois", label: "Le Zin du Mois", mood: "positive", icon: Crown },
-  { id: "la-fierte-des-notres", label: "La Fierté des Nôtres", mood: "positive", icon: BadgeCheck },
+  {
+    id: "le-zin-du-mois",
+    label: "Le Zin du Mois",
+    mood: "positive",
+    icon: Crown,
+  },
+  {
+    id: "la-fierte-des-notres",
+    label: "La Fierté des Nôtres",
+    mood: "positive",
+    icon: BadgeCheck,
+  },
   { id: "xptdr", label: "Xptdr", mood: "fun", icon: Sparkles },
   { id: "la-roue-libre", label: "La Roue Libre", mood: "fun", icon: Flame },
-  { id: "la-honte-de-la-oumma", label: "La Honte de la Oumma", mood: "critical", icon: ShieldAlert },
+  {
+    id: "la-honte-de-la-oumma",
+    label: "La Honte de la Oumma",
+    mood: "critical",
+    icon: ShieldAlert,
+  },
   { id: "bon-voyageur", label: "Bon Voyageur", mood: "surprise", icon: Globe2 },
   { id: "gros-chef-bandit", label: "Gros Chef Bandit", mood: "fun", icon: Zap },
-  { id: "surprise-totale", label: "Surprise Totale", mood: "surprise", icon: Camera },
-  { id: "lanalyse-pure", label: "L’Analyse Pure", mood: "positive", icon: Brain }
+  {
+    id: "surprise-totale",
+    label: "Surprise Totale",
+    mood: "surprise",
+    icon: Camera,
+  },
+  {
+    id: "lanalyse-pure",
+    label: "L’Analyse Pure",
+    mood: "positive",
+    icon: Brain,
+  },
 ];
 
-const CATEGORY_BY_ID = Object.fromEntries(CATEGORIES.map((category) => [category.id, category])) as Record<string, CategoryMeta>;
+const CATEGORY_BY_ID = Object.fromEntries(
+  CATEGORIES.map((category) => [category.id, category]),
+) as Record<string, CategoryMeta>;
 const CATEGORY_ID_ALIASES: Record<string, string> = {
   le_zin_du_mois: "le-zin-du-mois",
   fierte_des_notres: "la-fierte-des-notres",
@@ -208,64 +261,232 @@ const CATEGORY_ID_ALIASES: Record<string, string> = {
   fierte: "la-fierte-des-notres",
   pepite_cachee: "le-zin-du-mois",
   roue: "la-roue-libre",
-  viral: "surprise-totale"
+  viral: "surprise-totale",
 };
-const FEATURED_CATEGORY_IDS = ["le-zin-du-mois", "la-fierte-des-notres", "xptdr", "la-roue-libre", "la-honte-de-la-oumma", "bon-voyageur", "gros-chef-bandit", "surprise-totale", "lanalyse-pure"] as const;
-const RATING_DIMENSIONS: Array<{ key: RatingDimensionKey; label: string; shortLabel: string; emoji: string; color: string }> = [
-  { key: "rire", label: "Rire", shortLabel: "RIR", emoji: "😂", color: "#facc15" },
-  { key: "surprise", label: "Surprise", shortLabel: "SUR", emoji: "🤯", color: "#38bdf8" },
-  { key: "gene", label: "Gêne", shortLabel: "GÊN", emoji: "🤦", color: "#f43f5e" },
-  { key: "fierte", label: "Fierté", shortLabel: "FIE", emoji: "✊", color: "#d4af37" },
-  { key: "interet", label: "Intérêt", shortLabel: "INT", emoji: "🤔", color: "#a78bfa" }
+const FEATURED_CATEGORY_IDS = [
+  "le-zin-du-mois",
+  "la-fierte-des-notres",
+  "xptdr",
+  "la-roue-libre",
+  "la-honte-de-la-oumma",
+  "bon-voyageur",
+  "gros-chef-bandit",
+  "surprise-totale",
+  "lanalyse-pure",
+] as const;
+const RATING_DIMENSIONS: Array<{
+  key: RatingDimensionKey;
+  label: string;
+  shortLabel: string;
+  emoji: string;
+  color: string;
+}> = [
+  {
+    key: "rire",
+    label: "Rire",
+    shortLabel: "RIR",
+    emoji: "😂",
+    color: "#facc15",
+  },
+  {
+    key: "surprise",
+    label: "Surprise",
+    shortLabel: "SUR",
+    emoji: "🤯",
+    color: "#38bdf8",
+  },
+  {
+    key: "gene",
+    label: "Gêne",
+    shortLabel: "GÊN",
+    emoji: "🤦",
+    color: "#f43f5e",
+  },
+  {
+    key: "fierte",
+    label: "Fierté",
+    shortLabel: "FIE",
+    emoji: "✊",
+    color: "#d4af37",
+  },
+  {
+    key: "interet",
+    label: "Intérêt",
+    shortLabel: "INT",
+    emoji: "🤔",
+    color: "#a78bfa",
+  },
 ];
-const DEFAULT_DIMENSION_SCORES: DimensionScores = { rire: 3, surprise: 3, gene: 1, fierte: 2, interet: 3 };
-const CATEGORY_SCORING: Record<string, { weights: DimensionScores; lowIsStrong?: Partial<Record<RatingDimensionKey, boolean>> }> = {
-  "le-zin-du-mois": { weights: { rire: 0.18, surprise: 0.18, gene: 0.12, fierte: 0.32, interet: 0.2 }, lowIsStrong: { gene: true } },
-  "la-fierte-des-notres": { weights: { rire: 0.1, surprise: 0.14, gene: 0.22, fierte: 0.34, interet: 0.2 }, lowIsStrong: { gene: true } },
-  xptdr: { weights: { rire: 0.46, surprise: 0.2, gene: 0.18, fierte: 0.04, interet: 0.12 }, lowIsStrong: { gene: true } },
-  "la-roue-libre": { weights: { rire: 0.3, surprise: 0.34, gene: 0.14, fierte: 0.04, interet: 0.18 } },
-  "la-honte-de-la-oumma": { weights: { rire: 0.07, surprise: 0.1, gene: 0.55, fierte: 0.25, interet: 0.03 }, lowIsStrong: { fierte: true } },
-  "bon-voyageur": { weights: { rire: 0.12, surprise: 0.28, gene: 0.1, fierte: 0.14, interet: 0.36 }, lowIsStrong: { gene: true } },
-  "gros-chef-bandit": { weights: { rire: 0.24, surprise: 0.18, gene: 0.16, fierte: 0.24, interet: 0.18 }, lowIsStrong: { gene: true } },
-  "surprise-totale": { weights: { rire: 0.14, surprise: 0.46, gene: 0.08, fierte: 0.1, interet: 0.22 }, lowIsStrong: { gene: true } },
-  "lanalyse-pure": { weights: { rire: 0.04, surprise: 0.12, gene: 0.18, fierte: 0.22, interet: 0.44 }, lowIsStrong: { gene: true } }
+const DEFAULT_DIMENSION_SCORES: DimensionScores = {
+  rire: 3,
+  surprise: 3,
+  gene: 1,
+  fierte: 2,
+  interet: 3,
 };
-const SCORE_PRESETS: Array<{ id: string; label: string; hint: string; scores: DimensionScores }> = [
-  { id: "xptdr", label: "XPTDR", hint: "rire fort", scores: { rire: 5, surprise: 3, gene: 1, fierte: 1, interet: 3 } },
-  { id: "malaise", label: "Malaise", hint: "gêne max", scores: { rire: 1, surprise: 2, gene: 5, fierte: 0, interet: 2 } },
-  { id: "masterclass", label: "Masterclass", hint: "niveau haut", scores: { rire: 2, surprise: 4, gene: 0, fierte: 5, interet: 4 } },
-  { id: "choc", label: "Choc", hint: "surprise", scores: { rire: 2, surprise: 5, gene: 2, fierte: 2, interet: 5 } },
-  { id: "la-roue-libre", label: "Roue libre", hint: "chaos", scores: { rire: 4, surprise: 4, gene: 3, fierte: 1, interet: 3 } }
+const CATEGORY_SCORING: Record<
+  string,
+  {
+    weights: DimensionScores;
+    lowIsStrong?: Partial<Record<RatingDimensionKey, boolean>>;
+  }
+> = {
+  "le-zin-du-mois": {
+    weights: {
+      rire: 0.18,
+      surprise: 0.18,
+      gene: 0.12,
+      fierte: 0.32,
+      interet: 0.2,
+    },
+    lowIsStrong: { gene: true },
+  },
+  "la-fierte-des-notres": {
+    weights: {
+      rire: 0.1,
+      surprise: 0.14,
+      gene: 0.22,
+      fierte: 0.34,
+      interet: 0.2,
+    },
+    lowIsStrong: { gene: true },
+  },
+  xptdr: {
+    weights: {
+      rire: 0.46,
+      surprise: 0.2,
+      gene: 0.18,
+      fierte: 0.04,
+      interet: 0.12,
+    },
+    lowIsStrong: { gene: true },
+  },
+  "la-roue-libre": {
+    weights: {
+      rire: 0.3,
+      surprise: 0.34,
+      gene: 0.14,
+      fierte: 0.04,
+      interet: 0.18,
+    },
+  },
+  "la-honte-de-la-oumma": {
+    weights: {
+      rire: 0.07,
+      surprise: 0.1,
+      gene: 0.55,
+      fierte: 0.25,
+      interet: 0.03,
+    },
+    lowIsStrong: { fierte: true },
+  },
+  "bon-voyageur": {
+    weights: {
+      rire: 0.12,
+      surprise: 0.28,
+      gene: 0.1,
+      fierte: 0.14,
+      interet: 0.36,
+    },
+    lowIsStrong: { gene: true },
+  },
+  "gros-chef-bandit": {
+    weights: {
+      rire: 0.24,
+      surprise: 0.18,
+      gene: 0.16,
+      fierte: 0.24,
+      interet: 0.18,
+    },
+    lowIsStrong: { gene: true },
+  },
+  "surprise-totale": {
+    weights: {
+      rire: 0.14,
+      surprise: 0.46,
+      gene: 0.08,
+      fierte: 0.1,
+      interet: 0.22,
+    },
+    lowIsStrong: { gene: true },
+  },
+  "lanalyse-pure": {
+    weights: {
+      rire: 0.04,
+      surprise: 0.12,
+      gene: 0.18,
+      fierte: 0.22,
+      interet: 0.44,
+    },
+    lowIsStrong: { gene: true },
+  },
+};
+const SCORE_PRESETS: Array<{
+  id: string;
+  label: string;
+  hint: string;
+  scores: DimensionScores;
+}> = [
+  {
+    id: "xptdr",
+    label: "XPTDR",
+    hint: "rire fort",
+    scores: { rire: 5, surprise: 3, gene: 1, fierte: 1, interet: 3 },
+  },
+  {
+    id: "malaise",
+    label: "Malaise",
+    hint: "gêne max",
+    scores: { rire: 1, surprise: 2, gene: 5, fierte: 0, interet: 2 },
+  },
+  {
+    id: "masterclass",
+    label: "Masterclass",
+    hint: "niveau haut",
+    scores: { rire: 2, surprise: 4, gene: 0, fierte: 5, interet: 4 },
+  },
+  {
+    id: "choc",
+    label: "Choc",
+    hint: "surprise",
+    scores: { rire: 2, surprise: 5, gene: 2, fierte: 2, interet: 5 },
+  },
+  {
+    id: "la-roue-libre",
+    label: "Roue libre",
+    hint: "chaos",
+    scores: { rire: 4, surprise: 4, gene: 3, fierte: 1, interet: 3 },
+  },
 ];
 const TAB_ITEMS: Array<{ id: Tab; label: string; icon: LucideIcon }> = [
   { id: "direct", label: "Direct", icon: Sparkles },
   { id: "vote", label: "À voter", icon: Zap },
   { id: "studio", label: "Studio", icon: Plus },
   { id: "palmares", label: "Palmarès", icon: Trophy },
-  { id: "winners", label: "Trophées", icon: Crown }
+  { id: "winners", label: "Trophées", icon: Crown },
 ];
 
 const TAB_ORDER: Tab[] = TAB_ITEMS.map((item) => item.id);
 const pageVariants = {
   enter: (dir: "forward" | "backward") => ({
     x: dir === "forward" ? "100%" : "-100%",
-    opacity: 0
+    opacity: 0,
   }),
   center: {
     x: 0,
-    opacity: 1
+    opacity: 1,
   },
   exit: (dir: "forward" | "backward") => ({
     x: dir === "forward" ? "-100%" : "100%",
-    opacity: 0
-  })
+    opacity: 0,
+  }),
 };
 const DIRECT_FILTERS: Array<{ id: DirectFilter; label: string }> = [
   { id: "all", label: "Tout" },
   { id: "pending", label: "À voter" },
   { id: "qualified", label: "Nominés" },
   { id: "elite", label: "Favoris" },
-  { id: "mine", label: "Moi" }
+  { id: "mine", label: "Moi" },
 ];
 
 function isRecord(value: unknown): value is Record<string, unknown> {
@@ -288,13 +509,15 @@ function clampRating(value: number) {
   return clampDimension(value);
 }
 
-function cloneScores(scores: DimensionScores = DEFAULT_DIMENSION_SCORES): DimensionScores {
+function cloneScores(
+  scores: DimensionScores = DEFAULT_DIMENSION_SCORES,
+): DimensionScores {
   return {
     rire: clampDimension(scores.rire),
     surprise: clampDimension(scores.surprise),
     gene: clampDimension(scores.gene),
     fierte: clampDimension(scores.fierte),
-    interet: clampDimension(scores.interet)
+    interet: clampDimension(scores.interet),
   };
 }
 
@@ -304,19 +527,29 @@ function normalizedCategoryId(categoryId: string) {
 }
 
 function scoreForCategory(scores: DimensionScores, categoryId: string) {
-  const profile = CATEGORY_SCORING[normalizedCategoryId(categoryId)] ?? CATEGORY_SCORING[CATEGORIES[0].id];
+  const profile =
+    CATEGORY_SCORING[normalizedCategoryId(categoryId)] ??
+    CATEGORY_SCORING[CATEGORIES[0].id];
   const weighted = RATING_DIMENSIONS.reduce((sum, dimension) => {
     const rawValue = clampDimension(scores[dimension.key]);
-    const adjustedValue = profile.lowIsStrong?.[dimension.key] ? 5 - rawValue : rawValue;
+    const adjustedValue = profile.lowIsStrong?.[dimension.key]
+      ? 5 - rawValue
+      : rawValue;
     return sum + adjustedValue * profile.weights[dimension.key];
   }, 0);
 
   return Math.min(100, Math.max(0, Math.round(weighted * 20)));
 }
 
-function scoreTotal(scores: DimensionScores, categoryIds: string[] = [CATEGORIES[0].id]) {
+function scoreTotal(
+  scores: DimensionScores,
+  categoryIds: string[] = [CATEGORIES[0].id],
+) {
   const ids = normalizeCategoryIds(categoryIds, CATEGORIES[0].id);
-  const total = ids.reduce((sum, categoryId) => sum + scoreForCategory(scores, categoryId), 0);
+  const total = ids.reduce(
+    (sum, categoryId) => sum + scoreForCategory(scores, categoryId),
+    0,
+  );
   return Math.round(total / ids.length);
 }
 
@@ -349,7 +582,9 @@ function addToStarDistribution(distribution: StarDistribution, value: number) {
 
 function haptic(pattern: number | readonly number[]) {
   if (typeof window !== "undefined") {
-    window.dispatchEvent(new CustomEvent("nod-haptic", { detail: { pattern } }));
+    window.dispatchEvent(
+      new CustomEvent("nod-haptic", { detail: { pattern } }),
+    );
   }
   if (typeof navigator === "undefined" || !("vibrate" in navigator)) return;
   try {
@@ -360,17 +595,23 @@ function haptic(pattern: number | readonly number[]) {
 }
 
 function sameScores(a: DimensionScores, b: DimensionScores) {
-  return RATING_DIMENSIONS.every((dimension) => clampDimension(a[dimension.key]) === clampDimension(b[dimension.key]));
+  return RATING_DIMENSIONS.every(
+    (dimension) =>
+      clampDimension(a[dimension.key]) === clampDimension(b[dimension.key]),
+  );
 }
 
 function categorySummary(ids: string[]) {
-  const labels = normalizeCategoryIds(ids, CATEGORIES[0].id).map((id) => getCategoryMeta(id).label);
+  const labels = normalizeCategoryIds(ids, CATEGORIES[0].id).map(
+    (id) => getCategoryMeta(id).label,
+  );
   if (labels.length <= 2) return labels.join(" + ");
   return `${labels.slice(0, 2).join(" + ")} +${labels.length - 2}`;
 }
 
 function makeSessionId() {
-  if (typeof crypto !== "undefined" && "randomUUID" in crypto) return crypto.randomUUID();
+  if (typeof crypto !== "undefined" && "randomUUID" in crypto)
+    return crypto.randomUUID();
   return `session-${Date.now()}-${Math.random().toString(36).slice(2, 12)}`;
 }
 
@@ -400,19 +641,36 @@ function sanitizeTiktokerName(value: string) {
 
 function getCategoryMeta(value: string) {
   const resolved = CATEGORY_ID_ALIASES[value] ?? value;
-  return CATEGORY_BY_ID[resolved] ?? { id: "custom", label: value || "Sans catégorie", mood: "fun", icon: Camera };
+  return (
+    CATEGORY_BY_ID[resolved] ?? {
+      id: "custom",
+      label: value || "Sans catégorie",
+      mood: "fun",
+      icon: Camera,
+    }
+  );
 }
 
 function normalizeCategoryIds(value: unknown, fallback: string) {
-  const rawIds = Array.isArray(value) ? value.filter((item): item is string => typeof item === "string") : [];
-  const validIds = rawIds.map((id) => CATEGORY_ID_ALIASES[id] ?? id).filter((id) => CATEGORY_BY_ID[id]);
+  const rawIds = Array.isArray(value)
+    ? value.filter((item): item is string => typeof item === "string")
+    : [];
+  const validIds = rawIds
+    .map((id) => CATEGORY_ID_ALIASES[id] ?? id)
+    .filter((id) => CATEGORY_BY_ID[id]);
   const resolvedFallback = CATEGORY_ID_ALIASES[fallback] ?? fallback;
-  const fallbackId = CATEGORY_BY_ID[resolvedFallback] ? resolvedFallback : CATEGORIES[0].id;
+  const fallbackId = CATEGORY_BY_ID[resolvedFallback]
+    ? resolvedFallback
+    : CATEGORIES[0].id;
   return Array.from(new Set(validIds.length > 0 ? validIds : [fallbackId]));
 }
 
 function primaryCategoryId(ids: string[]) {
-  return ids.map((id) => CATEGORY_ID_ALIASES[id] ?? id).find((id) => CATEGORY_BY_ID[id]) ?? CATEGORIES[0].id;
+  return (
+    ids
+      .map((id) => CATEGORY_ID_ALIASES[id] ?? id)
+      .find((id) => CATEGORY_BY_ID[id]) ?? CATEGORIES[0].id
+  );
 }
 
 function statusFromRatings(ratings: Rating[]) {
@@ -427,28 +685,45 @@ function statusLabel(status: NominationStatus) {
 }
 
 function statusClass(status: NominationStatus) {
-  if (status === "accepted") return "border-[#d4af37]/60 bg-[#d4af37]/15 text-[#f0d889]";
-  if (status === "rejected") return "border-red-400/30 bg-red-950/40 text-red-100";
+  if (status === "accepted")
+    return "border-[#d4af37]/60 bg-[#d4af37]/15 text-[#f0d889]";
+  if (status === "rejected")
+    return "border-red-400/30 bg-red-950/40 text-red-100";
   return "border-[#d4af37]/50 bg-white/5 text-[#f0d889]";
 }
 
 function averageRating(ratings: Rating[], categoryIds?: string[]) {
   if (ratings.length === 0) return 0;
-  return ratings.reduce((sum, rating) => sum + ratingImpactScore(rating, categoryIds), 0) / ratings.length;
+  return (
+    ratings.reduce(
+      (sum, rating) => sum + ratingImpactScore(rating, categoryIds),
+      0,
+    ) / ratings.length
+  );
 }
 
 function totalPoints(ratings: Rating[], categoryIds?: string[]) {
-  return ratings.reduce((sum, rating) => sum + ratingImpactPoints(rating, categoryIds), 0);
+  return ratings.reduce(
+    (sum, rating) => sum + ratingImpactPoints(rating, categoryIds),
+    0,
+  );
 }
 
-function averageImpact(nomination: Nomination, categoryIds = nomination.category_ids) {
+function averageImpact(
+  nomination: Nomination,
+  categoryIds = nomination.category_ids,
+) {
   if (nomination.ratings.length === 0) return 0;
-  return Math.round(totalPoints(nomination.ratings, categoryIds) / nomination.ratings.length);
+  return Math.round(
+    totalPoints(nomination.ratings, categoryIds) / nomination.ratings.length,
+  );
 }
 
 function countdownToNextCeremony() {
   const now = new Date();
-  const next = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth() + 1, 1));
+  const next = new Date(
+    Date.UTC(now.getUTCFullYear(), now.getUTCMonth() + 1, 1),
+  );
   const diffMs = Math.max(0, next.getTime() - Date.now());
   const days = Math.floor(diffMs / 86400000);
   const hours = Math.floor((diffMs % 86400000) / 3600000);
@@ -459,7 +734,10 @@ function countdownToNextCeremony() {
 function isCurrentMonth(dateValue: string) {
   const date = new Date(dateValue);
   const now = new Date();
-  return date.getFullYear() === now.getFullYear() && date.getMonth() === now.getMonth();
+  return (
+    date.getFullYear() === now.getFullYear() &&
+    date.getMonth() === now.getMonth()
+  );
 }
 
 function parseRating(row: Record<string, unknown>): Rating {
@@ -469,25 +747,42 @@ function parseRating(row: Record<string, unknown>): Rating {
     surprise: clampDimension(toNumber(row.surprise_score, legacyRating)),
     gene: clampDimension(toNumber(row.gene_score, legacyRating)),
     fierte: clampDimension(toNumber(row.fierte_score, legacyRating)),
-    interet: clampDimension(toNumber(row.interet_score, legacyRating))
+    interet: clampDimension(toNumber(row.interet_score, legacyRating)),
   });
   const computedScore = scoreAverage(scores);
   const computedPoints = scoreTotal(scores);
 
   return {
-    id: toText(row.id, `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`),
+    id: toText(
+      row.id,
+      `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
+    ),
     nomination_id: toText(row.nomination_id),
     voter_id: toText(row.voter_id),
-    rating_stars: clampRating(toNumber(row.rating_stars, Math.round(computedScore))),
-    rating_score: Math.min(5, Math.max(0, toNumber(row.rating_score, computedScore))),
-    rating_points: Math.min(100, Math.max(0, toNumber(row.rating_points, computedPoints))),
+    rating_stars: clampRating(
+      toNumber(row.rating_stars, Math.round(computedScore)),
+    ),
+    rating_score: Math.min(
+      5,
+      Math.max(0, toNumber(row.rating_score, computedScore)),
+    ),
+    rating_points: Math.min(
+      100,
+      Math.max(0, toNumber(row.rating_points, computedPoints)),
+    ),
     scores,
     comment: toText(row.comment),
-    created_at: toText(row.created_at, new Date().toISOString())
+    created_at: toText(row.created_at, new Date().toISOString()),
   };
 }
 
-function makeRatingFromDraft(nominationId: string, voterId: string, scores: DimensionScores, comment: string, categoryIds?: string[]): Rating {
+function makeRatingFromDraft(
+  nominationId: string,
+  voterId: string,
+  scores: DimensionScores,
+  comment: string,
+  categoryIds?: string[],
+): Rating {
   const safeScores = cloneScores(scores);
   const points = scoreTotal(safeScores, categoryIds);
   const ratingScore = Math.round((points / 20) * 100) / 100;
@@ -501,16 +796,24 @@ function makeRatingFromDraft(nominationId: string, voterId: string, scores: Dime
     rating_points: points,
     scores: safeScores,
     comment,
-    created_at: new Date().toISOString()
+    created_at: new Date().toISOString(),
   };
 }
 
 function readPendingRatings(): PendingRatingPayload[] {
   if (typeof localStorage === "undefined") return [];
   try {
-    const parsed = JSON.parse(localStorage.getItem(PENDING_RATINGS_KEY) || "[]") as unknown;
+    const parsed = JSON.parse(
+      localStorage.getItem(PENDING_RATINGS_KEY) || "[]",
+    ) as unknown;
     if (!Array.isArray(parsed)) return [];
-    return parsed.filter((item): item is PendingRatingPayload => isRecord(item) && typeof item.nominationId === "string" && typeof item.voterId === "string" && isRecord(item.scores));
+    return parsed.filter(
+      (item): item is PendingRatingPayload =>
+        isRecord(item) &&
+        typeof item.nominationId === "string" &&
+        typeof item.voterId === "string" &&
+        isRecord(item.scores),
+    );
   } catch {
     return [];
   }
@@ -522,23 +825,36 @@ function writePendingRatings(items: PendingRatingPayload[]) {
 }
 
 function queuePendingRating(payload: PendingRatingPayload) {
-  const rest = readPendingRatings().filter((item) => !(item.nominationId === payload.nominationId && item.voterId === payload.voterId));
+  const rest = readPendingRatings().filter(
+    (item) =>
+      !(
+        item.nominationId === payload.nominationId &&
+        item.voterId === payload.voterId
+      ),
+  );
   writePendingRatings([...rest, payload]);
 }
 
 function parseNomination(row: Record<string, unknown>): Nomination {
-  const ratings = Array.isArray(row.ratings) ? row.ratings.filter(isRecord).map(parseRating) : [];
+  const ratings = Array.isArray(row.ratings)
+    ? row.ratings.filter(isRecord).map(parseRating)
+    : [];
   const rawMediaKind = toText(row.media_kind, "image");
   const fallbackCategory = toText(row.category_id, CATEGORIES[0].id);
   const categoryIds = normalizeCategoryIds(row.category_ids, fallbackCategory);
   const computedStatus = statusFromRatings(ratings);
 
   return {
-    id: toText(row.id, `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`),
+    id: toText(
+      row.id,
+      `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
+    ),
     room_id: toText(row.room_id),
     category_id: primaryCategoryId(categoryIds),
     category_ids: categoryIds,
-    tiktoker_name: sanitizeTiktokerName(toText(row.tiktoker_name, "TikToker mystère")) || "TikToker mystère",
+    tiktoker_name:
+      sanitizeTiktokerName(toText(row.tiktoker_name, "TikToker mystère")) ||
+      "TikToker mystère",
     media_url: toText(row.media_url, FALLBACK_IMAGE_URL),
     video_storage_path: toText(row.video_storage_path) || null,
     thumbnail_url: toText(row.thumbnail_url) || null,
@@ -548,7 +864,7 @@ function parseNomination(row: Record<string, unknown>): Nomination {
     submitted_by: toText(row.submitted_by, "session-inconnue"),
     status: computedStatus,
     created_at: toText(row.created_at, new Date().toISOString()),
-    ratings
+    ratings,
   };
 }
 
@@ -566,13 +882,15 @@ function studioBurst() {
     ticks: 180,
     colors,
     origin: { y: 0.6 },
-    disableForReducedMotion: true
+    disableForReducedMotion: true,
   });
 }
 
 function voteBurst(points: number) {
   const elite = points >= 80;
-  const colors = elite ? ["#d4af37", "#f0d889", "#ffffff", "#050505"] : ["#d4af37", "#8a6f24", "#f5f1e8"];
+  const colors = elite
+    ? ["#d4af37", "#f0d889", "#ffffff", "#050505"]
+    : ["#d4af37", "#8a6f24", "#f5f1e8"];
 
   void confetti({
     particleCount: elite ? 118 : 72,
@@ -582,139 +900,18 @@ function voteBurst(points: number) {
     ticks: 150,
     colors,
     origin: { y: 0.72 },
-    disableForReducedMotion: true
+    disableForReducedMotion: true,
   });
 }
 
-function setUrl(urlSetter: (value: string | null) => void, currentUrl: string | null, nextFile: File | null) {
+function setUrl(
+  urlSetter: (value: string | null) => void,
+  currentUrl: string | null,
+  nextFile: File | null,
+) {
   if (currentUrl) URL.revokeObjectURL(currentUrl);
   urlSetter(nextFile ? URL.createObjectURL(nextFile) : null);
 }
-
-function buildScoreBoard(nominations: Nomination[], categoryId?: string) {
-  const monthlyQualified = nominations.filter((nomination) => nomination.status !== "pending" && isCurrentMonth(nomination.created_at) && (!categoryId || nomination.category_ids.includes(categoryId)));
-  const byTarget = new Map<string, ScoreBoard>();
-
-  for (const nomination of monthlyQualified) {
-    const category = getCategoryMeta(categoryId ?? nomination.category_id);
-    const existing = byTarget.get(nomination.tiktoker_name) ?? {
-      tiktokerName: nomination.tiktoker_name,
-      category: categoryId ? category : undefined,
-      points: 0,
-      votes: 0,
-      average: 0,
-      nominations: 0
-    };
-
-    existing.nominations += 1;
-    for (const rating of nomination.ratings) {
-      existing.points += ratingImpactPoints(rating, categoryId ? [categoryId] : nomination.category_ids);
-      existing.votes += 1;
-    }
-    existing.average = existing.votes > 0 ? existing.points / existing.votes / 20 : 0;
-    byTarget.set(nomination.tiktoker_name, existing);
-  }
-
-  return Array.from(byTarget.values()).sort((a, b) => b.points - a.points || b.average - a.average || a.tiktokerName.localeCompare(b.tiktokerName));
-}
-
-function bestSubmission(nominations: Nomination[]) {
-  return nominations
-    .filter((nomination) => nomination.status !== "pending" && isCurrentMonth(nomination.created_at))
-    .sort((a, b) => totalPoints(b.ratings, b.category_ids) - totalPoints(a.ratings, a.category_ids) || averageRating(b.ratings, b.category_ids) - averageRating(a.ratings, a.category_ids))[0];
-}
-
-function buildPalmaresRows(nominations: Nomination[]) {
-  const rows = new Map<string, PalmaresRow>();
-  const monthly = nominations.filter((nomination) => isCurrentMonth(nomination.created_at));
-
-  for (const nomination of monthly) {
-    const current = rows.get(nomination.tiktoker_name) ?? {
-      tiktokerName: nomination.tiktoker_name,
-      avatarUrl: nomination.thumbnail_url || nomination.media_url || FALLBACK_IMAGE_URL,
-      points: 0,
-      votes: 0,
-      average: 0,
-      totalDossiers: 0,
-      acceptedDossiers: 0,
-      successRate: 0,
-      categoryCounts: Object.fromEntries(FEATURED_CATEGORY_IDS.map((id) => [id, 0])) as Record<string, number>,
-      starDistribution: createStarDistribution(),
-      dimensionTotals: cloneScores({ rire: 0, surprise: 0, gene: 0, fierte: 0, interet: 0 })
-    };
-
-    current.totalDossiers += 1;
-    if (nomination.status !== "pending") current.acceptedDossiers += 1;
-    for (const categoryId of nomination.category_ids) {
-      if (FEATURED_CATEGORY_IDS.includes(categoryId as (typeof FEATURED_CATEGORY_IDS)[number])) {
-        current.categoryCounts[categoryId] = (current.categoryCounts[categoryId] ?? 0) + 1;
-      }
-    }
-
-    for (const rating of nomination.ratings) {
-      current.points += ratingImpactPoints(rating, nomination.category_ids);
-      current.votes += 1;
-      addToStarDistribution(current.starDistribution, ratingImpactScore(rating, nomination.category_ids));
-      addScores(current.dimensionTotals, rating.scores);
-    }
-
-    current.average = current.votes > 0 ? current.points / current.votes / 20 : 0;
-    current.successRate = current.totalDossiers > 0 ? Math.round((current.acceptedDossiers / current.totalDossiers) * 100) : 0;
-    rows.set(nomination.tiktoker_name, current);
-  }
-
-  return Array.from(rows.values()).sort((a, b) => b.points - a.points || b.successRate - a.successRate || b.average - a.average || a.tiktokerName.localeCompare(b.tiktokerName));
-}
-
-function buildCategoryRaces(nominations: Nomination[]): CategoryRace[] {
-  const monthly = nominations.filter((nomination) => isCurrentMonth(nomination.created_at));
-
-  return CATEGORIES.map((category) => {
-    const inCategory = monthly.filter((nomination) => nomination.category_ids.includes(category.id));
-    const rows = new Map<string, CategoryRaceRow>();
-
-    for (const nomination of inCategory) {
-      const current = rows.get(nomination.tiktoker_name) ?? {
-        tiktokerName: nomination.tiktoker_name,
-        avatarUrl: nomination.thumbnail_url || nomination.media_url || FALLBACK_IMAGE_URL,
-        points: 0,
-        votes: 0,
-        average: 0,
-        totalDossiers: 0,
-        acceptedDossiers: 0,
-        pendingDossiers: 0,
-        rejectedDossiers: 0,
-        successRate: 0,
-        starDistribution: createStarDistribution(),
-        dimensionTotals: cloneScores({ rire: 0, surprise: 0, gene: 0, fierte: 0, interet: 0 })
-      };
-
-      current.totalDossiers += 1;
-      if (nomination.status !== "pending") current.acceptedDossiers += 1;
-      if (nomination.status === "pending") current.pendingDossiers += 1;
-      if (nomination.status === "rejected") current.rejectedDossiers += 1;
-
-      for (const rating of nomination.ratings) {
-        current.points += ratingImpactPoints(rating, [category.id]);
-        current.votes += 1;
-        addToStarDistribution(current.starDistribution, ratingImpactScore(rating, [category.id]));
-        addScores(current.dimensionTotals, rating.scores);
-      }
-
-      current.average = current.votes > 0 ? current.points / current.votes / 20 : 0;
-      current.successRate = current.totalDossiers > 0 ? Math.round((current.acceptedDossiers / current.totalDossiers) * 100) : 0;
-      rows.set(nomination.tiktoker_name, current);
-    }
-
-    return {
-      category,
-      totalDossiers: inCategory.length,
-      rows: Array.from(rows.values()).sort((a, b) => b.points - a.points || b.successRate - a.successRate || b.average - a.average || a.tiktokerName.localeCompare(b.tiktokerName))
-    };
-  });
-}
-
-
 
 function PaperBackdrop() {
   return (
@@ -728,7 +925,8 @@ function PaperBackdrop() {
 
 export default function Home() {
   const reduceMotion = !!useReducedMotion();
-  const [supabase, setSupabase] = useState<ReturnType<typeof getSupabaseBrowserClient>>(null);
+  const [supabase, setSupabase] =
+    useState<ReturnType<typeof getSupabaseBrowserClient>>(null);
   const [bootingSession, setBootingSession] = useState(true);
   const [participant, setParticipant] = useState<Participant | null>(null);
   const [roomId, setRoomId] = useState<string | null>(null);
@@ -742,27 +940,41 @@ export default function Home() {
 
   const [toast, setToast] = useState<ToastState>(null);
   const toastTimeoutRef = useRef<number | null>(null);
-  const [ceremonyCountdown, setCeremonyCountdown] = useState(countdownToNextCeremony);
+  const [ceremonyCountdown, setCeremonyCountdown] = useState(
+    countdownToNextCeremony,
+  );
 
   const [showStudioOverlay, setShowStudioOverlay] = useState(false);
   const [preparedFile, setPreparedFile] = useState<File | null>(null);
   const [thumbnailFile, setThumbnailFile] = useState<File | null>(null);
   const [mediaKind, setMediaKind] = useState<MediaKind | null>(null);
   const [previewUrl, setPreviewUrlState] = useState<string | null>(null);
-  const [thumbnailPreviewUrl, setThumbnailPreviewUrlState] = useState<string | null>(null);
+  const [thumbnailPreviewUrl, setThumbnailPreviewUrlState] = useState<
+    string | null
+  >(null);
   const [mediaProgress, setMediaProgress] = useState(0);
   const [isPreparingMedia, setIsPreparingMedia] = useState(false);
   const [tiktokerName, setTiktokerName] = useState("");
   const [catId, setCatId] = useState(CATEGORIES[0].id);
-  const [selectedCategoryIds, setSelectedCategoryIds] = useState<string[]>([CATEGORIES[0].id]);
+  const [selectedCategoryIds, setSelectedCategoryIds] = useState<string[]>([
+    CATEGORIES[0].id,
+  ]);
   const [comment, setComment] = useState("");
-  const [initialScores, setInitialScores] = useState<DimensionScores>(cloneScores(DEFAULT_DIMENSION_SCORES));
+  const [initialScores, setInitialScores] = useState<DimensionScores>(
+    cloneScores(DEFAULT_DIMENSION_SCORES),
+  );
   const [uploadLoading, setUploadLoading] = useState(false);
-  const [editingNominationId, setEditingNominationId] = useState<string | null>(null);
+  const [editingNominationId, setEditingNominationId] = useState<string | null>(
+    null,
+  );
   const [mutationBusyId, setMutationBusyId] = useState<string | null>(null);
 
-  const [scoreDraftById, setScoreDraftById] = useState<Record<string, DimensionScores>>({});
-  const [reviewDraftById, setReviewDraftById] = useState<Record<string, string>>({});
+  const [scoreDraftById, setScoreDraftById] = useState<
+    Record<string, DimensionScores>
+  >({});
+  const [reviewDraftById, setReviewDraftById] = useState<
+    Record<string, string>
+  >({});
   const [voteBusyId, setVoteBusyId] = useState<string | null>(null);
   const [bootError, setBootError] = useState<string | null>(null);
   const [shakeId, setShakeId] = useState<string | null>(null);
@@ -782,7 +994,10 @@ export default function Home() {
     void shell.offsetWidth;
     shell.classList.add("tabloid-haptic-pulse");
 
-    const timer = window.setTimeout(() => shell.classList.remove("tabloid-haptic-pulse"), 160);
+    const timer = window.setTimeout(
+      () => shell.classList.remove("tabloid-haptic-pulse"),
+      160,
+    );
     return () => window.clearTimeout(timer);
   }, [globalShake]);
 
@@ -826,10 +1041,14 @@ export default function Home() {
 
         const user = await ensureAnonymousSession(client);
         if (user) {
-          const storedPseudo = sanitizePseudo(localStorage.getItem(PSEUDO_KEY) || "");
-          const nextPseudo = storedPseudo || `Joueur ${user.id.slice(0, 4).toUpperCase()}`;
+          const storedPseudo = sanitizePseudo(
+            localStorage.getItem(PSEUDO_KEY) || "",
+          );
+          const nextPseudo =
+            storedPseudo || `Joueur ${user.id.slice(0, 4).toUpperCase()}`;
 
-          if (storedPseudo !== nextPseudo) localStorage.setItem(PSEUDO_KEY, nextPseudo);
+          if (storedPseudo !== nextPseudo)
+            localStorage.setItem(PSEUDO_KEY, nextPseudo);
 
           setParticipant({ id: user.id, pseudo: nextPseudo });
         } else {
@@ -886,7 +1105,11 @@ export default function Home() {
     localStorage.setItem(ROOM_CODE_KEY, cleanCode);
     setRoomCode(cleanCode);
 
-    const { data, error } = await supabase.from("rooms").upsert({ code: cleanCode }, { onConflict: "code" }).select("id").single();
+    const { data, error } = await supabase
+      .from("rooms")
+      .upsert({ code: cleanCode }, { onConflict: "code" })
+      .select("id")
+      .single();
     if (error) throw error;
 
     const nextRoomId = toText(data?.id);
@@ -905,7 +1128,9 @@ export default function Home() {
         // Attempt 1: full query with all optional columns + nested ratings
         const nominationsResult = await supabase
           .from("nominations")
-          .select("id,room_id,category_id,category_ids,tiktoker_name,media_url,video_storage_path,thumbnail_url,thumbnail_storage_path,media_kind,comment,submitted_by,status,created_at,ratings(id,nomination_id,voter_id,rating_stars,rating_score,rating_points,rire_score,surprise_score,gene_score,fierte_score,interet_score,comment,created_at)")
+          .select(
+            "id,room_id,category_id,category_ids,tiktoker_name,media_url,video_storage_path,thumbnail_url,thumbnail_storage_path,media_kind,comment,submitted_by,status,created_at,ratings(id,nomination_id,voter_id,rating_stars,rating_score,rating_points,rire_score,surprise_score,gene_score,fierte_score,interet_score,comment,created_at)",
+          )
           .eq("room_id", activeRoomId)
           .order("created_at", { ascending: false });
 
@@ -914,10 +1139,15 @@ export default function Home() {
 
         // Attempt 2: if ANY error (empty body {}, unknown column, broken relation) — use safe query without optional columns
         if (error) {
-          console.warn("[NOD Fetch] Attempt 1 failed, trying safe query.", { code: error.code, msg: error.message });
+          console.warn("[NOD Fetch] Attempt 1 failed, trying safe query.", {
+            code: error.code,
+            msg: error.message,
+          });
           const safe = await supabase
             .from("nominations")
-            .select("id,room_id,category_id,tiktoker_name,media_url,video_storage_path,thumbnail_url,thumbnail_storage_path,media_kind,comment,submitted_by,status,created_at,ratings(id,nomination_id,voter_id,rating_stars,comment,created_at)")
+            .select(
+              "id,room_id,category_id,tiktoker_name,media_url,video_storage_path,thumbnail_url,thumbnail_storage_path,media_kind,comment,submitted_by,status,created_at,ratings(id,nomination_id,voter_id,rating_stars,comment,created_at)",
+            )
             .eq("room_id", activeRoomId)
             .order("created_at", { ascending: false });
           data = safe.data as Record<string, unknown>[] | null;
@@ -926,10 +1156,15 @@ export default function Home() {
 
         // Attempt 3: absolute bare minimum — no nested ratings
         if (error) {
-          console.warn("[NOD Fetch] Attempt 2 failed, trying bare minimum.", { code: error.code, msg: error.message });
+          console.warn("[NOD Fetch] Attempt 2 failed, trying bare minimum.", {
+            code: error.code,
+            msg: error.message,
+          });
           const bare = await supabase
             .from("nominations")
-            .select("id,room_id,category_id,tiktoker_name,media_url,thumbnail_url,media_kind,comment,submitted_by,status,created_at")
+            .select(
+              "id,room_id,category_id,tiktoker_name,media_url,thumbnail_url,media_kind,comment,submitted_by,status,created_at",
+            )
             .eq("room_id", activeRoomId)
             .order("created_at", { ascending: false });
           data = bare.data as Record<string, unknown>[] | null;
@@ -937,22 +1172,30 @@ export default function Home() {
         }
 
         if (error) {
-          console.error("[NOD Fetch] All attempts failed:", { code: error.code, message: error.message, details: (error as any).details });
+          console.error("[NOD Fetch] All attempts failed:", {
+            code: error.code,
+            message: error.message,
+            details: (error as any).details,
+          });
           throw error;
         }
 
-        const rows = ((data ?? []) as Record<string, unknown>[]).map(parseNomination);
+        const rows = ((data ?? []) as Record<string, unknown>[]).map(
+          parseNomination,
+        );
         setNominations(rows);
       } catch (err: any) {
         if (!silent) {
-          const message = err?.message || (typeof err === 'string' ? err : "Le direct refuse de répondre.");
+          const message =
+            err?.message ||
+            (typeof err === "string" ? err : "Le direct refuse de répondre.");
           showToast("error", message);
         }
       } finally {
         setSyncing(false);
       }
     },
-    [roomId, showToast, supabase]
+    [roomId, showToast, supabase],
   );
 
   useEffect(() => {
@@ -962,9 +1205,11 @@ export default function Home() {
     void (async () => {
       try {
         const activeRoomId = await ensureRoom();
-        if (!cancelled && activeRoomId) await fetchNominations(false, activeRoomId);
+        if (!cancelled && activeRoomId)
+          await fetchNominations(false, activeRoomId);
       } catch (err) {
-        const message = err instanceof Error ? err.message : "Salon introuvable.";
+        const message =
+          err instanceof Error ? err.message : "Salon introuvable.";
         showToast("error", message);
       }
     })();
@@ -983,13 +1228,25 @@ export default function Home() {
 
     const channel = supabase
       .channel(`nod_room_${roomId}`, { config: { broadcast: { self: false } } })
-      .on("postgres_changes", { event: "*", schema: "public", table: "nominations", filter: `room_id=eq.${roomId}` }, (payload) => {
-        if (payload.eventType === "INSERT") {
-          const submittedBy = toText((payload.new as Record<string, unknown>).submitted_by);
-          if (submittedBy !== participant.id) showToast("info", "Nouveau dossier à juger.");
-        }
-        void fetchNominations(true);
-      })
+      .on(
+        "postgres_changes",
+        {
+          event: "*",
+          schema: "public",
+          table: "nominations",
+          filter: `room_id=eq.${roomId}`,
+        },
+        (payload) => {
+          if (payload.eventType === "INSERT") {
+            const submittedBy = toText(
+              (payload.new as Record<string, unknown>).submitted_by,
+            );
+            if (submittedBy !== participant.id)
+              showToast("info", "Nouveau dossier à juger.");
+          }
+          void fetchNominations(true);
+        },
+      )
       .on("broadcast", { event: "nomination" }, () => {
         void fetchNominations(true);
       })
@@ -1009,23 +1266,39 @@ export default function Home() {
 
   const pendingForMe = useMemo(() => {
     if (!participant) return [];
-    return nominations.filter((nomination) => 
-      nomination.status === "pending" && 
-      nomination.submitted_by !== participant.id &&
-      !nomination.ratings.some((rating) => rating.voter_id === participant.id)
+    return nominations.filter(
+      (nomination) =>
+        nomination.status === "pending" &&
+        nomination.submitted_by !== participant.id &&
+        !nomination.ratings.some(
+          (rating) => rating.voter_id === participant.id,
+        ),
     );
   }, [nominations, participant]);
 
-  const qualified = useMemo(() => nominations.filter((nomination) => nomination.status !== "pending"), [nominations]);
-  const eliteDossiers = useMemo(() => qualified.filter((nomination) => averageImpact(nomination) >= 80), [qualified]);
+  const qualified = useMemo(
+    () => nominations.filter((nomination) => nomination.status !== "pending"),
+    [nominations],
+  );
+  const eliteDossiers = useMemo(
+    () => qualified.filter((nomination) => averageImpact(nomination) >= 80),
+    [qualified],
+  );
   const feedItems = useMemo(() => {
     return nominations
       .filter((nomination) => {
-        if (directFilter === "mine") return Boolean(participant && nomination.submitted_by === participant.id);
+        if (directFilter === "mine")
+          return Boolean(
+            participant && nomination.submitted_by === participant.id,
+          );
         if (directFilter === "all") return true;
         if (directFilter === "pending") return nomination.status === "pending";
-        if (directFilter === "qualified") return nomination.status !== "pending";
-        if (directFilter === "elite") return nomination.status !== "pending" && averageImpact(nomination) >= 80;
+        if (directFilter === "qualified")
+          return nomination.status !== "pending";
+        if (directFilter === "elite")
+          return (
+            nomination.status !== "pending" && averageImpact(nomination) >= 80
+          );
         return true;
       })
       .slice(0, 30);
@@ -1033,38 +1306,94 @@ export default function Home() {
   const directFilterCounts = useMemo<Record<DirectFilter, number>>(
     () => ({
       all: nominations.length,
-      pending: nominations.filter((nomination) => nomination.status === "pending").length,
+      pending: nominations.filter(
+        (nomination) => nomination.status === "pending",
+      ).length,
       qualified: qualified.length,
       elite: eliteDossiers.length,
-      mine: participant ? nominations.filter((nomination) => nomination.submitted_by === participant.id).length : 0
+      mine: participant
+        ? nominations.filter(
+            (nomination) => nomination.submitted_by === participant.id,
+          ).length
+        : 0,
     }),
-    [eliteDossiers.length, nominations, participant, qualified.length]
+    [eliteDossiers.length, nominations, participant, qualified.length],
   );
-  const monthlyNominations = useMemo(() => nominations.filter((nomination) => isCurrentMonth(nomination.created_at)), [nominations]);
-  const ultimateWinner = useMemo(() => buildScoreBoard(nominations)[0] ?? null, [nominations]);
+  const monthlyNominations = useMemo(
+    () =>
+      nominations.filter((nomination) => isCurrentMonth(nomination.created_at)),
+    [nominations],
+  );
+  const ultimateWinner = useMemo(
+    () => buildScoreBoard(nominations)[0] ?? null,
+    [nominations],
+  );
   const paparazziOr = useMemo(() => bestSubmission(nominations), [nominations]);
   const nextPendingForMe = pendingForMe[0];
-  const { palmaresRows, isLoading: isLoadingPalmares } = usePalmares(supabase, roomCode);
-  const categoryRaces = useMemo(() => buildCategoryRaces(nominations), [nominations]);
+  const { palmaresRows, isLoading: isLoadingPalmares } = usePalmares(
+    supabase,
+    roomCode,
+  );
+  const categoryRaces = useMemo(
+    () => buildCategoryRaces(nominations),
+    [nominations],
+  );
 
-  const editingNomination = useMemo(() => nominations.find((nomination) => nomination.id === editingNominationId) ?? null, [nominations, editingNominationId]);
+  const editingNomination = useMemo(
+    () =>
+      nominations.find((nomination) => nomination.id === editingNominationId) ??
+      null,
+    [nominations, editingNominationId],
+  );
   const isEditingStudio = Boolean(editingNomination);
   const cleanTiktokerName = sanitizeTiktokerName(tiktokerName);
-  const cleanCategoryIds = useMemo(() => normalizeCategoryIds(selectedCategoryIds, catId), [catId, selectedCategoryIds]);
+  const cleanCategoryIds = useMemo(
+    () => normalizeCategoryIds(selectedCategoryIds, catId),
+    [catId, selectedCategoryIds],
+  );
   const uploadReady = isEditingStudio
-    ? comment.trim().length >= 3 && cleanTiktokerName.length >= 2 && cleanCategoryIds.length === 1
-    : Boolean(preparedFile && thumbnailFile && comment.trim().length >= 3 && cleanTiktokerName.length >= 2 && cleanCategoryIds.length === 1 && !isPreparingMedia);
-  const ownsNomination = useCallback((nomination: Nomination) => Boolean(participant && nomination.submitted_by === participant.id), [participant]);
+    ? comment.trim().length >= 3 &&
+      cleanTiktokerName.length >= 2 &&
+      cleanCategoryIds.length === 1
+    : Boolean(
+        preparedFile &&
+        thumbnailFile &&
+        comment.trim().length >= 3 &&
+        cleanTiktokerName.length >= 2 &&
+        cleanCategoryIds.length === 1 &&
+        !isPreparingMedia,
+      );
+  const ownsNomination = useCallback(
+    (nomination: Nomination) =>
+      Boolean(participant && nomination.submitted_by === participant.id),
+    [participant],
+  );
 
-  const patchRatingLocally = useCallback((nominationId: string, rating: Rating) => {
-    setNominations((current) =>
-      current.map((nomination) => {
-        if (nomination.id !== nominationId) return nomination;
-        const nextRatings = [...nomination.ratings.filter((item) => item.voter_id !== rating.voter_id), rating].sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime());
-        return { ...nomination, ratings: nextRatings, status: statusFromRatings(nextRatings) };
-      })
-    );
-  }, []);
+  const patchRatingLocally = useCallback(
+    (nominationId: string, rating: Rating) => {
+      setNominations((current) =>
+        current.map((nomination) => {
+          if (nomination.id !== nominationId) return nomination;
+          const nextRatings = [
+            ...nomination.ratings.filter(
+              (item) => item.voter_id !== rating.voter_id,
+            ),
+            rating,
+          ].sort(
+            (a, b) =>
+              new Date(b.created_at).getTime() -
+              new Date(a.created_at).getTime(),
+          );
+          return {
+            ...nomination,
+            ratings: nextRatings,
+            status: statusFromRatings(nextRatings),
+          };
+        }),
+      );
+    },
+    [],
+  );
 
   const submitRatingSafely = useCallback(
     async (nomination: Nomination, scores: DimensionScores, review: string) => {
@@ -1083,17 +1412,20 @@ export default function Home() {
         gene: safeScores.gene,
         fierte: safeScores.fierte,
         interet: safeScores.interet,
-        reaction_comment: safeReview
+        reaction_comment: safeReview,
       };
 
-      const rpcResult = await supabase.rpc("submit_nomination_vote", rpcPayload);
+      const rpcResult = await supabase.rpc(
+        "submit_nomination_vote",
+        rpcPayload,
+      );
       if (!rpcResult.error) return true;
 
       const legacyResult = await supabase.rpc("submit_nomination_vote", {
         target_nomination_id: nomination.id,
         voter_id: participant.id,
         stars: Math.max(0, Math.round(averageScore)),
-        reaction_comment: safeReview
+        reaction_comment: safeReview,
       });
       if (!legacyResult.error) return true;
 
@@ -1109,14 +1441,14 @@ export default function Home() {
           gene_score: safeScores.gene,
           fierte_score: safeScores.fierte,
           interet_score: safeScores.interet,
-          comment: safeReview
+          comment: safeReview,
         },
-        { onConflict: "nomination_id,voter_id" }
+        { onConflict: "nomination_id,voter_id" },
       );
 
       return !upsertResult.error;
     },
-    [participant, supabase]
+    [participant, supabase],
   );
 
   useEffect(() => {
@@ -1132,11 +1464,17 @@ export default function Home() {
       const stillPending: PendingRatingPayload[] = [];
 
       for (const payload of mine) {
-        const nomination = nominations.find((item) => item.id === payload.nominationId);
+        const nomination = nominations.find(
+          (item) => item.id === payload.nominationId,
+        );
         if (!nomination) continue;
 
         try {
-          const ok = await submitRatingSafely(nomination, cloneScores(payload.scores), payload.comment);
+          const ok = await submitRatingSafely(
+            nomination,
+            cloneScores(payload.scores),
+            payload.comment,
+          );
           if (!ok) stillPending.push(payload);
         } catch {
           stillPending.push(payload);
@@ -1159,7 +1497,13 @@ export default function Home() {
       cancelled = true;
       window.clearInterval(timer);
     };
-  }, [fetchNominations, nominations, participant, submitRatingSafely, supabase]);
+  }, [
+    fetchNominations,
+    nominations,
+    participant,
+    submitRatingSafely,
+    supabase,
+  ]);
 
   const revealContainer = reduceMotion
     ? {}
@@ -1168,8 +1512,8 @@ export default function Home() {
         animate: "show",
         variants: {
           hidden: {},
-          show: { transition: { staggerChildren: 0.08, delayChildren: 0.04 } }
-        }
+          show: { transition: { staggerChildren: 0.08, delayChildren: 0.04 } },
+        },
       };
 
   const revealItem = reduceMotion
@@ -1177,19 +1521,28 @@ export default function Home() {
     : {
         variants: {
           hidden: { opacity: 0, y: 18, rotate: -1.5 },
-          show: { opacity: 1, y: 0, rotate: 0, transition: { type: "spring", stiffness: 210, damping: 23 } }
-        }
+          show: {
+            opacity: 1,
+            y: 0,
+            rotate: 0,
+            transition: { type: "spring", stiffness: 210, damping: 23 },
+          },
+        },
       };
 
   const pageTransition = reduceMotion
-    ? { initial: { opacity: 1, x: 0 }, animate: { opacity: 1, x: 0 }, exit: { opacity: 1, x: 0 } }
+    ? {
+        initial: { opacity: 1, x: 0 },
+        animate: { opacity: 1, x: 0 },
+        exit: { opacity: 1, x: 0 },
+      }
     : {
         custom: dir,
         variants: pageVariants,
         initial: "enter",
         animate: "center",
         exit: "exit",
-        transition: { type: "spring", stiffness: 380, damping: 38 }
+        transition: { type: "spring", stiffness: 380, damping: 38 },
       };
 
   const handleSectionDrag = useCallback(
@@ -1200,7 +1553,7 @@ export default function Home() {
       const nextTab = TAB_ORDER[nextIndex];
       if (nextTab) switchTab(nextTab);
     },
-    [switchTab, tab]
+    [switchTab, tab],
   );
 
   const resetStudioDraft = useCallback(() => {
@@ -1212,14 +1565,11 @@ export default function Home() {
     setCatId(CATEGORIES[0].id);
   }, [clearPreparedMedia]);
 
-  const toggleCategory = useCallback(
-    (categoryId: string) => {
-      haptic(HAPTICS.option);
-      setSelectedCategoryIds([categoryId]);
-      setCatId(categoryId);
-    },
-    []
-  );
+  const toggleCategory = useCallback((categoryId: string) => {
+    haptic(HAPTICS.option);
+    setSelectedCategoryIds([categoryId]);
+    setCatId(categoryId);
+  }, []);
 
   const startEditNomination = useCallback(
     (nomination: Nomination) => {
@@ -1238,7 +1588,7 @@ export default function Home() {
       showToast("info", "Mode modif : auteur seulement.");
       switchTab("studio");
     },
-    [clearPreparedMedia, ownsNomination, showToast, switchTab]
+    [clearPreparedMedia, ownsNomination, showToast, switchTab],
   );
 
   const cancelEditNomination = useCallback(() => {
@@ -1283,7 +1633,8 @@ export default function Home() {
       showToast("success", "Rec prêt.");
     } catch (err) {
       clearPreparedMedia();
-      const message = err instanceof Error ? err.message : "Média impossible à préparer.";
+      const message =
+        err instanceof Error ? err.message : "Média impossible à préparer.";
       showToast("error", message);
     } finally {
       setIsPreparingMedia(false);
@@ -1291,7 +1642,14 @@ export default function Home() {
   };
 
   const saveEditedNomination = async () => {
-    if (!participant || !supabase || !editingNomination || !ownsNomination(editingNomination) || mutationBusyId) return;
+    if (
+      !participant ||
+      !supabase ||
+      !editingNomination ||
+      !ownsNomination(editingNomination) ||
+      mutationBusyId
+    )
+      return;
 
     const cleanedComment = comment.trim();
     if (cleanedComment.length < 3 || cleanTiktokerName.length < 2) {
@@ -1309,16 +1667,19 @@ export default function Home() {
         next_comment: cleanedComment,
         next_category_id: primaryCategoryId(cleanCategoryIds),
         next_tiktoker_name: cleanTiktokerName,
-        next_category_ids: cleanCategoryIds
+        next_category_ids: cleanCategoryIds,
       });
 
-      if (error && /function .*update_own_nomination|Could not find/i.test(error.message)) {
+      if (
+        error &&
+        /function .*update_own_nomination|Could not find/i.test(error.message)
+      ) {
         const legacy = await supabase.rpc("update_own_nomination", {
           target_nomination_id: editingNomination.id,
           editor_id: participant.id,
           next_comment: cleanedComment,
           next_category_id: primaryCategoryId(cleanCategoryIds),
-          next_tiktoker_name: cleanTiktokerName
+          next_tiktoker_name: cleanTiktokerName,
         });
         error = legacy.error;
       }
@@ -1329,10 +1690,15 @@ export default function Home() {
       setEditingNominationId(null);
       resetStudioDraft();
       switchTab("direct");
-      await channelRef.current?.send({ type: "broadcast", event: "nomination", payload: { id: editingNomination.id } });
+      await channelRef.current?.send({
+        type: "broadcast",
+        event: "nomination",
+        payload: { id: editingNomination.id },
+      });
       void fetchNominations(true);
     } catch (err) {
-      const message = err instanceof Error ? err.message : "Modification impossible.";
+      const message =
+        err instanceof Error ? err.message : "Modification impossible.";
       showToast("error", message);
     } finally {
       setMutationBusyId(null);
@@ -1340,7 +1706,13 @@ export default function Home() {
   };
 
   const removeNomination = async (nomination: Nomination) => {
-    if (!participant || !supabase || !ownsNomination(nomination) || mutationBusyId) return;
+    if (
+      !participant ||
+      !supabase ||
+      !ownsNomination(nomination) ||
+      mutationBusyId
+    )
+      return;
     const confirmed = window.confirm("Retirer ce dossier du club ?");
     if (!confirmed) return;
 
@@ -1350,7 +1722,7 @@ export default function Home() {
     try {
       const { error } = await supabase.rpc("delete_own_nomination", {
         target_nomination_id: nomination.id,
-        editor_id: participant.id
+        editor_id: participant.id,
       });
 
       if (error) throw error;
@@ -1361,10 +1733,15 @@ export default function Home() {
       }
 
       showToast("info", "Dossier retiré.");
-      await channelRef.current?.send({ type: "broadcast", event: "nomination", payload: { id: nomination.id } });
+      await channelRef.current?.send({
+        type: "broadcast",
+        event: "nomination",
+        payload: { id: nomination.id },
+      });
       void fetchNominations(true);
     } catch (err) {
-      const message = err instanceof Error ? err.message : "Retrait impossible.";
+      const message =
+        err instanceof Error ? err.message : "Retrait impossible.";
       showToast("error", message);
     } finally {
       setMutationBusyId(null);
@@ -1383,7 +1760,13 @@ export default function Home() {
     }
 
     const cleanedComment = comment.trim();
-    if (!preparedFile || !thumbnailFile || !mediaKind || cleanedComment.length < 3 || cleanTiktokerName.length < 2) {
+    if (
+      !preparedFile ||
+      !thumbnailFile ||
+      !mediaKind ||
+      cleanedComment.length < 3 ||
+      cleanTiktokerName.length < 2
+    ) {
       showToast("error", "Ajoute le TikToker, le média et le contexte.");
       return;
     }
@@ -1396,25 +1779,45 @@ export default function Home() {
       const activeRoomId = roomId ?? (await ensureRoom());
       if (!activeRoomId) throw new Error("Salon introuvable.");
 
-      const thumbnailUpload = await uploadMediaFile(supabase, thumbnailFile, "miniatures");
+      const thumbnailUpload = await uploadMediaFile(
+        supabase,
+        thumbnailFile,
+        "miniatures",
+      );
       setMediaProgress(mediaKind === "video" ? 0.45 : 0.82);
 
-      const mediaUpload = mediaKind === "video" ? await uploadMediaFile(supabase, preparedFile, "videos") : thumbnailUpload;
+      const mediaUpload =
+        mediaKind === "video"
+          ? await uploadMediaFile(supabase, preparedFile, "videos")
+          : thumbnailUpload;
       setMediaProgress(0.82);
 
       // Always use the live Supabase auth UID (not cached participant.id which may be stale)
-      const { data: { session: liveSession } } = await supabase.auth.getSession();
+      const {
+        data: { session: liveSession },
+      } = await supabase.auth.getSession();
       let liveUid = liveSession?.user?.id ?? participant.id;
-      
+
       // Prevent PostgreSQL "operator does not exist: uuid = text" if liveUid is not a valid UUID format
-      const isUuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(liveUid);
+      const isUuid =
+        /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(
+          liveUid,
+        );
       if (!isUuid) {
-        liveUid = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(participant.id)
-          ? participant.id
-          : "00000000-0000-0000-0000-000000000000"; // Safe empty UUID fallback
+        liveUid =
+          /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(
+            participant.id,
+          )
+            ? participant.id
+            : "00000000-0000-0000-0000-000000000000"; // Safe empty UUID fallback
       }
-      
-      console.info("[NOD Insert] liveUid=", liveUid, "participant.id=", participant.id);
+
+      console.info(
+        "[NOD Insert] liveUid=",
+        liveUid,
+        "participant.id=",
+        participant.id,
+      );
 
       const nominationInsert = {
         room_id: activeRoomId,
@@ -1428,7 +1831,7 @@ export default function Home() {
         media_kind: mediaKind,
         comment: cleanedComment,
         submitted_by: liveUid,
-        status: "pending"
+        status: "pending",
       };
 
       let { data: insertedNomination, error: insertError } = await supabase
@@ -1438,17 +1841,33 @@ export default function Home() {
         .single();
 
       if (insertError) {
-        console.error("[NOD Insert] Attempt 1 error:", { code: insertError.code, msg: insertError.message, details: (insertError as any).details, hint: (insertError as any).hint });
+        console.error("[NOD Insert] Attempt 1 error:", {
+          code: insertError.code,
+          msg: insertError.message,
+          details: (insertError as any).details,
+          hint: (insertError as any).hint,
+        });
       }
 
       // Fallback: if category_ids column doesn't exist OR any 4xx error on insert
       if (insertError) {
-        const legacyInsert: Partial<typeof nominationInsert> = { ...nominationInsert };
+        const legacyInsert: Partial<typeof nominationInsert> = {
+          ...nominationInsert,
+        };
         delete legacyInsert.category_ids;
         console.info("[NOD Insert] Retrying without category_ids...");
-        const legacy = await supabase.from("nominations").insert(legacyInsert).select("id").single();
+        const legacy = await supabase
+          .from("nominations")
+          .insert(legacyInsert)
+          .select("id")
+          .single();
         if (legacy.error) {
-          console.error("[NOD Insert] Attempt 2 error:", { code: legacy.error.code, msg: legacy.error.message, details: (legacy.error as any).details, hint: (legacy.error as any).hint });
+          console.error("[NOD Insert] Attempt 2 error:", {
+            code: legacy.error.code,
+            msg: legacy.error.message,
+            details: (legacy.error as any).details,
+            hint: (legacy.error as any).hint,
+          });
         }
         insertedNomination = legacy.data;
         insertError = legacy.error;
@@ -1473,9 +1892,13 @@ export default function Home() {
         submitted_by: participant.id,
         status: "pending",
         created_at: new Date().toISOString(),
-        ratings: []
+        ratings: [],
       };
-      const initialRatingSaved = await submitRatingSafely(initialNomination, initialScores, cleanedComment);
+      const initialRatingSaved = await submitRatingSafely(
+        initialNomination,
+        initialScores,
+        cleanedComment,
+      );
 
       if (!initialRatingSaved) {
         queuePendingRating({
@@ -1483,7 +1906,7 @@ export default function Home() {
           voterId: participant.id,
           scores: initialScores,
           comment: cleanedComment,
-          createdAt: new Date().toISOString()
+          createdAt: new Date().toISOString(),
         });
       }
 
@@ -1492,15 +1915,25 @@ export default function Home() {
       studioBurst();
       haptic([30, 40, 30, 40]);
       resetStudioDraft();
-      await channelRef.current?.send({ type: "broadcast", event: "nomination", payload: { id: nominationId } });
+      await channelRef.current?.send({
+        type: "broadcast",
+        event: "nomination",
+        payload: { id: nominationId },
+      });
       void fetchNominations(true, activeRoomId);
       window.setTimeout(() => {
         setShowStudioOverlay(false);
         switchTab("direct");
       }, 2500);
     } catch (err: any) {
-      const message = err?.message || (typeof err === 'string' ? err : "Échec de l'envoi.");
-      showToast("error", isStorageUnavailableMessage(message) ? STORAGE_UNAVAILABLE_NOTICE : message);
+      const message =
+        err?.message || (typeof err === "string" ? err : "Échec de l'envoi.");
+      showToast(
+        "error",
+        isStorageUnavailableMessage(message)
+          ? STORAGE_UNAVAILABLE_NOTICE
+          : message,
+      );
     } finally {
       setUploadLoading(false);
       setMediaProgress(0);
@@ -1514,9 +1947,17 @@ export default function Home() {
     if (!nomination) return;
 
     const cleanedReview = (reviewDraftById[id] ?? "").trim();
-    const draftScores = cloneScores(scoreDraftById[id] ?? DEFAULT_DIMENSION_SCORES);
+    const draftScores = cloneScores(
+      scoreDraftById[id] ?? DEFAULT_DIMENSION_SCORES,
+    );
     const impactPoints = scoreTotal(draftScores, nomination.category_ids);
-    const localRating = makeRatingFromDraft(id, participant.id, draftScores, cleanedReview, nomination.category_ids);
+    const localRating = makeRatingFromDraft(
+      id,
+      participant.id,
+      draftScores,
+      cleanedReview,
+      nomination.category_ids,
+    );
 
     haptic(impactPoints >= 80 ? HAPTICS.success : HAPTICS.option);
     setVoteBusyId(id);
@@ -1525,14 +1966,18 @@ export default function Home() {
     patchRatingLocally(id, localRating);
 
     try {
-      const remoteSaved = await submitRatingSafely(nomination, draftScores, cleanedReview);
+      const remoteSaved = await submitRatingSafely(
+        nomination,
+        draftScores,
+        cleanedReview,
+      );
       if (!remoteSaved) {
         queuePendingRating({
           nominationId: id,
           voterId: participant.id,
           scores: draftScores,
           comment: cleanedReview,
-          createdAt: localRating.created_at
+          createdAt: localRating.created_at,
         });
       }
       setScoreDraftById((prev) => {
@@ -1547,9 +1992,18 @@ export default function Home() {
       });
 
       voteBurst(impactPoints);
-      showToast("success", remoteSaved ? `Note enregistrée · ${impactPoints}/100.` : `Note gardée · ${impactPoints}/100.`);
+      showToast(
+        "success",
+        remoteSaved
+          ? `Note enregistrée · ${impactPoints}/100.`
+          : `Note gardée · ${impactPoints}/100.`,
+      );
       if (remoteSaved) {
-        await channelRef.current?.send({ type: "broadcast", event: "rating", payload: { id } });
+        await channelRef.current?.send({
+          type: "broadcast",
+          event: "rating",
+          payload: { id },
+        });
         void fetchNominations(true);
       }
     } catch {
@@ -1558,7 +2012,7 @@ export default function Home() {
         voterId: participant.id,
         scores: draftScores,
         comment: cleanedReview,
-        createdAt: localRating.created_at
+        createdAt: localRating.created_at,
       });
       voteBurst(impactPoints);
       showToast("success", `Note gardée · ${impactPoints}/100.`);
@@ -1571,7 +2025,10 @@ export default function Home() {
     return (
       <div ref={shellRef} className="tabloid-app items-center justify-center">
         <PaperBackdrop />
-        <BrutalCard tone="yellow" className="flex h-20 w-20 items-center justify-center">
+        <BrutalCard
+          tone="yellow"
+          className="flex h-20 w-20 items-center justify-center"
+        >
           <Loader2 className="h-8 w-8 animate-spin text-black" />
         </BrutalCard>
       </div>
@@ -1585,13 +2042,17 @@ export default function Home() {
         <BrutalCard tone="yellow" className="p-5 text-center">
           {bootError ? (
             <>
-              <p className="mb-2 text-xl font-black uppercase leading-none text-red-600">Erreur Fatale</p>
+              <p className="mb-2 text-xl font-black uppercase leading-none text-red-600">
+                Erreur Fatale
+              </p>
               <p className="font-mono text-sm">{bootError}</p>
             </>
           ) : (
             <>
               <Loader2 className="mx-auto mb-3 h-8 w-8 animate-spin text-black" />
-              <p className="text-xl font-black uppercase leading-none">Chargement du jeu...</p>
+              <p className="text-xl font-black uppercase leading-none">
+                Chargement du jeu...
+              </p>
             </>
           )}
         </BrutalCard>
@@ -1600,14 +2061,33 @@ export default function Home() {
   }
 
   return (
-    <div ref={shellRef} className={`tabloid-app ${uploadLoading || mutationBusyId ? "pointer-events-none" : ""}`}>
+    <div
+      ref={shellRef}
+      className={`tabloid-app ${uploadLoading || mutationBusyId ? "pointer-events-none" : ""}`}
+    >
       <PaperBackdrop />
 
       <AnimatePresence>
         {toast && (
-          <motion.div initial={{ opacity: 0, y: -18, scale: 0.95 }} animate={{ opacity: 1, y: 0, scale: 1 }} exit={{ opacity: 0, y: -14, scale: 0.95 }} transition={{ type: "spring", stiffness: 400, damping: 25 }} className="toast-stack">
-            <div role="status" aria-live="polite" className={`flex items-center gap-2 rounded-[10px] border px-3 py-2 text-[11px] font-black uppercase tracking-[0.04em] shadow-[0_14px_36px_rgba(0,0,0,0.45)] backdrop-blur-xl ${toast.tone === "success" ? "border-[#d4af37]/60 bg-[#d4af37]/20 text-[#f0d889]" : toast.tone === "error" ? "border-red-400/40 bg-red-950/80 text-red-100" : "border-white/10 bg-black/80 text-white"}`}>
-              {toast.tone === "success" ? <Check className="h-4 w-4" /> : toast.tone === "error" ? <ShieldAlert className="h-4 w-4" /> : <Sparkles className="h-4 w-4" />}
+          <motion.div
+            initial={{ opacity: 0, y: -18, scale: 0.95 }}
+            animate={{ opacity: 1, y: 0, scale: 1 }}
+            exit={{ opacity: 0, y: -14, scale: 0.95 }}
+            transition={{ type: "spring", stiffness: 400, damping: 25 }}
+            className="toast-stack"
+          >
+            <div
+              role="status"
+              aria-live="polite"
+              className={`flex items-center gap-2 rounded-[10px] border px-3 py-2 text-[11px] font-black uppercase tracking-[0.04em] shadow-[0_14px_36px_rgba(0,0,0,0.45)] backdrop-blur-xl ${toast.tone === "success" ? "border-[#d4af37]/60 bg-[#d4af37]/20 text-[#f0d889]" : toast.tone === "error" ? "border-red-400/40 bg-red-950/80 text-red-100" : "border-white/10 bg-black/80 text-white"}`}
+            >
+              {toast.tone === "success" ? (
+                <Check className="h-4 w-4" />
+              ) : toast.tone === "error" ? (
+                <ShieldAlert className="h-4 w-4" />
+              ) : (
+                <Sparkles className="h-4 w-4" />
+              )}
               <span>{toast.message}</span>
             </div>
           </motion.div>
@@ -1624,18 +2104,22 @@ export default function Home() {
           >
             <motion.div
               initial={{ scale: 0.9, y: 20 }}
-              animate={{ scale: 1, y: 0, transition: { type: "spring", stiffness: 300, damping: 20 } }}
+              animate={{
+                scale: 1,
+                y: 0,
+                transition: { type: "spring", stiffness: 300, damping: 20 },
+              }}
               exit={{ scale: 0.9, y: -20 }}
               className="max-w-md space-y-4"
             >
               <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-full border-4 border-[#39FF14] bg-[#39FF14]/10 text-[#39FF14] shadow-[0_0_20px_rgba(57,255,20,0.3)]">
                 <Check className="h-8 w-8 stroke-[3]" />
               </div>
-              
+
               <h2 className="tabloid-headline text-3xl md:text-4xl leading-none text-white tracking-tight">
                 DOSSIER SOUMIS
               </h2>
-              
+
               <div className="inline-block rounded-none border-2 border-[#d4af37] bg-[#d4af37]/15 px-3 py-1.5 text-xs font-black uppercase tracking-[0.15em] text-[#f0d889] transform -rotate-1">
                 EN ROUTE POUR LA CÉRÉMONIE DE SAISON 1
               </div>
@@ -1646,11 +2130,14 @@ export default function Home() {
 
       <main className="tabloid-main">
         <div className="tabloid-scroll mx-auto w-full max-w-[30rem] px-2">
-        <header className="sticky top-0 z-30 mb-2 overflow-hidden bg-[#050505]/85 py-1.5 backdrop-blur-xl">
-          <Ticker>
-            CÉRÉMONIE DE LA SAISON 1 LE 1ER DU MOIS / DANS {ceremonyCountdown.days}J {ceremonyCountdown.hours}H {ceremonyCountdown.mins}M / TOURNOI DU MOIS / {monthlyNominations.length} DOSSIERS EN JEU / 
-          </Ticker>
-        </header>
+          <header className="sticky top-0 z-30 mb-2 overflow-hidden bg-[#050505]/85 py-1.5 backdrop-blur-xl">
+            <Ticker>
+              CÉRÉMONIE DE LA SAISON 1 LE 1ER DU MOIS / DANS{" "}
+              {ceremonyCountdown.days}J {ceremonyCountdown.hours}H{" "}
+              {ceremonyCountdown.mins}M / TOURNOI DU MOIS /{" "}
+              {monthlyNominations.length} DOSSIERS EN JEU /
+            </Ticker>
+          </header>
 
           <AnimatePresence mode="wait" custom={dir}>
             {tab === "direct" && (
@@ -1743,35 +2230,50 @@ export default function Home() {
               />
             )}
           </AnimatePresence>
-          </div>
-        </main>
+        </div>
+      </main>
 
+      <nav
+        aria-label="Navigation principale"
+        className="bottom-tabloid px-2 pt-1.5 pointer-events-auto"
+      >
+        <div className="mx-auto grid w-full max-w-[30rem] grid-cols-5 gap-1">
+          {TAB_ITEMS.map((item) => {
+            const Icon = item.icon;
+            const active = tab === item.id;
+            const badge = item.id === "vote" ? pendingForMe.length : 0;
 
-
-        <nav aria-label="Navigation principale" className="bottom-tabloid px-2 pt-1.5 pointer-events-auto">
-          <div className="mx-auto grid w-full max-w-[30rem] grid-cols-5 gap-1">
-            {TAB_ITEMS.map((item) => {
-              const Icon = item.icon;
-              const active = tab === item.id;
-              const badge = item.id === "vote" ? pendingForMe.length : 0;
-
-              return (
-                <motion.button key={item.id} type="button" whileTap={TAP_REBOUND} transition={TAP_TRANSITION} onClick={() => switchTab(item.id)} aria-current={active ? "page" : undefined} className={`relative flex flex-col items-center justify-center gap-0.5 rounded-[10px] border px-1 py-1.5 transition ${active ? "border-[#d4af37]/70 text-[#f0d889]" : "border-transparent bg-transparent hover:bg-white/5 text-zinc-400"}`}>
-                  {active && (
-                    <motion.div layoutId="navIndicator" className="absolute inset-0 rounded-[10px] bg-[#d4af37]/18 shadow-[inset_0_0_10px_rgba(212,175,55,0.1)]" transition={{ type: "spring", stiffness: 400, damping: 35 }} />
-                  )}
-                  <Icon className="relative z-10 h-4 w-4" strokeWidth={1.5} />
-                  <span className="relative z-10 text-[7.5px] font-black uppercase tracking-tighter">{item.label}</span>
-                  {badge > 0 && (
-                    <span className="absolute right-0 top-0 z-20 inline-flex h-4 min-w-[16px] items-center justify-center rounded-full border border-[#d4af37]/80 bg-[#d4af37] px-1 text-[8px] font-black text-black">
-                      {badge > 9 ? "9+" : badge}
-                    </span>
-                  )}
-                </motion.button>
-              );
-            })}
-          </div>
-        </nav>
+            return (
+              <motion.button
+                key={item.id}
+                type="button"
+                whileTap={TAP_REBOUND}
+                transition={TAP_TRANSITION}
+                onClick={() => switchTab(item.id)}
+                aria-current={active ? "page" : undefined}
+                className={`relative flex flex-col items-center justify-center gap-0.5 rounded-[10px] border px-1 py-1.5 transition ${active ? "border-[#d4af37]/70 text-[#f0d889]" : "border-transparent bg-transparent hover:bg-white/5 text-zinc-400"}`}
+              >
+                {active && (
+                  <motion.div
+                    layoutId="navIndicator"
+                    className="absolute inset-0 rounded-[10px] bg-[#d4af37]/18 shadow-[inset_0_0_10px_rgba(212,175,55,0.1)]"
+                    transition={{ type: "spring", stiffness: 400, damping: 35 }}
+                  />
+                )}
+                <Icon className="relative z-10 h-4 w-4" strokeWidth={1.5} />
+                <span className="relative z-10 text-[7.5px] font-black uppercase tracking-tighter">
+                  {item.label}
+                </span>
+                {badge > 0 && (
+                  <span className="absolute right-0 top-0 z-20 inline-flex h-4 min-w-[16px] items-center justify-center rounded-full border border-[#d4af37]/80 bg-[#d4af37] px-1 text-[8px] font-black text-black">
+                    {badge > 9 ? "9+" : badge}
+                  </span>
+                )}
+              </motion.button>
+            );
+          })}
+        </div>
+      </nav>
     </div>
   );
 }
