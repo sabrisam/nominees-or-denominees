@@ -351,7 +351,7 @@ export function StudioTab({
               COURS...
             </span>
           ) : (
-            "Lancer le dossier"
+            "ENVOYER LE SCREEN"
           )}
         </motion.button>
       )}
