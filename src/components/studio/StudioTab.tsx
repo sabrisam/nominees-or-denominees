@@ -239,12 +239,7 @@ export function StudioTab({
 
       <div className="grid grid-cols-3 gap-1">
         {CATEGORIES.map((category) => {
-          const tacticalTag =
-            category.mood === "positive"
-              ? "EL FAKHR"
-              : category.mood === "critical"
-                ? "EL HECHMA"
-                : category.label;
+          const label = category.label;
           const Icon = category.icon;
           const active = cleanCategoryIds.includes(category.id);
           return (
@@ -255,12 +250,12 @@ export function StudioTab({
               transition={TAP_TRANSITION}
               onClick={() => toggleCategory(category.id)}
               aria-pressed={active}
-              aria-label={`${category.label} - ${tacticalTag}`}
+              aria-label={label}
               className={`min-h-10 rounded-[10px] border px-1.5 py-1 text-left font-sans ${active ? "border-[#d4af37]/75 bg-[#d4af37]/18 text-[#f0d889]" : "border-white/10 bg-[#0c0c0c] text-zinc-500"}`}
             >
               <Icon className="mb-1 h-3 w-3" />
               <span className="line-clamp-2 text-[8px] font-black uppercase leading-none tracking-tighter font-sans">
-                {tacticalTag}
+                {label}
               </span>
             </motion.button>
           );
