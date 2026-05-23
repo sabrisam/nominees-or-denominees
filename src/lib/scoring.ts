@@ -52,12 +52,23 @@ export function normalizedCategoryId(categoryId: string) {
 }
 
 export function scoreForCategory(scores: DimensionScores, categoryId?: string) {
-  const sum = 
-    clampDimension(scores.rire) + 
-    clampDimension(scores.surprise) + 
-    clampDimension(scores.gene) + 
-    clampDimension(scores.fierte) + 
-    clampDimension(scores.interet);
+  const resolvedId = categoryId ? normalizedCategoryId(categoryId) : null;
+  const rules = resolvedId ? CATEGORY_SCORING[resolvedId] : null;
+  const lowIsStrong = rules?.lowIsStrong ?? {};
+
+  const rireVal = clampDimension(scores.rire);
+  const surpriseVal = clampDimension(scores.surprise);
+  const geneVal = clampDimension(scores.gene);
+  const fierteVal = clampDimension(scores.fierte);
+  const interetVal = clampDimension(scores.interet);
+
+  const rire = lowIsStrong.rire ? (5 - rireVal) : rireVal;
+  const surprise = lowIsStrong.surprise ? (5 - surpriseVal) : surpriseVal;
+  const gene = lowIsStrong.gene ? (5 - geneVal) : geneVal;
+  const fierte = lowIsStrong.fierte ? (5 - fierteVal) : fierteVal;
+  const interet = lowIsStrong.interet ? (5 - interetVal) : interetVal;
+
+  const sum = rire + surprise + gene + fierte + interet;
   return Math.min(100, Math.max(0, Math.round(sum * 4)));
 }
 
