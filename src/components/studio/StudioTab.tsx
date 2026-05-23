@@ -75,6 +75,39 @@ export function StudioTab({
 }) {
   const isEditingStudio = Boolean(editingNomination);
 
+  const handleSelectedFile = async (file: File | null) => {
+    if (!file) {
+      await prepareMedia(null);
+      return;
+    }
+
+    const isAllowedType = MEDIA_WHITELIST.some((prefix) =>
+      file.type.startsWith(prefix),
+    );
+
+    if (!isAllowedType || file.size > MAX_UPLOAD_BYTES) {
+      const message = !isAllowedType
+        ? "Seuls les fichiers image et vidéo sont autorisés."
+        : "Taille maximale atteinte : 25 Mo.";
+      window.alert(message);
+      await prepareMedia(null);
+      return;
+    }
+
+    await prepareMedia(file);
+  };
+
+  const handleAIPunchline = () => {
+    const prompt = `${AI_PROMPT_TEMPLATE} \n
+      SCREEN: ${tiktokerName || "inconnu"} / Catégorie: ${
+        cleanCategoryIds.length > 0
+          ? cleanCategoryIds.map((id) => id.toUpperCase()).join(", ")
+          : "aucune"
+      }`;
+    console.info("AI PUNCHLINE PROMPT", prompt);
+    window.alert("Prompt IA prêt dans la console du navigateur.");
+  };
+
   return (
     <motion.section
       key="studio"
