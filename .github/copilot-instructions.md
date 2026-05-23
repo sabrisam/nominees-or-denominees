@@ -1,4 +1,4 @@
-# SYSTEM RULES FOR NOD v3.4
+# SYSTEM RULES FOR NOD v4.3
 
 - Language: French (Comments & UI placeholders)
 - Theme: Dark Gold Tabloid (bg-[#050505], card bg-[#0c0c0c], border-[#d4af37]/20)
@@ -36,4 +36,6 @@ All visual styling MUST be driven by `src/lib/tokens.ts`. Hardcoded hex values i
 
 ## LOCALES
 
-- Comments and user-facing UI placeholders must be in French.- iOS Targets: input/textarea font-size must be 16px to block auto-zoom. -webkit-user-select: none on interactive items.
+- Comments and user-facing UI placeholders must be in French.
+- iOS Targets: input/textarea font-size must be 16px to block auto-zoom.
+- `-webkit-user-select: none` on interactive items.

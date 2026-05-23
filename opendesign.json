@@ -1,0 +1,11 @@
+{
+  "projectId": "nod-game-v4.3",
+  "engine": "openai",
+  "model": "custom",
+  "modelId": "qwen2.5-coder:1.5b",
+  "baseUrl": "http://localhost:11434/v1",
+  "options": {
+    "bypassPermissions": true,
+    "autoMode": true
+  }
+}

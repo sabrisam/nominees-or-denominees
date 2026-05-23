@@ -1,0 +1,7 @@
+{
+  "api": {
+    "baseUrl": "http://localhost:11434/v1",
+    "apiKey": "ollama"
+  },
+  "defaultModel": "qwen2.5-coder:1.5b"
+}
