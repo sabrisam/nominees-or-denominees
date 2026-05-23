@@ -43,6 +43,7 @@ import {
   buildScoreBoard,
   bestSubmission,
   buildCategoryRaces,
+  buildRankingMemoryGrid,
 } from "@/lib/ranking";
 import {
   BadgeCheck,
