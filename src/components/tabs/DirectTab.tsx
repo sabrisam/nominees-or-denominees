@@ -10,7 +10,7 @@ import {
 } from "lucide-react";
 import { BrutalCard } from "../ui/BrutalCard";
 import { SectionTitle } from "../ui/SectionTitle";
-import { NominationCard } from "./NominationCard";
+import { NominationCard } from "../direct/NominationCard";
 import { getCategoryMeta, averageImpact } from "@/lib/scoring";
 import { CATEGORIES } from "@/constants/categories";
 import type { Nomination, DirectFilter, Tab, PalmaresRow } from "@/types";
