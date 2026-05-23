@@ -99,7 +99,7 @@ export function PalmaresTab({
         <BrutalCard className="p-6 text-center border-white/5 bg-black/50">
           <Trophy className="mx-auto mb-2 h-8 w-8 text-champagne" />
           <p className="tabloid-headline text-2xl leading-none text-white">
-            AUCUN PROFIL ÉVALUÉ POUR L'INSTANT
+            AUCUN PROFIL ÉVALUÉ POUR L{"'"}INSTANT
           </p>
           <p className="mx-auto mt-1 max-w-[15rem] text-[10px] font-semibold uppercase tracking-tighter text-zinc-500">
             Le palmarès se mettra à jour après le premier SCREEN noté.
