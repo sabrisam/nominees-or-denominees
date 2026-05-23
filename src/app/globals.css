@@ -85,7 +85,7 @@ textarea {
 
 html {
   height: var(--app-height, 100dvh);
-  background: #050505;
+  background: var(--void);
 }
 
 body {
@@ -96,7 +96,7 @@ body {
   padding: 0;
   overflow: hidden;
   overscroll-behavior: none;
-  background: #050505;
+  background: var(--void);
   color: var(--cream);
   font-size: 14px;
   font-family:
@@ -246,7 +246,7 @@ video {
         rgba(240, 216, 137, 0.1),
         transparent 18rem
       ),
-      linear-gradient(180deg, #050505 0%, #0b0a08 48%, #050505 100%);
+      linear-gradient(180deg, var(--void) 0%, var(--monolith) 48%, var(--void) 100%);
     color: var(--cream);
   }
 
