@@ -11,7 +11,7 @@ export function Sticker({
 }) {
   const toneClass =
     tone === "yellow"
-      ? "border-[#d4af37]/60 bg-[#d4af37]/15 text-[#f0d889]"
+      ? "border-champagne/60 bg-champagne/15 text-champagneSoft"
       : tone === "black"
         ? "border-white/10 bg-black/70 text-white"
         : tone === "paper"

@@ -79,8 +79,8 @@ export function VoteTab({
       className="space-y-1.5"
     >
       {/* Header Tabloid */}
-      <BrutalCard tone="black" className="p-3 bg-[#0c0c0c] border-[#d4af37]/20">
-        <p className="mb-0.5 text-[7.5px] font-black uppercase tracking-[0.2em] text-[#d4af37] font-sans">
+      <BrutalCard tone="black" className="p-3 bg-monolith border-champagne/20">
+        <p className="mb-0.5 text-[7.5px] font-black uppercase tracking-[0.2em] text-champagne font-sans">
           Jugement en cours
         </p>
         <h1 className="tabloid-headline text-[clamp(1.6rem,8vw,2.6rem)] leading-[0.84] text-white od-display">
@@ -97,23 +97,23 @@ export function VoteTab({
         >
           <BrutalCard
             tone="yellow"
-            className="p-5 text-center bg-[#0c0c0c] border-[#d4af37]/20"
+            className="p-5 text-center bg-monolith border-champagne/20"
           >
             <motion.div
               animate={{ rotate: [0, 8, -8, 0] }}
               transition={{ duration: 2, repeat: Infinity, ease: "easeInOut" }}
             >
-              <Check className="mx-auto mb-3 h-10 w-10 text-[#d4af37]" />
+              <Check className="mx-auto mb-3 h-10 w-10 text-champagne" />
             </motion.div>
-            <p className="text-2xl font-black uppercase leading-none text-[#f0d889] font-serif">
+            <p className="text-2xl font-black uppercase leading-none text-champagneSoft font-serif">
               File&nbsp;propre
             </p>
-            <p className="mt-1.5 text-[10px] font-black uppercase text-[#d4af37]/70 font-sans">
+            <p className="mt-1.5 text-[10px] font-black uppercase text-champagne/70 font-sans">
               Tous les dossiers ont été jugés — reviens vite
             </p>
             <div className="mt-3 flex items-center justify-center gap-1.5">
-              <Sparkles className="h-3 w-3 text-[#d4af37]" />
-              <span className="text-[9px] font-black uppercase tracking-widest text-[#d4af37]/60 font-sans">
+              <Sparkles className="h-3 w-3 text-champagne" />
+              <span className="text-[9px] font-black uppercase tracking-widest text-champagne/60 font-sans">
                 Propre comme un sou neuf
               </span>
             </div>
@@ -123,8 +123,8 @@ export function VoteTab({
         <>
           {/* Compteur de dossiers */}
           <div className="flex items-center gap-2 px-0.5">
-            <span className="h-2 w-2 rounded-full bg-[#d4af37] animate-pulse" />
-            <p className="text-[9.5px] font-black uppercase tracking-[0.18em] text-[#d4af37]/80 font-sans">
+            <span className="h-2 w-2 rounded-full bg-champagne animate-pulse" />
+            <p className="text-[9.5px] font-black uppercase tracking-[0.18em] text-champagne/80 font-sans">
               {pendingForMe.length} dossier{pendingForMe.length > 1 ? "s" : ""}{" "}
               à juger
             </p>
@@ -166,14 +166,14 @@ export function VoteTab({
                   className="brutal-card overflow-hidden"
                 >
                   {/* Media + overlay info */}
-                  <div className="relative border-b border-[#d4af37]/20 bg-[#050505]">
+                  <div className="relative border-b border-champagne/20 bg-void">
                     <MediaFrame
                       nomination={nomination}
                       height="aspect-[9/16] max-h-[52svh]"
                     />
 
                     {/* Catégorie badge */}
-                    <span className="absolute left-2 top-2 -rotate-2 inline-flex items-center gap-1 rounded-[8px] border px-2 py-0.5 text-[8px] font-black uppercase tracking-[0.1em] leading-none border-[#d4af37]/60 bg-black/70 text-[#f0d889] backdrop-blur-sm font-sans">
+                    <span className="absolute left-2 top-2 -rotate-2 inline-flex items-center gap-1 rounded-[8px] border px-2 py-0.5 text-[8px] font-black uppercase tracking-[0.1em] leading-none border-champagne/60 bg-black/70 text-champagneSoft backdrop-blur-sm font-sans">
                       <Icon className="h-2.5 w-2.5" />
                       {categoryLabel}
                     </span>
@@ -184,7 +184,7 @@ export function VoteTab({
                     />
 
                     {/* TikToker name overlay */}
-                    <div className="absolute bottom-2 left-2 right-2 rounded-[10px] border border-[#d4af37]/30 bg-black/75 p-2 backdrop-blur-md">
+                    <div className="absolute bottom-2 left-2 right-2 rounded-[10px] border border-champagne/30 bg-black/75 p-2 backdrop-blur-md">
                       <p className="tabloid-headline text-[clamp(1.22rem,6.2vw,2rem)] leading-[0.84] text-white font-serif italic normal-case">
                         {nomination.tiktoker_name}
                       </p>
@@ -192,10 +192,10 @@ export function VoteTab({
                   </div>
 
                   {/* Interaction zone */}
-                  <div className="space-y-1.5 p-2 bg-[#0c0c0c]">
+                  <div className="space-y-1.5 p-2 bg-monolith">
                     {/* Commentaire du dossier */}
                     {nomination.comment && (
-                      <p className="rounded-[8px] border border-white/10 bg-[#050505] p-2 text-xs font-medium leading-tight text-zinc-300 font-sans">
+                      <p className="rounded-[8px] border border-white/10 bg-void p-2 text-xs font-medium leading-tight text-zinc-300 font-sans">
                         &quot;{nomination.comment}&quot;
                       </p>
                     )}
@@ -249,9 +249,9 @@ export function VoteTab({
                       <span
                         className={`text-[13px] font-serif font-black leading-none ${
                           currentScore >= 80
-                            ? "text-[#f0d889]"
+                            ? "text-champagneSoft"
                             : currentScore >= 60
-                              ? "text-[#d4af37]"
+                              ? "text-champagne"
                               : "text-zinc-400"
                         }`}
                       >
@@ -268,7 +268,7 @@ export function VoteTab({
                       transition={TAP_TRANSITION}
                       onClick={() => void applyRating(nomination.id)}
                       disabled={voteBusyId === nomination.id}
-                      className="brutal-action w-full bg-[#d4af37] text-black disabled:opacity-50 flex items-center justify-center gap-2 font-sans"
+                      className="brutal-action w-full bg-champagne text-black disabled:opacity-50 flex items-center justify-center gap-2 font-sans"
                     >
                       {voteBusyId === nomination.id ? (
                         <>

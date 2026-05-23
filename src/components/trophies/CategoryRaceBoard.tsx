@@ -24,7 +24,7 @@ export function CategoryRaceBoard({ races }: { races: CategoryRace[] }) {
           <BrutalCard key={category.id} className="p-0">
             <div className="flex items-center justify-between gap-2 border-b border-white/10 px-2 py-1.5">
               <div className="min-w-0">
-                <p className="flex items-center gap-1.5 text-[9px] font-black uppercase leading-none tracking-tighter text-[#d4af37]">
+                <p className="flex items-center gap-1.5 text-[9px] font-black uppercase leading-none tracking-tighter text-champagne">
                   <Icon className="h-3 w-3 shrink-0" /> {category.label}
                 </p>
                 <p className="mt-0.5 truncate text-[10px] font-semibold uppercase leading-none tracking-tighter text-zinc-500">{leader ? `Leader · ${leader.tiktokerName}` : "En attente"}</p>
@@ -45,9 +45,9 @@ export function CategoryRaceBoard({ races }: { races: CategoryRace[] }) {
                     className="px-2 py-1.5"
                   >
                     <div className="grid grid-cols-[1rem_2rem_minmax(0,1fr)_auto] items-center gap-2">
-                      <p className="rank-number text-[1.1rem] leading-none text-[#d4af37]">{index + 1}</p>
-                      <div className="h-8 w-8 overflow-hidden rounded-full border border-[#d4af37]/45 bg-[#d4af37]/10">
-                        {row.avatarUrl ? <img src={row.avatarUrl} alt="" className="h-full w-full object-cover" /> : <span className="flex h-full w-full items-center justify-center text-[9px] font-black text-[#f0d889]">{initialsFor(row.tiktokerName)}</span>}
+                      <p className="rank-number text-[1.1rem] leading-none text-champagne">{index + 1}</p>
+                      <div className="h-8 w-8 overflow-hidden rounded-full border border-champagne/45 bg-champagne/10">
+                        {row.avatarUrl ? <img src={row.avatarUrl} alt="" className="h-full w-full object-cover" /> : <span className="flex h-full w-full items-center justify-center text-[9px] font-black text-champagneSoft">{initialsFor(row.tiktokerName)}</span>}
                       </div>
                       <div className="min-w-0">
                         <p className="truncate text-xs font-black leading-none tracking-tighter text-white">@{row.tiktokerName}</p>
@@ -63,7 +63,7 @@ export function CategoryRaceBoard({ races }: { races: CategoryRace[] }) {
                         <motion.div className="stat-bar-fill" initial={{ width: 0 }} animate={{ width: `${row.successRate}%` }} transition={{ delay: index * 0.03 + 0.08, duration: 0.42 }} />
                       </div>
                       <MicroDimensionBars scores={row.dimensionTotals} />
-                      <p className="text-right text-[10px] font-black leading-none tracking-tighter text-[#f0d889]">{row.successRate}%</p>
+                      <p className="text-right text-[10px] font-black leading-none tracking-tighter text-champagneSoft">{row.successRate}%</p>
                     </div>
                   </motion.div>
                 ))

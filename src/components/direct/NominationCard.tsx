@@ -54,9 +54,9 @@ export function NominationCard({
       <BrutalCard
         layout
         tone={isElite ? "yellow" : "black"}
-        className="overflow-hidden border-[#d4af37]/20 bg-[#0c0c0c]"
+        className="overflow-hidden border-champagne/20 bg-monolith"
       >
-        <div className="relative aspect-[16/10] w-full border-b border-[#d4af37]/20 bg-[#050505]">
+        <div className="relative aspect-[16/10] w-full border-b border-champagne/20 bg-void">
           <MediaFrame
             nomination={nomination}
             height="h-full w-full"
@@ -66,7 +66,7 @@ export function NominationCard({
           <div className="absolute left-2 top-2 z-10 flex gap-1">
             <OwnershipBadge owned={owned} />
             {isElite && (
-              <span className="inline-flex rounded-[8px] bg-[#d4af37] px-2 py-0.5 text-[8px] font-black uppercase tracking-[0.1em] text-black">
+              <span className="inline-flex rounded-[8px] bg-champagne px-2 py-0.5 text-[8px] font-black uppercase tracking-[0.1em] text-black">
                 ÉLITE 👑
               </span>
             )}
@@ -99,7 +99,7 @@ export function NominationCard({
                 whileTap={TAP_REBOUND}
                 transition={TAP_TRANSITION}
                 onClick={onVote}
-                className="brutal-action bg-[#d4af37] px-2.5 py-1 text-[9px] text-black font-black uppercase tracking-tight shrink-0 self-start font-sans"
+                className="brutal-action bg-champagne px-2.5 py-1 text-[9px] text-black font-black uppercase tracking-tight shrink-0 self-start font-sans"
                 type="button"
               >
                 JUGER
@@ -107,9 +107,9 @@ export function NominationCard({
             )}
           </div>
 
-          <div className="flex flex-wrap items-center justify-between gap-x-2 gap-y-1 border-t border-[#d4af37]/10 pt-2 text-[8px] font-black uppercase tracking-wider text-[#d4af37]">
+          <div className="flex flex-wrap items-center justify-between gap-x-2 gap-y-1 border-t border-champagne/10 pt-2 text-[8px] font-black uppercase tracking-wider text-champagne">
             <span className="flex items-center gap-1 font-serif">
-              <Icon className="h-3 w-3 text-[#d4af37]" />
+              <Icon className="h-3 w-3 text-champagne" />
               {categories}
             </span>
             <div className="flex items-center gap-1.5 font-serif text-zinc-500">
@@ -117,7 +117,7 @@ export function NominationCard({
                 {nomination.ratings.length} NOTES
               </span>
               <span>·</span>
-              <span className="text-[#f0d889] font-serif">
+              <span className="text-champagneSoft font-serif">
                 {impact || "-"} INDICE
               </span>
               <span>·</span>

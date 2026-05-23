@@ -86,8 +86,8 @@ export function PalmaresTab({
         onDragEnd={(_, info) => handleSectionDrag(info)}
         className="space-y-2"
       >
-        <BrutalCard tone="black" className="p-3 text-white border-[#d4af37]/30">
-          <p className="mb-1 text-[8px] font-black uppercase tracking-[0.2em] text-[#d4af37]">
+        <BrutalCard tone="black" className="p-3 text-white border-champagne/30">
+          <p className="mb-1 text-[8px] font-black uppercase tracking-[0.2em] text-champagne">
             Classement
           </p>
           <h2 className="tabloid-headline text-[clamp(1.55rem,7.8vw,2.7rem)] leading-[0.84]">
@@ -95,7 +95,7 @@ export function PalmaresTab({
           </h2>
         </BrutalCard>
         <BrutalCard className="p-6 text-center border-white/5 bg-black/50">
-          <Trophy className="mx-auto mb-2 h-8 w-8 text-[#d4af37]" />
+          <Trophy className="mx-auto mb-2 h-8 w-8 text-champagne" />
           <p className="tabloid-headline text-2xl leading-none text-white">
             AUCUN PROFIL ÉVALUÉ POUR L'INSTANT
           </p>
@@ -125,9 +125,9 @@ export function PalmaresTab({
       {/* Title */}
       <BrutalCard
         tone="black"
-        className="p-3 text-white border-[#d4af37]/20 bg-[#0c0c0c]"
+        className="p-3 text-white border-champagne/20 bg-monolith"
       >
-        <p className="mb-1 text-[8px] font-black uppercase tracking-[0.2em] text-[#d4af37] font-sans">
+        <p className="mb-1 text-[8px] font-black uppercase tracking-[0.2em] text-champagne font-sans">
           Stats central
         </p>
         <h2 className="tabloid-headline text-[clamp(1.55rem,7.8vw,2.7rem)] leading-[0.84] font-serif italic normal-case">
@@ -147,11 +147,11 @@ export function PalmaresTab({
               onClick={() => setSelectedIdx(index)}
               className={`snap-center flex shrink-0 items-center gap-2 rounded-[10px] border px-3 py-1.5 transition font-sans ${
                 active
-                  ? "border-[#d4af37] bg-[#d4af37]/15 text-[#f0d889]"
-                  : "border-white/10 bg-[#0c0c0c] text-zinc-400 hover:border-white/20"
+                  ? "border-champagne bg-champagne/15 text-champagneSoft"
+                  : "border-white/10 bg-monolith text-zinc-400 hover:border-white/20"
               }`}
             >
-              <div className="h-5 w-5 rounded-full border border-[#d4af37]/40 bg-[#050505] overflow-hidden shrink-0">
+              <div className="h-5 w-5 rounded-full border border-champagne/40 bg-void overflow-hidden shrink-0">
                 {row.avatarUrl ? (
                   <img
                     src={row.avatarUrl}
@@ -159,7 +159,7 @@ export function PalmaresTab({
                     className="h-full w-full object-cover"
                   />
                 ) : (
-                  <span className="flex h-full w-full items-center justify-center text-[7px] font-black text-[#f0d889] font-sans">
+                  <span className="flex h-full w-full items-center justify-center text-[7px] font-black text-champagneSoft font-sans">
                     {row.tiktokerName.slice(0, 2).toUpperCase()}
                   </span>
                 )}
@@ -189,10 +189,10 @@ export function PalmaresTab({
             {/* Main profile card */}
             <BrutalCard
               tone="black"
-              className="p-4 bg-[#0c0c0c] border-[#d4af37]/20"
+              className="p-4 bg-monolith border-champagne/20"
             >
               <div className="flex items-center gap-3">
-                <div className="relative h-14 w-14 overflow-hidden rounded-full border-2 border-[#d4af37] bg-[#050505] shrink-0">
+                <div className="relative h-14 w-14 overflow-hidden rounded-full border-2 border-champagne bg-void shrink-0">
                   {selectedRow.avatarUrl ? (
                     <img
                       src={selectedRow.avatarUrl}
@@ -200,7 +200,7 @@ export function PalmaresTab({
                       className="h-full w-full object-cover"
                     />
                   ) : (
-                    <span className="flex h-full w-full items-center justify-center text-xs font-black text-[#f0d889] font-sans">
+                    <span className="flex h-full w-full items-center justify-center text-xs font-black text-champagneSoft font-sans">
                       {selectedRow.tiktokerName.slice(0, 2).toUpperCase()}
                     </span>
                   )}
@@ -222,8 +222,8 @@ export function PalmaresTab({
 
               {/* Consolidates Statistics Tiles */}
               <div className="grid grid-cols-4 gap-1.5 mt-4">
-                <div className="rounded-[8px] border border-white/5 bg-[#050505]/30 p-2 text-center">
-                  <TrendingUp className="mx-auto mb-1 h-3.5 w-3.5 text-[#d4af37]" />
+                <div className="rounded-[8px] border border-white/5 bg-void/30 p-2 text-center">
+                  <TrendingUp className="mx-auto mb-1 h-3.5 w-3.5 text-champagne" />
                   <span className="block text-[14px] font-serif font-black leading-none text-white">
                     {selectedRow.totalDossiers}
                   </span>
@@ -231,7 +231,7 @@ export function PalmaresTab({
                     DOSSIERS
                   </span>
                 </div>
-                <div className="rounded-[8px] border border-white/5 bg-[#050505]/30 p-2 text-center">
+                <div className="rounded-[8px] border border-white/5 bg-void/30 p-2 text-center">
                   <CheckCircle className="mx-auto mb-1 h-3.5 w-3.5 text-emerald-400" />
                   <span className="block text-[14px] font-serif font-black leading-none text-white">
                     {selectedRow.acceptedDossiers}
@@ -240,7 +240,7 @@ export function PalmaresTab({
                     NOMINÉS
                   </span>
                 </div>
-                <div className="rounded-[8px] border border-white/5 bg-[#050505]/30 p-2 text-center">
+                <div className="rounded-[8px] border border-white/5 bg-void/30 p-2 text-center">
                   <Activity className="mx-auto mb-1 h-3.5 w-3.5 text-[#a78bfa]" />
                   <span className="block text-[14px] font-serif font-black leading-none text-white">
                     {selectedRow.votes}
@@ -249,7 +249,7 @@ export function PalmaresTab({
                     VOTES RECUS
                   </span>
                 </div>
-                <div className="rounded-[8px] border border-white/5 bg-[#050505]/30 p-2 text-center">
+                <div className="rounded-[8px] border border-white/5 bg-void/30 p-2 text-center">
                   <Award className="mx-auto mb-1 h-3.5 w-3.5 text-yellow-500" />
                   <span className="block text-[14px] font-serif font-black leading-none text-white">
                     {selectedRow.average ? selectedRow.average.toFixed(1) : "-"}
@@ -266,9 +266,9 @@ export function PalmaresTab({
               {/* SVG RADAR CHART (EMOTIONAL FOOTPRINT) */}
               <BrutalCard
                 tone="black"
-                className="p-3 bg-[#0c0c0c] border-[#d4af37]/20 flex flex-col items-center"
+                className="p-3 bg-monolith border-champagne/20 flex flex-col items-center"
               >
-                <h3 className="text-[8.5px] font-black uppercase tracking-[0.16em] text-[#d4af37] w-full text-left mb-3 font-sans">
+                <h3 className="text-[8.5px] font-black uppercase tracking-[0.16em] text-champagne w-full text-left mb-3 font-sans">
                   🎯 EMPREINTE ÉMOTIONNELLE
                 </h3>
 
@@ -376,7 +376,7 @@ export function PalmaresTab({
                         <span className="block text-[9px] text-white leading-none font-sans">
                           {dim.emoji} {dim.label}
                         </span>
-                        <span className="block text-[8px] font-serif text-[#d4af37] leading-none mt-0.5">
+                        <span className="block text-[8px] font-serif text-champagne leading-none mt-0.5">
                           {avgScore.toFixed(1)}/5
                         </span>
                       </div>
@@ -388,10 +388,10 @@ export function PalmaresTab({
               {/* CATEGORIES SHARE (HORIZONTAL STACKED BAR / PIE LIST) */}
               <BrutalCard
                 tone="black"
-                className="p-3 bg-[#0c0c0c] border-[#d4af37]/20 flex flex-col justify-between"
+                className="p-3 bg-monolith border-champagne/20 flex flex-col justify-between"
               >
                 <div className="space-y-3 w-full">
-                  <h3 className="text-[8.5px] font-black uppercase tracking-[0.16em] text-[#d4af37] w-full text-left font-sans">
+                  <h3 className="text-[8.5px] font-black uppercase tracking-[0.16em] text-champagne w-full text-left font-sans">
                     📊 RÉPARTITION DES CATÉGORIES
                   </h3>
 
@@ -402,10 +402,10 @@ export function PalmaresTab({
                   ) : (
                     <div className="space-y-2 pt-1 w-full">
                       {/* Visual stacked bar */}
-                      <div className="flex h-3 w-full overflow-hidden rounded-[4px] border border-white/10 bg-[#050505]">
+                      <div className="flex h-3 w-full overflow-hidden rounded-[4px] border border-white/10 bg-void">
                         {categoryShare.map((cat, i) => {
                           const colors = [
-                            "bg-[#d4af37]",
+                            "bg-champagne",
                             "bg-[#a78bfa]",
                             "bg-[#38bdf8]",
                             "bg-[#facc15]",
@@ -432,7 +432,7 @@ export function PalmaresTab({
                         {categoryShare.map((cat, i) => {
                           const meta = getCategoryMeta(cat.id);
                           const colors = [
-                            "border-[#d4af37] text-[#d4af37]",
+                            "border-champagne text-champagne",
                             "border-[#a78bfa] text-[#a78bfa]",
                             "border-[#38bdf8] text-[#38bdf8]",
                             "border-[#facc15] text-[#facc15]",
@@ -470,9 +470,9 @@ export function PalmaresTab({
             {/* VERTICAL COMPARISON BAR CHART (TOP TIKTOKERS BY POINTS) */}
             <BrutalCard
               tone="black"
-              className="p-3 bg-[#0c0c0c] border-[#d4af37]/20"
+              className="p-3 bg-monolith border-champagne/20"
             >
-              <h3 className="text-[8.5px] font-black uppercase tracking-[0.16em] text-[#d4af37] mb-4 font-sans">
+              <h3 className="text-[8.5px] font-black uppercase tracking-[0.16em] text-champagne mb-4 font-sans">
                 📈 CLASSEMENT DES ZINS (CUMUL DE POINTS)
               </h3>
 
@@ -488,7 +488,7 @@ export function PalmaresTab({
                       onClick={() => setSelectedIdx(index)}
                     >
                       {/* Tooltip points */}
-                      <span className="block text-[8px] font-serif font-black text-[#d4af37] leading-none mb-1">
+                      <span className="block text-[8px] font-serif font-black text-champagne leading-none mb-1">
                         {row.points}
                       </span>
 
@@ -504,14 +504,14 @@ export function PalmaresTab({
                         }}
                         className={`w-full max-w-[1.75rem] rounded-t-[4px] border-t border-l border-r transition ${
                           active
-                            ? "border-[#d4af37] bg-[#d4af37]/35 shadow-[0_0_12px_rgba(212,175,55,0.25)]"
+                            ? "border-champagne bg-champagne/35 shadow-[0_0_12px_rgba(212,175,55,0.25)]"
                             : "border-white/10 bg-white/5 hover:border-white/30"
                         }`}
                       />
 
                       {/* Label */}
                       <span
-                        className={`block truncate text-[7.5px] font-black uppercase tracking-tight text-center w-full mt-1.5 ${active ? "text-[#f0d889]" : "text-zinc-500"} font-sans`}
+                        className={`block truncate text-[7.5px] font-black uppercase tracking-tight text-center w-full mt-1.5 ${active ? "text-champagneSoft" : "text-zinc-500"} font-sans`}
                       >
                         @{row.tiktokerName.slice(0, 6)}
                       </span>

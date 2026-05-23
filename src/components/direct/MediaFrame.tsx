@@ -57,7 +57,7 @@ export function MediaFrame({
         <motion.div
           initial={{ opacity: 0, y: 10 }}
           animate={{ opacity: 1, y: 0 }}
-          className="relative z-10 mx-3 rounded-full border border-[#d4af37]/60 bg-black/70 px-3 py-2 text-center text-[11px] font-bold uppercase tracking-[0.12em] leading-none text-[#f0d889]"
+          className="relative z-10 mx-3 rounded-full border border-champagne/60 bg-black/70 px-3 py-2 text-center text-[11px] font-bold uppercase tracking-[0.12em] leading-none text-champagneSoft"
         >
           {isDemo
             ? "SCREEN à renvoyer depuis le Studio"
@@ -79,7 +79,7 @@ export function MediaFrame({
               className="media-shimmer animate-shimmer absolute inset-0 z-10 flex items-center justify-center"
               aria-hidden="true"
             >
-              <Loader2 className="h-5 w-5 animate-spin text-[#d4af37]" />
+              <Loader2 className="h-5 w-5 animate-spin text-champagne" />
             </motion.div>
           )}
         </AnimatePresence>
@@ -111,7 +111,7 @@ export function MediaFrame({
           className="prestige-media block h-full w-full bg-black object-cover"
         />
         {!controls && !engaged ? (
-          <span className="pointer-events-none absolute bottom-2 left-2 z-20 rounded-full border border-[#d4af37]/40 bg-black/60 px-2 py-1 text-[8px] font-black uppercase tracking-tighter text-[#f0d889]">
+          <span className="pointer-events-none absolute bottom-2 left-2 z-20 rounded-full border border-champagne/40 bg-black/60 px-2 py-1 text-[8px] font-black uppercase tracking-tighter text-champagneSoft">
             SCREEN
           </span>
         ) : null}
@@ -130,7 +130,7 @@ export function MediaFrame({
             className="media-shimmer animate-shimmer absolute inset-0 z-10 flex items-center justify-center"
             aria-hidden="true"
           >
-            <Loader2 className="h-5 w-5 animate-spin text-[#d4af37]" />
+            <Loader2 className="h-5 w-5 animate-spin text-champagne" />
           </motion.div>
         )}
       </AnimatePresence>

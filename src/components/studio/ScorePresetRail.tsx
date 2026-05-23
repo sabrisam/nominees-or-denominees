@@ -42,7 +42,7 @@ export function ScorePresetRail({
               haptic(HAPTICS.option);
               onSelect(cloneScores(preset.scores));
             }}
-            className={`shrink-0 rounded-[9px] border px-2 py-1 text-left transition ${active ? "border-[#d4af37]/80 bg-[#d4af37]/18 text-[#f0d889]" : "border-white/10 bg-white/[0.035] text-zinc-400"}`}
+            className={`shrink-0 rounded-[9px] border px-2 py-1 text-left transition ${active ? "border-champagne/80 bg-champagne/18 text-champagneSoft" : "border-white/10 bg-white/[0.035] text-zinc-400"}`}
           >
             <span className={`${compact ? "text-[8px]" : "text-[9px]"} block font-black uppercase leading-none tracking-tighter`}>{preset.label}</span>
             <span className="mt-0.5 block text-[7px] font-bold uppercase leading-none tracking-tighter opacity-70">{preset.hint}</span>

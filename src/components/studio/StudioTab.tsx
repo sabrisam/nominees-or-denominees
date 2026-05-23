@@ -123,15 +123,15 @@ export function StudioTab({
       }}
       className="space-y-1.5"
     >
-      <BrutalCard tone="black" className="p-2 border-[#d4af37]/20 bg-[#0c0c0c]">
+      <BrutalCard tone="black" className="p-2 border-champagne/20 bg-monolith">
         <h2 className="tabloid-headline text-[clamp(1.28rem,6.8vw,2.2rem)] leading-[0.82] text-white font-serif italic normal-case">
           {isEditingStudio ? "Modifier le dossier" : "Studio"}
         </h2>
       </BrutalCard>
 
-      <BrutalCard className="p-1.5 border-[#d4af37]/20 bg-[#0c0c0c]">
+      <BrutalCard className="p-1.5 border-champagne/20 bg-monolith">
         {editingNomination ? (
-          <div className="relative overflow-hidden rounded-[10px] border border-[#d4af37]/20 bg-[#050505]">
+          <div className="relative overflow-hidden rounded-[10px] border border-champagne/20 bg-void">
             <MediaFrame
               nomination={editingNomination}
               height="aspect-[9/16] max-h-[52svh]"
@@ -146,7 +146,7 @@ export function StudioTab({
               fileInputRef.current?.click();
             }}
             disabled={isPreparingMedia || uploadLoading}
-            className="relative flex aspect-[9/16] max-h-[52svh] w-full items-center justify-center overflow-hidden rounded-[10px] border border-[#d4af37]/20 bg-[#050505] text-left transition disabled:opacity-70"
+            className="relative flex aspect-[9/16] max-h-[52svh] w-full items-center justify-center overflow-hidden rounded-[10px] border border-champagne/20 bg-void text-left transition disabled:opacity-70"
             aria-label="Choisir une vidéo ou une capture"
           >
             {previewUrl ? (
@@ -175,16 +175,16 @@ export function StudioTab({
             ) : (
               <span className="flex flex-col items-center px-6 text-center text-white">
                 {isPreparingMedia ? (
-                  <Loader2 className="mb-3 h-9 w-9 animate-spin text-[#d4af37]" />
+                  <Loader2 className="mb-3 h-9 w-9 animate-spin text-champagne" />
                 ) : (
-                  <UploadCloud className="mb-3 h-9 w-9 text-[#d4af37]" />
+                  <UploadCloud className="mb-3 h-9 w-9 text-champagne" />
                 )}
                 <span className="tabloid-headline text-xl leading-none font-serif">
                   {isPreparingMedia
                     ? "Chargement du studio..."
                     : "Déposer le SCREEN"}
                 </span>
-                <span className="mt-1.5 text-[10px] font-black uppercase tracking-[0.12em] text-[#d4af37] font-sans">
+                <span className="mt-1.5 text-[10px] font-black uppercase tracking-[0.12em] text-champagne font-sans">
                   Vidéo ou capture libre
                 </span>
               </span>
@@ -208,7 +208,7 @@ export function StudioTab({
       {(isPreparingMedia || uploadLoading) && (
         <BrutalCard
           tone="yellow"
-          className="p-2 border-[#d4af37]/20 bg-[#0c0c0c]"
+          className="p-2 border-champagne/20 bg-monolith"
         >
           <p className="tabloid-headline text-[clamp(1.05rem,5.6vw,1.65rem)] leading-[0.82] font-serif">
             {uploadLoading
@@ -251,7 +251,7 @@ export function StudioTab({
               onClick={() => toggleCategory(category.id)}
               aria-pressed={active}
               aria-label={label}
-              className={`min-h-10 rounded-[10px] border px-1.5 py-1 text-left font-sans ${active ? "border-[#d4af37]/75 bg-[#d4af37]/18 text-[#f0d889]" : "border-white/10 bg-[#0c0c0c] text-zinc-500"}`}
+              className={`min-h-10 rounded-[10px] border px-1.5 py-1 text-left font-sans ${active ? "border-champagne/75 bg-champagne/18 text-champagneSoft" : "border-white/10 bg-monolith text-zinc-500"}`}
             >
               <Icon className="mb-1 h-3 w-3" />
               <span className="line-clamp-2 text-[8px] font-black uppercase leading-none tracking-tighter font-sans">
@@ -276,11 +276,11 @@ export function StudioTab({
         className="brutal-input w-full resize-none p-2.5 text-base font-serif"
       />
 
-      <div className="flex items-center justify-between gap-3 text-[10px] font-black uppercase tracking-[0.1em] text-[#d4af37]/80">
+      <div className="flex items-center justify-between gap-3 text-[10px] font-black uppercase tracking-[0.1em] text-champagne/80">
         <span>Besoin d'un punchline IA ?</span>
         <button
           type="button"
-          className="rounded-[10px] border border-[#d4af37]/30 bg-[#d4af37]/10 px-3 py-1 text-[#f0d889] transition hover:bg-[#d4af37]/15"
+          className="rounded-[10px] border border-champagne/30 bg-champagne/10 px-3 py-1 text-champagneSoft transition hover:bg-champagne/15"
           onClick={handleAIPunchline}
         >
           IA PUNCHLINE
@@ -290,7 +290,7 @@ export function StudioTab({
       {!isEditingStudio && (
         <BrutalCard
           tone="yellow"
-          className="p-2 border-[#d4af37]/20 bg-[#0c0c0c]"
+          className="p-2 border-champagne/20 bg-monolith"
         >
           <ScorePresetRail
             value={initialScores}
@@ -301,7 +301,7 @@ export function StudioTab({
             value={initialScores}
             onChange={setInitialScores}
           />
-          <p className="mt-2 border-t border-[#d4af37]/20 pt-2 text-center text-[10.5px] font-black uppercase tracking-[0.12em] text-[#d4af37] font-serif">
+          <p className="mt-2 border-t border-champagne/20 pt-2 text-center text-[10.5px] font-black uppercase tracking-[0.12em] text-champagne font-serif">
             Indice initial : {scoreTotal(initialScores, cleanCategoryIds)} / 100
           </p>
         </BrutalCard>

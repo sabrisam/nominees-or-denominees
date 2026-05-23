@@ -54,7 +54,7 @@ export function CeremonyBulletin({
             <p className="tabloid-headline mt-1 text-[clamp(1.05rem,5.5vw,1.8rem)] leading-[0.84] text-white">
               {nextPending.tiktoker_name}
             </p>
-            <p className="mt-0.5 truncate text-[9px] font-black uppercase tracking-tighter text-[#d4af37]">
+            <p className="mt-0.5 truncate text-[9px] font-black uppercase tracking-tighter text-champagne">
               {category.label} ·{" "}
               {isMine ? "en attente de vote" : "ta note peut le nominer"}
             </p>
@@ -69,7 +69,7 @@ export function CeremonyBulletin({
               whileTap={TAP_REBOUND}
               transition={TAP_TRANSITION}
               onClick={onOpenVote}
-              className="brutal-action bg-[#d4af37] px-3 text-black"
+              className="brutal-action bg-champagne px-3 text-black"
             >
               Juger
             </motion.button>
@@ -88,7 +88,7 @@ export function CeremonyBulletin({
             <p className="tabloid-headline mt-1 text-[clamp(1.05rem,5.5vw,1.8rem)] leading-[0.84] text-white">
               {leader.tiktokerName}
             </p>
-            <p className="mt-0.5 truncate text-[9px] font-black uppercase tracking-tighter text-[#d4af37]">
+            <p className="mt-0.5 truncate text-[9px] font-black uppercase tracking-tighter text-champagne">
               {leader.points} points de saison
               {spotlight ? ` · ${spotlight}` : ""}
             </p>
@@ -115,7 +115,7 @@ export function CeremonyBulletin({
           <p className="tabloid-headline mt-1 text-[clamp(1.05rem,5.5vw,1.8rem)] leading-[0.84] text-white">
             Premier SCREEN attendu
           </p>
-          <p className="mt-0.5 truncate text-[9px] font-black uppercase tracking-tighter text-[#d4af37]">
+          <p className="mt-0.5 truncate text-[9px] font-black uppercase tracking-tighter text-champagne">
             Le trophée commence au premier dossier
           </p>
         </div>
@@ -124,7 +124,7 @@ export function CeremonyBulletin({
           whileTap={TAP_REBOUND}
           transition={TAP_TRANSITION}
           onClick={onOpenStudio}
-          className="brutal-action bg-[#d4af37] px-3 text-black"
+          className="brutal-action bg-champagne px-3 text-black"
         >
           Studio
         </motion.button>
