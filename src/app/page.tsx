@@ -1679,7 +1679,7 @@ export default function Home() {
       setUrl(setThumbnailPreviewUrlState, null, thumbnail);
       setMediaProgress(1);
       haptic(HAPTICS.success);
-      showToast("success", "Rec prêt.");
+      showToast("success", "Screen prêt.");
     } catch (err) {
       clearPreparedMedia();
       const message =

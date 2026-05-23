@@ -402,7 +402,7 @@ export function DirectTab({
                             </span>
                             <p className="text-[10px] font-black uppercase leading-tight text-white mt-1 font-serif">
                               LA GRANDE FINALE DE SAISON APPROCHE ! DERNIÈRES
-                              RECS À METTRE EN VOTE :
+                              SCREENS À METTRE EN VOTE :
                             </p>
                             <p className="text-sm font-black text-[#f0d889] font-serif leading-none">
                               {ceremonyCountdown.days} JOURS{" "}
