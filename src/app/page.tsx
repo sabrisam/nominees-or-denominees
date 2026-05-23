@@ -1215,8 +1215,8 @@ export default function Home() {
               nomination.ratings.length > 0
                 ? nomination.ratings
                 : ratingMap.has(nomination.id)
-                ? [ratingMap.get(nomination.id)!]
-                : [],
+                  ? [ratingMap.get(nomination.id)!]
+                  : [],
           }));
 
           setNominations(enrichedRows);
