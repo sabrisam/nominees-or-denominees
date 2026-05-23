@@ -293,8 +293,8 @@ video {
       sans-serif;
     font-weight: 900;
     text-transform: uppercase;
-    letter-spacing: -0.045em;
-    line-height: 0.84;
+    letter-spacing: -0.05em;
+    line-height: 0.85;
   }
 
   .rank-number {
