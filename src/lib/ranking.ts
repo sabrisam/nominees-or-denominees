@@ -20,6 +20,8 @@ import type {
   PalmaresRow,
   CategoryRace,
   CategoryRaceRow,
+  DimensionScores,
+  StarDistribution,
 } from "@/types";
 
 type RankingMemoryRow = {
