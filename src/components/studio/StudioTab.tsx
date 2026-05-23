@@ -243,8 +243,8 @@ export function StudioTab({
             category.mood === "positive"
               ? "EL FAKHR"
               : category.mood === "critical"
-              ? "EL HECHMA"
-              : category.label;
+                ? "EL HECHMA"
+                : category.label;
           const Icon = category.icon;
           const active = cleanCategoryIds.includes(category.id);
           return (
