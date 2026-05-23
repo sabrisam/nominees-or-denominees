@@ -147,13 +147,20 @@ export function PalmaresTab({
               whileTap={TAP_REBOUND}
               transition={TAP_TRANSITION}
               onClick={() => setSelectedIdx(index)}
-              className={`snap-center flex shrink-0 items-center gap-2 rounded-[10px] border px-3 py-1.5 transition font-sans ${
+              className={`relative snap-center flex shrink-0 items-center gap-2 rounded-[10px] border px-3 py-1.5 transition font-sans ${
                 active
-                  ? "border-champagne bg-champagne/15 text-champagneSoft"
+                  ? "border-champagne text-champagneSoft bg-champagne/15"
                   : "border-white/10 bg-monolith text-zinc-400 hover:border-white/20"
               }`}
             >
-              <div className="relative h-5 w-5 rounded-full border border-champagne/40 bg-void overflow-hidden shrink-0">
+              {active && (
+                <motion.div
+                  layoutId="activePalmaresTab"
+                  className="absolute inset-0 rounded-[10px] bg-champagne/18 shadow-[inset_0_0_10px_rgba(212,175,55,0.1)]"
+                  transition={{ type: "spring", stiffness: 400, damping: 35 }}
+                />
+              )}
+              <div className="relative z-10 h-5 w-5 rounded-full border border-champagne/40 bg-void overflow-hidden shrink-0">
                 {row.avatarUrl ? (
                   <Image
                     src={row.avatarUrl}
@@ -169,10 +176,10 @@ export function PalmaresTab({
                   </span>
                 )}
               </div>
-              <span className="text-[10px] font-black uppercase tracking-tight font-sans">
+              <span className="relative z-10 text-[10px] font-black uppercase tracking-tight font-sans">
                 @{row.tiktokerName}
               </span>
-              <span className="text-[9px] font-mono opacity-80 font-sans">
+              <span className="relative z-10 text-[9px] font-mono opacity-80 font-sans">
                 #{index + 1}
               </span>
             </motion.button>
