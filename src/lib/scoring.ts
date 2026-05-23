@@ -51,15 +51,29 @@ export function normalizedCategoryId(categoryId: string) {
   return CATEGORY_BY_ID[resolved] ? resolved : CATEGORIES[0].id;
 }
 
-export function scoreForCategory(scores: DimensionScores, categoryId: string) {
-  const profile = CATEGORY_SCORING[normalizedCategoryId(categoryId)] ?? CATEGORY_SCORING[CATEGORIES[0].id];
-  const weighted = RATING_DIMENSIONS.reduce((sum, dimension) => {
-    const rawValue = clampDimension(scores[dimension.key]);
-    const adjustedValue = profile.lowIsStrong?.[dimension.key] ? 5 - rawValue : rawValue;
-    return sum + adjustedValue * profile.weights[dimension.key];
-  }, 0);
+export function scoreForCategory(scores: DimensionScores, categoryId?: string) {
+  const sum = 
+    clampDimension(scores.rire) + 
+    clampDimension(scores.surprise) + 
+    clampDimension(scores.gene) + 
+    clampDimension(scores.fierte) + 
+    clampDimension(scores.interet);
+  return Math.min(100, Math.max(0, Math.round(sum * 4)));
+}
 
-  return Math.min(100, Math.max(0, Math.round(weighted * 20)));
+export function pointsForCategory(scores: DimensionScores, categoryId: string) {
+  const rawScore = scoreForCategory(scores, categoryId);
+  const resolved = normalizedCategoryId(categoryId);
+  if (["le-zin-du-mois", "la-fierte-des-notres", "xptdr", "la-roue-libre", "gros-chef-bandit", "lanalyse-pure"].includes(resolved)) {
+    return Math.round(rawScore * 1.0);
+  }
+  if (resolved === "la-honte-de-la-oumma") {
+    return Math.round(rawScore * 1.5);
+  }
+  if (["bon-voyageur", "surprise-totale"].includes(resolved)) {
+    return Math.round(rawScore * 1.2);
+  }
+  return Math.round(rawScore * 1.0);
 }
 
 export function scoreTotal(scores: DimensionScores, categoryIds: string[] = [CATEGORIES[0].id]) {
@@ -73,7 +87,9 @@ export function scoreAverage(scores: DimensionScores, categoryIds?: string[]) {
 }
 
 export function ratingImpactPoints(rating: Rating, categoryIds?: string[]) {
-  return scoreTotal(rating.scores, categoryIds);
+  const ids = categoryIds && categoryIds.length > 0 ? categoryIds : [CATEGORIES[0].id];
+  const total = ids.reduce((sum, categoryId) => sum + pointsForCategory(rating.scores, categoryId), 0);
+  return Math.round(total / ids.length);
 }
 
 export function ratingImpactScore(rating: Rating, categoryIds?: string[]) {

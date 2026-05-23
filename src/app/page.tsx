@@ -246,6 +246,20 @@ const TAB_ITEMS: Array<{ id: Tab; label: string; icon: LucideIcon }> = [
 ];
 
 const TAB_ORDER: Tab[] = TAB_ITEMS.map((item) => item.id);
+const pageVariants = {
+  enter: (dir: "forward" | "backward") => ({
+    x: dir === "forward" ? "100%" : "-100%",
+    opacity: 0
+  }),
+  center: {
+    x: 0,
+    opacity: 1
+  },
+  exit: (dir: "forward" | "backward") => ({
+    x: dir === "forward" ? "-100%" : "100%",
+    opacity: 0
+  })
+};
 const DIRECT_FILTERS: Array<{ id: DirectFilter; label: string }> = [
   { id: "all", label: "Tout" },
   { id: "pending", label: "À voter" },
@@ -542,6 +556,20 @@ function isLegacyDemoMedia(url: string) {
   return url === LEGACY_FLOWER_VIDEO_URL;
 }
 
+function studioBurst() {
+  const colors = ["#d4af37", "#c0c0c0", "#39FF14"];
+  void confetti({
+    particleCount: 140,
+    spread: 100,
+    startVelocity: 50,
+    scalar: 1.2,
+    ticks: 180,
+    colors,
+    origin: { y: 0.6 },
+    disableForReducedMotion: true
+  });
+}
+
 function voteBurst(points: number) {
   const elite = points >= 80;
   const colors = elite ? ["#d4af37", "#f0d889", "#ffffff", "#050505"] : ["#d4af37", "#8a6f24", "#f5f1e8"];
@@ -707,6 +735,7 @@ export default function Home() {
   const [roomCode, setRoomCode] = useState(DEFAULT_ROOM_CODE);
 
   const [tab, setTab] = useState<Tab>("direct");
+  const [dir, setDir] = useState<"forward" | "backward">("forward");
   const [directFilter, setDirectFilter] = useState<DirectFilter>("all");
   const [nominations, setNominations] = useState<Nomination[]>([]);
   const [syncing, setSyncing] = useState(false);
@@ -715,6 +744,7 @@ export default function Home() {
   const toastTimeoutRef = useRef<number | null>(null);
   const [ceremonyCountdown, setCeremonyCountdown] = useState(countdownToNextCeremony);
 
+  const [showStudioOverlay, setShowStudioOverlay] = useState(false);
   const [preparedFile, setPreparedFile] = useState<File | null>(null);
   const [thumbnailFile, setThumbnailFile] = useState<File | null>(null);
   const [mediaKind, setMediaKind] = useState<MediaKind | null>(null);
@@ -772,7 +802,14 @@ export default function Home() {
 
   const switchTab = useCallback((nextTab: Tab) => {
     haptic(HAPTICS.nav);
-    setTab(nextTab);
+    setTab((prevTab) => {
+      const prevIndex = TAB_ORDER.indexOf(prevTab);
+      const nextIndex = TAB_ORDER.indexOf(nextTab);
+      if (nextIndex !== prevIndex) {
+        setDir(nextIndex > prevIndex ? "forward" : "backward");
+      }
+      return nextTab;
+    });
   }, []);
 
   // supabase client is initialized inside initParticipant
@@ -1015,8 +1052,8 @@ export default function Home() {
   const cleanTiktokerName = sanitizeTiktokerName(tiktokerName);
   const cleanCategoryIds = useMemo(() => normalizeCategoryIds(selectedCategoryIds, catId), [catId, selectedCategoryIds]);
   const uploadReady = isEditingStudio
-    ? comment.trim().length >= 3 && cleanTiktokerName.length >= 2 && cleanCategoryIds.length > 0
-    : Boolean(preparedFile && thumbnailFile && comment.trim().length >= 3 && cleanTiktokerName.length >= 2 && cleanCategoryIds.length > 0 && !isPreparingMedia);
+    ? comment.trim().length >= 3 && cleanTiktokerName.length >= 2 && cleanCategoryIds.length === 1
+    : Boolean(preparedFile && thumbnailFile && comment.trim().length >= 3 && cleanTiktokerName.length >= 2 && cleanCategoryIds.length === 1 && !isPreparingMedia);
   const ownsNomination = useCallback((nomination: Nomination) => Boolean(participant && nomination.submitted_by === participant.id), [participant]);
 
   const patchRatingLocally = useCallback((nominationId: string, rating: Rating) => {
@@ -1145,8 +1182,15 @@ export default function Home() {
       };
 
   const pageTransition = reduceMotion
-    ? { initial: { opacity: 1 }, animate: { opacity: 1 }, exit: { opacity: 1 } }
-    : { initial: { opacity: 0, y: 18 }, animate: { opacity: 1, y: 0 }, exit: { opacity: 0, y: -12 } };
+    ? { initial: { opacity: 1, x: 0 }, animate: { opacity: 1, x: 0 }, exit: { opacity: 1, x: 0 } }
+    : {
+        custom: dir,
+        variants: pageVariants,
+        initial: "enter",
+        animate: "center",
+        exit: "exit",
+        transition: { type: "spring", stiffness: 380, damping: 38 }
+      };
 
   const handleSectionDrag = useCallback(
     (info: PanInfo) => {
@@ -1171,13 +1215,8 @@ export default function Home() {
   const toggleCategory = useCallback(
     (categoryId: string) => {
       haptic(HAPTICS.option);
-      setSelectedCategoryIds((current) => {
-        const exists = current.includes(categoryId);
-        const next = exists ? current.filter((id) => id !== categoryId) : [...current, categoryId];
-        const safeNext = next.length > 0 ? next : [categoryId];
-        setCatId(primaryCategoryId(safeNext));
-        return safeNext;
-      });
+      setSelectedCategoryIds([categoryId]);
+      setCatId(categoryId);
     },
     []
   );
@@ -1449,12 +1488,16 @@ export default function Home() {
       }
 
       setMediaProgress(1);
-      haptic(HAPTICS.success);
-      showToast("success", "Dossier lancé dans le club.");
+      setShowStudioOverlay(true);
+      studioBurst();
+      haptic([30, 40, 30, 40]);
       resetStudioDraft();
-      switchTab("direct");
       await channelRef.current?.send({ type: "broadcast", event: "nomination", payload: { id: nominationId } });
       void fetchNominations(true, activeRoomId);
+      window.setTimeout(() => {
+        setShowStudioOverlay(false);
+        switchTab("direct");
+      }, 2500);
     } catch (err: any) {
       const message = err?.message || (typeof err === 'string' ? err : "Échec de l'envoi.");
       showToast("error", isStorageUnavailableMessage(message) ? STORAGE_UNAVAILABLE_NOTICE : message);
@@ -1571,25 +1614,45 @@ export default function Home() {
         )}
       </AnimatePresence>
 
+      <AnimatePresence>
+        {showStudioOverlay && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 z-50 flex flex-col items-center justify-center bg-black/95 p-6 text-center select-none"
+          >
+            <motion.div
+              initial={{ scale: 0.9, y: 20 }}
+              animate={{ scale: 1, y: 0, transition: { type: "spring", stiffness: 300, damping: 20 } }}
+              exit={{ scale: 0.9, y: -20 }}
+              className="max-w-md space-y-4"
+            >
+              <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-full border-4 border-[#39FF14] bg-[#39FF14]/10 text-[#39FF14] shadow-[0_0_20px_rgba(57,255,20,0.3)]">
+                <Check className="h-8 w-8 stroke-[3]" />
+              </div>
+              
+              <h2 className="tabloid-headline text-3xl md:text-4xl leading-none text-white tracking-tight">
+                DOSSIER SOUMIS
+              </h2>
+              
+              <div className="inline-block rounded-none border-2 border-[#d4af37] bg-[#d4af37]/15 px-3 py-1.5 text-xs font-black uppercase tracking-[0.15em] text-[#f0d889] transform -rotate-1">
+                EN ROUTE POUR LA CÉRÉMONIE DE SAISON 1
+              </div>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
       <main className="tabloid-main">
         <div className="tabloid-scroll mx-auto w-full max-w-[30rem] px-2">
         <header className="sticky top-0 z-30 mb-2 overflow-hidden bg-[#050505]/85 py-1.5 backdrop-blur-xl">
           <Ticker>
-            CÉRÉMONIE LE 1ER DU MOIS / DANS {ceremonyCountdown.days}J {ceremonyCountdown.hours}H {ceremonyCountdown.mins}M / TOURNOI DU MOIS / {monthlyNominations.length} DOSSIERS EN JEU / 
+            CÉRÉMONIE DE LA SAISON 1 LE 1ER DU MOIS / DANS {ceremonyCountdown.days}J {ceremonyCountdown.hours}H {ceremonyCountdown.mins}M / TOURNOI DU MOIS / {monthlyNominations.length} DOSSIERS EN JEU / 
           </Ticker>
         </header>
-          <CeremonyBulletin
-            pendingCount={pendingForMe.length}
-            nextPending={nextPendingForMe}
-            leader={ultimateWinner}
-            bestDossier={paparazziOr}
-            currentUserId={participant?.id}
-            onOpenVote={() => switchTab("vote")}
-            onOpenStudio={() => switchTab("studio")}
-            onOpenPalmares={() => switchTab("palmares")}
-          />
 
-          <AnimatePresence mode="wait">
+          <AnimatePresence mode="wait" custom={dir}>
             {tab === "direct" && (
               <DirectTab
                 feedItems={feedItems}
@@ -1605,6 +1668,11 @@ export default function Home() {
                 revealContainer={revealContainer}
                 revealItem={revealItem}
                 pageTransition={pageTransition}
+                pendingForMe={pendingForMe}
+                allNominations={nominations}
+                ceremonyCountdown={ceremonyCountdown}
+                palmaresRows={palmaresRows}
+                switchTab={switchTab}
               />
             )}
 
@@ -1678,11 +1746,7 @@ export default function Home() {
           </div>
         </main>
 
-        {tab !== "studio" && (
-          <motion.button initial={reduceMotion ? { opacity: 1 } : { opacity: 0, scale: 0.96, y: 8 }} animate={{ opacity: 1, scale: 1, y: 0 }} whileTap={TAP_REBOUND} transition={TAP_TRANSITION} onClick={() => switchTab("studio")} className="brutal-fab brutal-fab-dock absolute right-5 z-40 flex h-12 w-12 items-center justify-center pointer-events-auto" aria-label="Lancer un dossier">
-            <Plus className="h-6 w-6" />
-          </motion.button>
-        )}
+
 
         <nav aria-label="Navigation principale" className="bottom-tabloid px-2 pt-1.5 pointer-events-auto">
           <div className="mx-auto grid w-full max-w-[30rem] grid-cols-5 gap-1">

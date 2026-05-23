@@ -58,7 +58,8 @@ export function buildPalmaresRows(nominations: Nomination[]): PalmaresRow[] {
   const monthly = nominations.filter((nomination) => isCurrentMonth(nomination.created_at));
 
   for (const nomination of monthly) {
-    const current = rows.get(nomination.tiktoker_name) ?? {
+    const key = nomination.tiktoker_name.trim().toLowerCase();
+    const current = rows.get(key) ?? {
       tiktokerName: nomination.tiktoker_name,
       avatarUrl: nomination.thumbnail_url || nomination.media_url || FALLBACK_IMAGE_URL,
       points: 0,
@@ -89,7 +90,7 @@ export function buildPalmaresRows(nominations: Nomination[]): PalmaresRow[] {
 
     current.average = current.votes > 0 ? current.points / current.votes / 20 : 0;
     current.successRate = current.totalDossiers > 0 ? Math.round((current.acceptedDossiers / current.totalDossiers) * 100) : 0;
-    rows.set(nomination.tiktoker_name, current);
+    rows.set(key, current);
   }
 
   return Array.from(rows.values()).sort((a, b) => b.points - a.points || b.successRate - a.successRate || b.average - a.average || a.tiktokerName.localeCompare(b.tiktokerName));
