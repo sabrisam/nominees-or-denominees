@@ -9,6 +9,11 @@ import { CATEGORIES } from "@/constants/categories";
 import { scoreTotal, primaryCategoryId } from "@/lib/scoring";
 import type { Nomination, MediaKind, DimensionScores } from "@/types";
 
+const MAX_UPLOAD_BYTES = 25 * 1024 * 1024;
+const MEDIA_WHITELIST = ["image/", "video/"];
+const AI_PROMPT_TEMPLATE =
+  "Génère une vanne urbaine de club, ciblée sur le SCREEN soumis. Le ton doit rester local, espiègle et ancré dans le banter communautaire, sans rien de générique ni hors sujet. Donne une phrase courte, piquante, strictement adaptée au contexte du contenu et à la culture du club.";
+
 const TAP_REBOUND = { scale: 0.965, rotate: -0.35 };
 const TAP_TRANSITION = {
   type: "spring",
