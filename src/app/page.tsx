@@ -2170,6 +2170,7 @@ export default function Home() {
                 allNominations={nominations}
                 ceremonyCountdown={ceremonyCountdown}
                 palmaresRows={palmaresRows}
+                activeMemberCount={activeMemberCount}
                 switchTab={switchTab}
               />
             )}
