@@ -133,12 +133,7 @@ export function VoteTab({
           <AnimatePresence mode="popLayout">
             {pendingForMe.map((nomination) => {
               const category = getCategoryMeta(nomination.category_id);
-              const tacticalTag =
-                category.mood === "positive"
-                  ? "EL FAKHR"
-                  : category.mood === "critical"
-                    ? "EL HECHMA"
-                    : category.label;
+              const categoryLabel = category.label;
               const Icon = category.icon;
               const draftScores = cloneScores(
                 scoreDraftById[nomination.id] ?? DEFAULT_DIMENSION_SCORES,
