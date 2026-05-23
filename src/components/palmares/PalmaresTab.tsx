@@ -273,7 +273,10 @@ export function PalmaresTab({
                 </h3>
 
                 <div className="relative w-48 h-48 select-none">
-                  <svg viewBox="0 0 200 200" className="w-full h-full text-champagne">
+                  <svg
+                    viewBox="0 0 200 200"
+                    className="w-full h-full text-champagne"
+                  >
                     {/* Concentric grids representing ratings 1-5 */}
                     {[14, 28, 42, 56, 70].map((radius, rIndex) => {
                       const points = RATING_DIMENSIONS.map((_, i) => {
