@@ -687,10 +687,10 @@ function statusLabel(status: NominationStatus) {
 
 function statusClass(status: NominationStatus) {
   if (status === "accepted")
-    return "border-[#d4af37]/60 bg-[#d4af37]/15 text-[#f0d889]";
+    return "border-champagne/60 bg-champagne/15 text-champagneSoft";
   if (status === "rejected")
     return "border-red-400/30 bg-red-950/40 text-red-100";
-  return "border-[#d4af37]/50 bg-white/5 text-[#f0d889]";
+  return "border-champagne/50 bg-white/5 text-champagneSoft";
 }
 
 function averageRating(ratings: Rating[], categoryIds?: string[]) {
@@ -2081,7 +2081,7 @@ export default function Home() {
           >
             <Loader2 className="h-8 w-8 animate-spin text-black" />
           </BrutalCard>
-          <p className="text-[10px] font-sans uppercase tracking-[0.15em] text-[#d4af37]/40">
+          <p className="text-[10px] font-sans uppercase tracking-[0.15em] text-champagne/40">
             NOD v4.0
           </p>
         </div>
@@ -2107,7 +2107,7 @@ export default function Home() {
               <p className="text-xl font-black uppercase leading-none">
                 Chargement du jeu...
               </p>
-              <p className="mt-2 text-[10px] font-sans uppercase tracking-[0.15em] text-[#d4af37]/40">
+              <p className="mt-2 text-[10px] font-sans uppercase tracking-[0.15em] text-champagne/40">
                 NOD v4.0
               </p>
             </>
@@ -2136,7 +2136,7 @@ export default function Home() {
             <div
               role="status"
               aria-live="polite"
-              className={`flex items-center gap-2 rounded-[10px] border px-3 py-2 text-[11px] font-black uppercase tracking-[0.04em] shadow-[0_14px_36px_rgba(0,0,0,0.45)] backdrop-blur-xl ${toast.tone === "success" ? "border-[#d4af37]/60 bg-[#d4af37]/20 text-[#f0d889]" : toast.tone === "error" ? "border-red-400/40 bg-red-950/80 text-red-100" : "border-white/10 bg-black/80 text-white"}`}
+              className={`flex items-center gap-2 rounded-[10px] border px-3 py-2 text-[11px] font-black uppercase tracking-[0.04em] shadow-[0_14px_36px_rgba(0,0,0,0.45)] backdrop-blur-xl ${toast.tone === "success" ? "border-champagne/60 bg-champagne/20 text-champagneSoft" : toast.tone === "error" ? "border-red-400/40 bg-red-950/80 text-red-100" : "border-white/10 bg-black/80 text-white"}`}
             >
               {toast.tone === "success" ? (
                 <Check className="h-4 w-4" />
@@ -2177,7 +2177,7 @@ export default function Home() {
                 DOSSIER SOUMIS
               </h2>
 
-              <div className="inline-block rounded-none border-2 border-[#d4af37] bg-[#d4af37]/15 px-3 py-1.5 text-xs font-black uppercase tracking-[0.15em] text-[#f0d889] transform -rotate-1">
+              <div className="inline-block rounded-none border-2 border-champagne bg-champagne/15 px-3 py-1.5 text-xs font-black uppercase tracking-[0.15em] text-champagneSoft transform -rotate-1">
                 EN ROUTE POUR LA CÉRÉMONIE DE SAISON 1
               </div>
             </motion.div>
@@ -2187,7 +2187,7 @@ export default function Home() {
 
       <main className="tabloid-main">
         <div className="tabloid-scroll mx-auto w-full max-w-[30rem] px-2">
-          <header className="sticky top-0 z-30 mb-2 overflow-hidden bg-[#050505]/85 py-1.5 backdrop-blur-xl">
+          <header className="sticky top-0 z-30 mb-2 overflow-hidden bg-void/85 py-1.5 backdrop-blur-xl">
             <Ticker>
               CÉRÉMONIE DE LA SAISON 1 LE 1ER DU MOIS / DANS{" "}
               {ceremonyCountdown.days}J {ceremonyCountdown.hours}H{" "}
@@ -2309,12 +2309,12 @@ export default function Home() {
                 transition={TAP_TRANSITION}
                 onClick={() => switchTab(item.id)}
                 aria-current={active ? "page" : undefined}
-                className={`relative flex flex-col items-center justify-center gap-0.5 rounded-[10px] border px-1 py-1.5 transition ${active ? "border-[#d4af37]/70 text-[#f0d889]" : "border-transparent bg-transparent hover:bg-white/5 text-zinc-400"}`}
+                className={`relative flex flex-col items-center justify-center gap-0.5 rounded-[10px] border px-1 py-1.5 transition ${active ? "border-champagne/70 text-champagneSoft" : "border-transparent bg-transparent hover:bg-white/5 text-zinc-400"}`}
               >
                 {active && (
                   <motion.div
                     layoutId="navIndicator"
-                    className="absolute inset-0 rounded-[10px] bg-[#d4af37]/18 shadow-[inset_0_0_10px_rgba(212,175,55,0.1)]"
+                    className="absolute inset-0 rounded-[10px] bg-champagne/18 shadow-[inset_0_0_10px_rgba(212,175,55,0.1)]"
                     transition={{ type: "spring", stiffness: 400, damping: 35 }}
                   />
                 )}
@@ -2323,7 +2323,7 @@ export default function Home() {
                   {item.label}
                 </span>
                 {badge > 0 && (
-                  <span className="absolute right-0 top-0 z-20 inline-flex h-4 min-w-[16px] items-center justify-center rounded-full border border-[#d4af37]/80 bg-[#d4af37] px-1 text-[8px] font-black text-black">
+                  <span className="absolute right-0 top-0 z-20 inline-flex h-4 min-w-[16px] items-center justify-center rounded-full border border-champagne/80 bg-champagne px-1 text-[8px] font-black text-black">
                     {badge > 9 ? "9+" : badge}
                   </span>
                 )}
