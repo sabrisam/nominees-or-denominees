@@ -222,7 +222,7 @@ export function DirectTab({
           <div className="paper-tear -mt-[4px]" />
           <div className="rounded-[10px] border border-[#d4af37]/20 bg-[#050505]/75 px-2 py-1 text-white mt-1">
             <p className="text-[8px] font-black uppercase tracking-[0.14em] text-zinc-400 font-sans">
-              Le club des SCREENs du mois
+              LE CLUB DES SCREENS DU MOIS
             </p>
           </div>
         </BrutalCard>
