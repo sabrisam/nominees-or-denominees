@@ -99,6 +99,8 @@ body {
   text-rendering: geometricPrecision;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
+  font-feature-settings: "tnum" 1;
+  line-height: 1;
   -webkit-tap-highlight-color: transparent;
 }
 
