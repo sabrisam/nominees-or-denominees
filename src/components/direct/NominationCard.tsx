@@ -39,8 +39,8 @@ export function NominationCard({
       transition={{ type: "spring", stiffness: 400, damping: 25 }}
       className="w-full"
     >
-      <BrutalCard layout tone={isElite ? "yellow" : "black"} className="overflow-hidden border-[#d4af37]/30 bg-black/95">
-        <div className="relative aspect-[16/10] w-full border-b border-[#d4af37]/20 bg-zinc-950">
+      <BrutalCard layout tone={isElite ? "yellow" : "black"} className="overflow-hidden border-[#d4af37]/20 bg-[#0c0c0c]">
+        <div className="relative aspect-[16/10] w-full border-b border-[#d4af37]/20 bg-[#050505]">
           <MediaFrame nomination={nomination} height="h-full w-full" controls={false} />
           
           <div className="absolute left-2 top-2 z-10 flex gap-1">
@@ -64,10 +64,10 @@ export function NominationCard({
         <div className="p-3 space-y-2">
           <div className="flex items-start justify-between gap-2">
             <div className="min-w-0">
-              <p className="tabloid-headline text-lg text-white leading-none tracking-tight">
+              <p className="tabloid-headline text-lg text-white leading-none tracking-tight font-serif italic normal-case">
                 @{nomination.tiktoker_name}
               </p>
-              <p className="mt-1 line-clamp-2 font-mono text-[10px] leading-tight text-zinc-400">
+              <p className="mt-1 line-clamp-2 font-serif text-[10.5px] leading-tight text-zinc-400">
                 &ldquo;{nomination.comment || "Pas de contexte renseigné."}&rdquo;
               </p>
             </div>
@@ -76,7 +76,7 @@ export function NominationCard({
                 whileTap={TAP_REBOUND}
                 transition={TAP_TRANSITION}
                 onClick={onVote}
-                className="brutal-action bg-[#d4af37] px-2.5 py-1 text-[9px] text-black font-black uppercase tracking-tight shrink-0 self-start"
+                className="brutal-action bg-[#d4af37] px-2.5 py-1 text-[9px] text-black font-black uppercase tracking-tight shrink-0 self-start font-sans"
                 type="button"
               >
                 JUGER
@@ -85,16 +85,16 @@ export function NominationCard({
           </div>
 
           <div className="flex flex-wrap items-center justify-between gap-x-2 gap-y-1 border-t border-[#d4af37]/10 pt-2 text-[8px] font-black uppercase tracking-wider text-[#d4af37]">
-            <span className="flex items-center gap-1">
+            <span className="flex items-center gap-1 font-serif">
               <Icon className="h-3 w-3 text-[#d4af37]" />
               {categories}
             </span>
-            <div className="flex items-center gap-1.5 font-mono text-zinc-500">
-              <span>{nomination.ratings.length} NOTES</span>
+            <div className="flex items-center gap-1.5 font-serif text-zinc-500">
+              <span className="font-serif">{nomination.ratings.length} NOTES</span>
               <span>·</span>
-              <span className="text-[#f0d889]">{impact || "-"} INDICE</span>
+              <span className="text-[#f0d889] font-serif">{impact || "-"} INDICE</span>
               <span>·</span>
-              <span className="text-white">{rating ? `${rating.toFixed(1)}★` : "-"}</span>
+              <span className="text-white font-serif">{rating ? `${rating.toFixed(1)}★` : "-"}</span>
             </div>
           </div>
 
@@ -104,7 +104,7 @@ export function NominationCard({
                 whileTap={TAP_REBOUND}
                 transition={TAP_TRANSITION}
                 onClick={onEdit}
-                className="owner-action bg-white/5 border border-white/10 hover:border-white/20 text-white py-1"
+                className="owner-action bg-white/5 border border-white/10 hover:border-white/20 text-white py-1 font-sans"
                 type="button"
               >
                 Modifier
@@ -114,7 +114,7 @@ export function NominationCard({
                 transition={TAP_TRANSITION}
                 onClick={onRemove}
                 disabled={busy}
-                className="owner-action bg-red-950/20 border border-red-500/20 text-red-400 hover:bg-red-950/40 disabled:opacity-50 py-1"
+                className="owner-action bg-red-950/20 border border-red-500/20 text-red-400 hover:bg-red-950/40 disabled:opacity-50 py-1 font-sans"
                 type="button"
               >
                 Retirer

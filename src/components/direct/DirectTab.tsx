@@ -168,16 +168,16 @@ export function DirectTab({
     >
       {/* Brutal Header Cover */}
       <motion.div {...revealItem}>
-        <BrutalCard className="relative overflow-hidden p-3.5 bg-black border-[#d4af37]/30">
-          <p className="mb-1 text-[7.5px] font-black uppercase tracking-[0.2em] text-[#d4af37]">Club live</p>
-          <h1 className="tabloid-headline text-[clamp(1.78rem,8.9vw,3rem)] leading-[0.84] text-[#f5f1e8]">
-            NOMINEES
-            <span className="mx-1.5 inline-block rounded-[8px] border border-[#d4af37]/70 bg-[#d4af37]/15 px-1.5 py-0.5 text-[clamp(0.72rem,3.55vw,1.1rem)] font-black uppercase leading-none text-[#f0d889]">or</span>
-            <span className="block text-[#d4af37]">DENOMINEES</span>
+        <BrutalCard className="relative overflow-hidden p-3.5 bg-[#0c0c0c] border-[#d4af37]/20">
+          <p className="mb-1 text-[7.5px] font-black uppercase tracking-[0.2em] text-[#d4af37] font-sans">Club live</p>
+          <h1 className="tabloid-headline text-[clamp(1.78rem,8.9vw,3rem)] leading-[0.84] text-[#f5f1e8] font-serif italic normal-case">
+            Nominees
+            <span className="mx-1.5 inline-block rounded-[8px] border border-[#d4af37]/70 bg-[#d4af37]/15 px-1.5 py-0.5 text-[clamp(0.72rem,3.55vw,1.1rem)] font-sans font-black uppercase leading-none text-[#f0d889] not-italic">or</span>
+            <span className="block text-[#d4af37] not-italic uppercase font-serif">Denominees</span>
           </h1>
           <div className="paper-tear -mt-[4px]" />
-          <div className="rounded-[10px] border border-[#d4af37]/20 bg-zinc-900/50 px-2 py-1 text-white mt-1">
-            <p className="text-[8px] font-black uppercase tracking-[0.14em] text-zinc-400">Le club des recs du mois</p>
+          <div className="rounded-[10px] border border-[#d4af37]/20 bg-[#050505]/75 px-2 py-1 text-white mt-1">
+            <p className="text-[8px] font-black uppercase tracking-[0.14em] text-zinc-400 font-sans">Le club des recs du mois</p>
           </div>
         </BrutalCard>
       </motion.div>
@@ -195,14 +195,14 @@ export function DirectTab({
                 transition={TAP_TRANSITION}
                 aria-pressed={active}
                 onClick={() => setSetFilter(filter.id)}
-                className={`rounded-[9px] border px-1 py-1.5 text-center transition ${
+                className={`rounded-[9px] border px-1 py-1.5 text-center transition font-sans ${
                   active 
                     ? "border-[#d4af37]/80 bg-[#d4af37]/15 text-[#f0d889] shadow-[0_0_8px_rgba(212,175,55,0.15)]" 
-                    : "border-white/10 bg-white/[0.025] text-zinc-500 hover:border-white/20"
+                    : "border-white/10 bg-[#0c0c0c] text-zinc-500 hover:border-white/20"
                 }`}
               >
-                <span className="block truncate text-[7.5px] font-black uppercase leading-none tracking-tighter">{filter.label}</span>
-                <span className="mt-0.5 block text-[11px] font-black leading-none tracking-tighter">{directFilterCounts[filter.id]}</span>
+                <span className="block truncate text-[7.5px] font-black uppercase leading-none tracking-tighter font-sans">{filter.label}</span>
+                <span className="mt-0.5 block text-[11px] font-black leading-none tracking-tighter font-sans">{directFilterCounts[filter.id]}</span>
               </motion.button>
             );
           })}
@@ -213,7 +213,7 @@ export function DirectTab({
           <div className="space-y-1.5 border-t border-b border-[#d4af37]/10 py-3">
             <div className="flex items-center gap-1.5 px-1">
               <span className="h-2 w-2 rounded-full bg-yellow-500 animate-pulse" />
-              <h2 className="text-[10px] font-black uppercase tracking-[0.18em] text-yellow-500">
+              <h2 className="text-[10px] font-black uppercase tracking-[0.18em] text-yellow-500 font-serif">
                 🔥 À JUGER D&apos;URGENCE ({pendingForMe.length})
               </h2>
             </div>
@@ -238,10 +238,10 @@ export function DirectTab({
         {/* FEED SECTION */}
         {directFilter === "all" ? (
           mixedFeed.length === 0 ? (
-            <BrutalCard className="p-6 text-center border-white/5 bg-black/50">
+            <BrutalCard className="p-6 text-center border-[#d4af37]/10 bg-[#0c0c0c]">
               <Camera className="mx-auto mb-2 h-8 w-8 text-zinc-700" />
-              <p className="text-xl font-black uppercase leading-none text-zinc-500">Aucun rec.</p>
-              <p className="mt-1 text-[9px] font-black uppercase text-zinc-600">Le club est vide</p>
+              <p className="text-xl font-black uppercase leading-none text-zinc-500 font-serif">Aucun rec.</p>
+              <p className="mt-1 text-[9px] font-black uppercase text-zinc-600 font-sans">Le club est vide</p>
             </BrutalCard>
           ) : (
             <div className="flex flex-col gap-3">
@@ -265,20 +265,20 @@ export function DirectTab({
                   const Icon = meta.icon;
                   const slogan = CATEGORY_SLOGANS[item.adCategory] ?? CATEGORY_SLOGANS["le-zin-du-mois"];
                   return (
-                    <BrutalCard key={item.feedId} tone="black" className="border-dashed border-[#d4af37]/40 bg-zinc-950 p-4">
+                    <BrutalCard key={item.feedId} tone="black" className="border-dashed border-[#d4af37]/20 bg-[#0c0c0c] p-4">
                       <div className="flex items-start gap-3">
                         <div className="flex h-9 w-9 shrink-0 items-center justify-center bg-[#d4af37]/10 text-[#d4af37] border border-[#d4af37]/30 rounded-[10px]">
                           <Icon className="h-5 w-5" />
                         </div>
                         <div className="space-y-2">
-                          <p className="text-[10px] font-black uppercase tracking-wide leading-tight text-[#f0d889]">
+                          <p className="text-[10.5px] font-black uppercase tracking-wide leading-tight text-[#f0d889] font-serif">
                             {slogan}
                           </p>
                           <motion.button
                             whileTap={TAP_REBOUND}
                             transition={TAP_TRANSITION}
                             onClick={() => switchTab("studio")}
-                            className="brutal-action bg-white/5 border border-white/10 text-white text-[8px] font-black tracking-wider uppercase px-2.5 py-1"
+                            className="brutal-action bg-white/5 border border-white/10 text-white text-[8px] font-black tracking-wider uppercase px-2.5 py-1 font-sans"
                           >
                             LANCER LE DOSSIER →
                           </motion.button>
@@ -290,26 +290,26 @@ export function DirectTab({
 
                 if (item.type === "countdown") {
                   return (
-                    <BrutalCard key={item.feedId} tone="yellow" className="p-4 bg-[#d4af37]/10 border-[#d4af37]/40">
+                    <BrutalCard key={item.feedId} tone="yellow" className="p-4 bg-[#d4af37]/10 border-[#d4af37]/20">
                       <div className="flex items-start gap-3">
                         <div className="flex h-9 w-9 shrink-0 items-center justify-center bg-[#d4af37] text-black rounded-[10px]">
                           <Calendar className="h-5 w-5" />
                         </div>
                         <div className="space-y-1.5">
-                          <span className="inline-flex rounded-[6px] bg-[#d4af37] px-1.5 py-0.5 text-[8.5px] font-black uppercase tracking-wider text-black">
+                          <span className="inline-flex rounded-[6px] bg-[#d4af37] px-1.5 py-0.5 text-[8.5px] font-black uppercase tracking-wider text-black font-sans">
                             CÉRÉMONIE IMMINENTE ⏳
                           </span>
-                          <p className="text-[10px] font-black uppercase leading-tight text-white mt-1">
+                          <p className="text-[10px] font-black uppercase leading-tight text-white mt-1 font-serif">
                             LA GRANDE FINALE DE SAISON APPROCHE ! DERNIÈRES RECS À METTRE EN VOTE :
                           </p>
-                          <p className="text-sm font-black text-[#f0d889] font-mono leading-none">
+                          <p className="text-sm font-black text-[#f0d889] font-serif leading-none">
                             {ceremonyCountdown.days} JOURS {ceremonyCountdown.hours}H {ceremonyCountdown.mins}M
                           </p>
                           <motion.button
                             whileTap={TAP_REBOUND}
                             transition={TAP_TRANSITION}
                             onClick={() => switchTab("palmares")}
-                            className="brutal-action bg-[#d4af37] text-black text-[8px] font-black tracking-wider uppercase px-2.5 py-1 mt-1 block"
+                            className="brutal-action bg-[#d4af37] text-black text-[8px] font-black tracking-wider uppercase px-2.5 py-1 mt-1 block font-sans"
                           >
                             VOIR LE PALMARÈS
                           </motion.button>
@@ -321,19 +321,19 @@ export function DirectTab({
 
                 if (item.type === "paparazzi") {
                   return (
-                    <BrutalCard key={item.feedId} tone="black" className="bg-zinc-950 border-[#d4af37]/20 p-4">
+                    <BrutalCard key={item.feedId} tone="black" className="bg-[#0c0c0c] border-[#d4af37]/20 p-4">
                       <div className="flex items-start gap-3">
                         <div className="flex h-9 w-9 shrink-0 items-center justify-center bg-zinc-800 border border-zinc-700 text-[#d4af37] rounded-[10px]">
                           <Trophy className="h-5 w-5" />
                         </div>
                         <div className="space-y-1.5">
-                          <span className="inline-flex rounded-[6px] border border-[#d4af37]/40 bg-[#d4af37]/15 px-1.5 py-0.5 text-[8.5px] font-black uppercase tracking-wider text-[#f0d889]">
+                          <span className="inline-flex rounded-[6px] border border-[#d4af37]/40 bg-[#d4af37]/15 px-1.5 py-0.5 text-[8.5px] font-black uppercase tracking-wider text-[#f0d889] font-sans">
                             ÉLITE PAPARAZZI 📸
                           </span>
-                          <p className="text-[10px] font-black uppercase leading-tight text-zinc-300">
+                          <p className="text-[10px] font-black uppercase leading-tight text-zinc-300 font-serif">
                             QUI PRENDRA LE CONTRÔLE DE SAISON 1 ?
                           </p>
-                          <p className="text-[9px] font-bold text-zinc-400">
+                          <p className="text-[9.5px] font-bold text-zinc-400 font-serif">
                             {topPaparazzi.count > 0 
                               ? `Un paparazzi d'Élite est actuellement en tête avec un cumul de ${topPaparazzi.count} dossiers d'activités lancés !`
                               : "Aucun paparazzi n'a encore lancé de dossier. Ouvre le bal dans le studio !"}
@@ -342,7 +342,7 @@ export function DirectTab({
                             whileTap={TAP_REBOUND}
                             transition={TAP_TRANSITION}
                             onClick={() => switchTab("studio")}
-                            className="brutal-action bg-white/5 border border-white/10 text-white text-[8px] font-black tracking-wider uppercase px-2.5 py-1 block mt-1"
+                            className="brutal-action bg-white/5 border border-white/10 text-white text-[8px] font-black tracking-wider uppercase px-2.5 py-1 block mt-1 font-sans"
                           >
                             DÉPOSER MON REPLAY
                           </motion.button>
@@ -358,10 +358,10 @@ export function DirectTab({
           )
         ) : (
           feedItems.length === 0 ? (
-            <BrutalCard className="p-6 text-center border-white/5 bg-black/50">
+            <BrutalCard className="p-6 text-center border-[#d4af37]/20 bg-[#0c0c0c]">
               <Camera className="mx-auto mb-2 h-8 w-8 text-zinc-700" />
-              <p className="text-xl font-black uppercase leading-none text-zinc-500">Aucun rec.</p>
-              <p className="mt-1 text-[9px] font-black uppercase text-zinc-600">Le flux est vide</p>
+              <p className="text-xl font-black uppercase leading-none text-zinc-500 font-serif">Aucun rec.</p>
+              <p className="mt-1 text-[9px] font-black uppercase text-zinc-600 font-sans">Le flux est vide</p>
             </BrutalCard>
           ) : (
             <div className="flex flex-col gap-3">

@@ -75,15 +75,15 @@ export function StudioTab({
       transition={{ duration: reduceMotion ? 0.01 : 0.26, type: "spring", stiffness: 230, damping: 25 }}
       className="space-y-1.5"
     >
-      <BrutalCard tone="black" className="p-2">
-        <h2 className="tabloid-headline text-[clamp(1.28rem,6.8vw,2.2rem)] leading-[0.82] text-white">
-          {isEditingStudio ? "MODIFIER LE DOSSIER" : "STUDIO"}
+      <BrutalCard tone="black" className="p-2 border-[#d4af37]/20 bg-[#0c0c0c]">
+        <h2 className="tabloid-headline text-[clamp(1.28rem,6.8vw,2.2rem)] leading-[0.82] text-white font-serif italic normal-case">
+          {isEditingStudio ? "Modifier le dossier" : "Studio"}
         </h2>
       </BrutalCard>
 
-      <BrutalCard className="p-1.5">
+      <BrutalCard className="p-1.5 border-[#d4af37]/20 bg-[#0c0c0c]">
         {editingNomination ? (
-          <div className="relative overflow-hidden rounded-[10px] border border-[#d4af37]/25 bg-black">
+          <div className="relative overflow-hidden rounded-[10px] border border-[#d4af37]/20 bg-[#050505]">
             <MediaFrame nomination={editingNomination} height="aspect-[9/16] max-h-[52svh]" />
             <OwnershipBadge owned className="absolute left-2 top-2 -rotate-2" />
           </div>
@@ -95,7 +95,7 @@ export function StudioTab({
               fileInputRef.current?.click();
             }}
             disabled={isPreparingMedia || uploadLoading}
-            className="relative flex aspect-[9/16] max-h-[52svh] w-full items-center justify-center overflow-hidden rounded-[10px] border border-[#d4af37]/25 bg-black text-left transition disabled:opacity-70"
+            className="relative flex aspect-[9/16] max-h-[52svh] w-full items-center justify-center overflow-hidden rounded-[10px] border border-[#d4af37]/20 bg-[#050505] text-left transition disabled:opacity-70"
             aria-label="Choisir une vidéo ou une capture"
           >
             {previewUrl ? (
@@ -117,8 +117,8 @@ export function StudioTab({
             ) : (
               <span className="flex flex-col items-center px-6 text-center text-white">
                 {isPreparingMedia ? <Loader2 className="mb-3 h-9 w-9 animate-spin text-[#d4af37]" /> : <UploadCloud className="mb-3 h-9 w-9 text-[#d4af37]" />}
-                <span className="tabloid-headline text-xl leading-none">{isPreparingMedia ? "Chargement du studio..." : "Déposer le rec"}</span>
-                <span className="mt-1.5 text-[10px] font-black uppercase tracking-[0.12em] text-[#d4af37]">Vidéo ou capture libre</span>
+                <span className="tabloid-headline text-xl leading-none font-serif">{isPreparingMedia ? "Chargement du studio..." : "Déposer le rec"}</span>
+                <span className="mt-1.5 text-[10px] font-black uppercase tracking-[0.12em] text-[#d4af37] font-sans">Vidéo ou capture libre</span>
               </span>
             )}
             <input
@@ -126,7 +126,7 @@ export function StudioTab({
               type="file"
               accept="video/*,image/*,.heic,.heif"
               onChange={(event) => void prepareMedia(event.target.files?.[0] ?? null)}
-              className="hidden"
+              className="hidden font-sans"
               aria-label="Fichier média du dossier"
             />
           </motion.button>
@@ -134,8 +134,8 @@ export function StudioTab({
       </BrutalCard>
 
       {(isPreparingMedia || uploadLoading) && (
-        <BrutalCard tone="yellow" className="p-2">
-          <p className="tabloid-headline text-[clamp(1.05rem,5.6vw,1.65rem)] leading-[0.82]">{uploadLoading ? "CHARGEMENT DU DOSSIER..." : "PRÉPARATION DU REC..."}</p>
+        <BrutalCard tone="yellow" className="p-2 border-[#d4af37]/20 bg-[#0c0c0c]">
+          <p className="tabloid-headline text-[clamp(1.05rem,5.6vw,1.65rem)] leading-[0.82] font-serif">{uploadLoading ? "CHARGEMENT DU DOSSIER..." : "PRÉPARATION DU REC..."}</p>
           <div className="stat-bar mt-2">
             <motion.div className="stat-bar-fill" animate={{ width: `${Math.round(mediaProgress * 100)}%` }} />
           </div>
@@ -152,7 +152,7 @@ export function StudioTab({
         onChange={(event) => setTiktokerName(event.target.value)}
         placeholder="TikToker visé"
         maxLength={48}
-        className="brutal-input w-full px-2.5 py-2 text-xs font-black uppercase"
+        className="brutal-input w-full px-2.5 py-2 text-base font-serif italic normal-case"
       />
 
       <div className="grid grid-cols-3 gap-1">
@@ -167,10 +167,10 @@ export function StudioTab({
               transition={TAP_TRANSITION}
               onClick={() => toggleCategory(category.id)}
               aria-pressed={active}
-              className={`min-h-10 rounded-[10px] border px-1.5 py-1 text-left ${active ? "border-[#d4af37]/75 bg-[#d4af37]/18 text-[#f0d889]" : "border-white/10 bg-white/[0.035] text-zinc-500"}`}
+              className={`min-h-10 rounded-[10px] border px-1.5 py-1 text-left font-sans ${active ? "border-[#d4af37]/75 bg-[#d4af37]/18 text-[#f0d889]" : "border-white/10 bg-[#0c0c0c] text-zinc-500"}`}
             >
               <Icon className="mb-1 h-3 w-3" />
-              <span className="line-clamp-2 text-[8px] font-black uppercase leading-none tracking-tighter">{category.label}</span>
+              <span className="line-clamp-2 text-[8px] font-black uppercase leading-none tracking-tighter font-sans">{category.label}</span>
             </motion.button>
           );
         })}
@@ -187,14 +187,14 @@ export function StudioTab({
         placeholder="Pourquoi ce dossier mérite le club ?"
         rows={3}
         maxLength={240}
-        className="brutal-input w-full resize-none p-2.5 text-xs font-black uppercase"
+        className="brutal-input w-full resize-none p-2.5 text-base font-serif"
       />
 
       {!isEditingStudio && (
-        <BrutalCard tone="yellow" className="p-2">
+        <BrutalCard tone="yellow" className="p-2 border-[#d4af37]/20 bg-[#0c0c0c]">
           <ScorePresetRail value={initialScores} onSelect={setInitialScores} label="Profils rapides du score initial" />
           <DimensionScoreGrid value={initialScores} onChange={setInitialScores} />
-          <p className="mt-2 border-t border-[#d4af37]/20 pt-2 text-center text-[10px] font-black uppercase tracking-[0.12em] text-[#d4af37]">
+          <p className="mt-2 border-t border-[#d4af37]/20 pt-2 text-center text-[10.5px] font-black uppercase tracking-[0.12em] text-[#d4af37] font-serif">
             Indice initial : {scoreTotal(initialScores, cleanCategoryIds)} / 100
           </p>
         </BrutalCard>
