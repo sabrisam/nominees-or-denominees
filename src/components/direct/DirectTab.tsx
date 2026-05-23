@@ -126,13 +126,10 @@ export function DirectTab({
   const mixedFeed = useMemo(() => {
     if (directFilter !== "all") return [];
 
-    // Exclude top 3 pending votes from the main feed to avoid duplicate rendering
-    const pendingIds = new Set(pendingForMe.slice(0, 3).map((n) => n.id));
-    const mainStream = allNominations
-      .filter((n) => !pendingIds.has(n.id))
-      .sort(
-        (a, b) =>
-          new Date(b.created_at).getTime() - new Date(a.created_at).getTime(),
+      // Exclude urgent triage nominations from the lower feed to avoid duplicates
+      const triageIds = pendingForMe.slice(0, 3).map((n) => n.id);
+      const mainStream = allNominations
+        .filter((n) => !triageIds.includes(n.id))
       );
 
     const result: Array<{

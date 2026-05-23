@@ -1181,10 +1181,48 @@ export default function Home() {
           throw error;
         }
 
-        const rows = ((data ?? []) as Record<string, unknown>[]).map(
-          parseNomination,
-        );
-        setNominations(rows);
+        const rawRows = (data ?? []) as Record<string, unknown>[];
+        const rows = rawRows.map(parseNomination);
+
+        if (
+          participant &&
+          rawRows.length > 0 &&
+          !Object.prototype.hasOwnProperty.call(rawRows[0], "ratings")
+        ) {
+          const ratingResponse = await supabase
+            .from("ratings")
+            .select(
+              "id,nomination_id,voter_id,rating_stars,rating_score,rating_points,rire_score,surprise_score,gene_score,fierte_score,interet_score,comment,created_at",
+            )
+            .eq("voter_id", participant.id)
+            .in(
+              "nomination_id",
+              rows.map((nomination) => nomination.id),
+            );
+
+          const currentUserRatings = (ratingResponse.data ?? []) as
+            | Record<string, unknown>[]
+            | null;
+          const ratingMap = new Map<string, Rating>();
+          currentUserRatings?.forEach((ratingRow) => {
+            const parsedRating = parseRating(ratingRow);
+            ratingMap.set(parsedRating.nomination_id, parsedRating);
+          });
+
+          const enrichedRows = rows.map((nomination) => ({
+            ...nomination,
+            ratings:
+              nomination.ratings.length > 0
+                ? nomination.ratings
+                : ratingMap.has(nomination.id)
+                ? [ratingMap.get(nomination.id)!]
+                : [],
+          }));
+
+          setNominations(enrichedRows);
+        } else {
+          setNominations(rows);
+        }
       } catch (err: any) {
         if (!silent) {
           const message =
@@ -1196,7 +1234,7 @@ export default function Home() {
         setSyncing(false);
       }
     },
-    [roomId, showToast, supabase],
+    [participant, roomId, showToast, supabase],
   );
 
   useEffect(() => {
