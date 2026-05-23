@@ -1277,6 +1277,11 @@ export default function Home() {
     );
   }, [nominations, participant]);
 
+  const rankingGrid = useMemo(
+    () => buildRankingMemoryGrid(nominations),
+    [nominations],
+  );
+
   const qualified = useMemo(
     () => nominations.filter((nomination) => nomination.status !== "pending"),
     [nominations],
