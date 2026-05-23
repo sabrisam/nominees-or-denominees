@@ -4,8 +4,8 @@ import { UploadCloud, Loader2 } from "lucide-react";
 import { BrutalCard } from "../ui/BrutalCard";
 import { MediaFrame } from "../direct/MediaFrame";
 import { OwnershipBadge } from "../direct/OwnershipBadge";
-import { ScorePresetRail } from "./ScorePresetRail";
-import { DimensionScoreGrid } from "./DimensionScoreGrid";
+import { ScorePresetRail } from "../studio/ScorePresetRail";
+import { DimensionScoreGrid } from "../studio/DimensionScoreGrid";
 import { CATEGORIES } from "@/constants/categories";
 import { scoreTotal, primaryCategoryId } from "@/lib/scoring";
 import type { Nomination, MediaKind, DimensionScores } from "@/types";
@@ -32,6 +32,7 @@ export function StudioTab({
   mediaKind,
   isPreparingMedia,
   uploadLoading,
+  isUploading = false,
   mediaProgress,
   tiktokerName,
   setTiktokerName,
@@ -57,6 +58,7 @@ export function StudioTab({
   mediaKind: MediaKind | null;
   isPreparingMedia: boolean;
   uploadLoading: boolean;
+  isUploading?: boolean;
   mediaProgress: number;
   tiktokerName: string;
   setTiktokerName: (val: string) => void;
@@ -317,10 +319,10 @@ export function StudioTab({
             whileTap={TAP_REBOUND}
             transition={TAP_TRANSITION}
             onClick={() => void uploadNomination()}
-            disabled={mutationBusyId === editingNomination?.id || !uploadReady}
+            disabled={mutationBusyId === editingNomination?.id || !uploadReady || isUploading}
             className="brutal-submit flex w-full items-center justify-center gap-2 disabled:opacity-50"
           >
-            {mutationBusyId === editingNomination?.id ? (
+            {mutationBusyId === editingNomination?.id || isUploading ? (
               <Loader2 className="h-6 w-6 animate-spin" />
             ) : (
               "Sauvegarder"
@@ -341,10 +343,10 @@ export function StudioTab({
           whileTap={TAP_REBOUND}
           transition={TAP_TRANSITION}
           onClick={() => void uploadNomination()}
-          disabled={uploadLoading || !uploadReady}
+          disabled={uploadLoading || !uploadReady || isUploading}
           className="brutal-submit flex w-full items-center justify-center gap-2 disabled:opacity-50"
         >
-          {uploadLoading ? (
+          {uploadLoading || isUploading ? (
             <span className="flex items-center gap-2 animate-pulse">
               <Loader2 className="h-6 w-6 animate-spin" /> TRANSMISSION EN
               COURS...
