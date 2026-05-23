@@ -126,10 +126,13 @@ export function DirectTab({
   const mixedFeed = useMemo(() => {
     if (directFilter !== "all") return [];
 
-      // Exclude urgent triage nominations from the lower feed to avoid duplicates
-      const triageIds = pendingForMe.slice(0, 3).map((n) => n.id);
-      const mainStream = allNominations
-        .filter((n) => !triageIds.includes(n.id))
+    // Exclude urgent triage nominations from the lower feed to avoid duplicates
+    const triageIds = pendingForMe.slice(0, 3).map((n) => n.id);
+    const mainStream = allNominations
+      .filter((n) => !triageIds.includes(n.id))
+      .sort(
+        (a, b) =>
+          new Date(b.created_at).getTime() - new Date(a.created_at).getTime(),
       );
 
     const result: Array<{
