@@ -77,7 +77,7 @@ export function CeremonyBulletin({
       <div className="grid grid-cols-[minmax(0,1fr)_auto] items-center gap-2">
         <div className="min-w-0">
           <Sticker tone="paper">Saison ouverte</Sticker>
-          <p className="tabloid-headline mt-1 text-[clamp(1.05rem,5.5vw,1.8rem)] leading-[0.84] text-white">Premier rec attendu</p>
+          <p className="tabloid-headline mt-1 text-[clamp(1.05rem,5.5vw,1.8rem)] leading-[0.84] text-white">Premier SCREEN attendu</p>
           <p className="mt-0.5 truncate text-[9px] font-black uppercase tracking-tighter text-[#d4af37]">Le trophée commence au premier dossier</p>
         </div>
         <motion.button type="button" whileTap={TAP_REBOUND} transition={TAP_TRANSITION} onClick={onOpenStudio} className="brutal-action bg-[#d4af37] px-3 text-black">

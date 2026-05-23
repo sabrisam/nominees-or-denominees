@@ -60,7 +60,7 @@ export function MediaFrame({
           className="relative z-10 mx-3 rounded-full border border-[#d4af37]/60 bg-black/70 px-3 py-2 text-center text-[11px] font-bold uppercase tracking-[0.12em] leading-none text-[#f0d889]"
         >
           {isDemo
-            ? "Rec à renvoyer depuis le Studio"
+            ? "SCREEN à renvoyer depuis le Studio"
             : "Média indisponible ou non supporté"}
         </motion.div>
       </div>
@@ -112,7 +112,7 @@ export function MediaFrame({
         />
         {!controls && !engaged ? (
           <span className="pointer-events-none absolute bottom-2 left-2 z-20 rounded-full border border-[#d4af37]/40 bg-black/60 px-2 py-1 text-[8px] font-black uppercase tracking-tighter text-[#f0d889]">
-            Rec
+            SCREEN
           </span>
         ) : null}
       </div>
