@@ -521,96 +521,7 @@ const DIRECT_FILTERS: Array<{ id: DirectFilter; label: string }> = [
   { id: "mine", label: "Moi" },
 ];
 
-function isRecord(value: unknown): value is Record<string, unknown> {
-  return typeof value === "object" && value !== null && !Array.isArray(value);
-}
 
-function toText(value: unknown, fallback = "") {
-  return typeof value === "string" ? value : fallback;
-}
-
-function toNumber(value: unknown, fallback = 0) {
-  return typeof value === "number" && Number.isFinite(value) ? value : fallback;
-}
-
-function clampDimension(value: number) {
-  return Math.min(5, Math.max(0, Math.round(value)));
-}
-
-function clampRating(value: number) {
-  return clampDimension(value);
-}
-
-function cloneScores(
-  scores: DimensionScores = DEFAULT_DIMENSION_SCORES,
-): DimensionScores {
-  return {
-    rire: clampDimension(scores.rire),
-    surprise: clampDimension(scores.surprise),
-    gene: clampDimension(scores.gene),
-    fierte: clampDimension(scores.fierte),
-    interet: clampDimension(scores.interet),
-  };
-}
-
-function normalizedCategoryId(categoryId: string) {
-  const resolved = CATEGORY_ID_ALIASES[categoryId] ?? categoryId;
-  return CATEGORY_BY_ID[resolved] ? resolved : CATEGORIES[0].id;
-}
-
-function scoreForCategory(scores: DimensionScores, categoryId: string) {
-  const profile =
-    CATEGORY_SCORING[normalizedCategoryId(categoryId)] ??
-    CATEGORY_SCORING[CATEGORIES[0].id];
-  const weighted = RATING_DIMENSIONS.reduce((sum, dimension) => {
-    const rawValue = clampDimension(scores[dimension.key]);
-    const adjustedValue = profile.lowIsStrong?.[dimension.key]
-      ? 5 - rawValue
-      : rawValue;
-    return sum + adjustedValue * profile.weights[dimension.key];
-  }, 0);
-
-  return Math.min(100, Math.max(0, Math.round(weighted * 20)));
-}
-
-function scoreTotal(
-  scores: DimensionScores,
-  categoryIds: string[] = [CATEGORIES[0].id],
-) {
-  const ids = normalizeCategoryIds(categoryIds, CATEGORIES[0].id);
-  const total = ids.reduce(
-    (sum, categoryId) => sum + scoreForCategory(scores, categoryId),
-    0,
-  );
-  return Math.round(total / ids.length);
-}
-
-function scoreAverage(scores: DimensionScores, categoryIds?: string[]) {
-  return Math.round((scoreTotal(scores, categoryIds) / 20) * 100) / 100;
-}
-
-function ratingImpactPoints(rating: Rating, categoryIds?: string[]) {
-  return scoreTotal(rating.scores, categoryIds);
-}
-
-function ratingImpactScore(rating: Rating, categoryIds?: string[]) {
-  return Math.round((ratingImpactPoints(rating, categoryIds) / 20) * 100) / 100;
-}
-
-function addScores(target: DimensionScores, source: DimensionScores) {
-  for (const dimension of RATING_DIMENSIONS) {
-    target[dimension.key] += clampDimension(source[dimension.key]);
-  }
-}
-
-function createStarDistribution(): StarDistribution {
-  return [0, 0, 0, 0, 0];
-}
-
-function addToStarDistribution(distribution: StarDistribution, value: number) {
-  const rounded = Math.max(1, clampRating(value));
-  distribution[rounded - 1] += 1;
-}
 
 function haptic(pattern: number | readonly number[]) {
   if (typeof window !== "undefined") {
@@ -626,20 +537,7 @@ function haptic(pattern: number | readonly number[]) {
   }
 }
 
-function sameScores(a: DimensionScores, b: DimensionScores) {
-  return RATING_DIMENSIONS.every(
-    (dimension) =>
-      clampDimension(a[dimension.key]) === clampDimension(b[dimension.key]),
-  );
-}
 
-function categorySummary(ids: string[]) {
-  const labels = normalizeCategoryIds(ids, CATEGORIES[0].id).map(
-    (id) => getCategoryMeta(id).label,
-  );
-  if (labels.length <= 2) return labels.join(" + ");
-  return `${labels.slice(0, 2).join(" + ")} +${labels.length - 2}`;
-}
 
 function makeSessionId() {
   if (typeof crypto !== "undefined" && "randomUUID" in crypto)
@@ -671,50 +569,7 @@ function sanitizeTiktokerName(value: string) {
     .slice(0, 48);
 }
 
-function getCategoryMeta(value: string) {
-  const resolved = CATEGORY_ID_ALIASES[value] ?? value;
-  return (
-    CATEGORY_BY_ID[resolved] ?? {
-      id: "custom",
-      label: value || "Sans catégorie",
-      mood: "fun",
-      icon: Camera,
-    }
-  );
-}
 
-function normalizeCategoryIds(value: unknown, fallback: string) {
-  const rawIds = Array.isArray(value)
-    ? value.filter((item): item is string => typeof item === "string")
-    : [];
-  const validIds = rawIds
-    .map((id) => CATEGORY_ID_ALIASES[id] ?? id)
-    .filter((id) => CATEGORY_BY_ID[id]);
-  const resolvedFallback = CATEGORY_ID_ALIASES[fallback] ?? fallback;
-  const fallbackId = CATEGORY_BY_ID[resolvedFallback]
-    ? resolvedFallback
-    : CATEGORIES[0].id;
-  return Array.from(new Set(validIds.length > 0 ? validIds : [fallbackId]));
-}
-
-function primaryCategoryId(ids: string[]) {
-  return (
-    ids
-      .map((id) => CATEGORY_ID_ALIASES[id] ?? id)
-      .find((id) => CATEGORY_BY_ID[id]) ?? CATEGORIES[0].id
-  );
-}
-
-function statusFromRatings(ratings: Rating[]) {
-  if (ratings.length < MIN_PUBLIC_RATINGS) return "pending" as const;
-  return "accepted" as const;
-}
-
-function statusLabel(status: NominationStatus) {
-  if (status === "accepted") return "NOMINÉ";
-  if (status === "rejected") return "ARCHIVÉ";
-  return "À VOTER";
-}
 
 function statusClass(status: NominationStatus) {
   if (status === "accepted")
@@ -724,32 +579,7 @@ function statusClass(status: NominationStatus) {
   return "border-champagne/50 bg-white/5 text-champagneSoft";
 }
 
-function averageRating(ratings: Rating[], categoryIds?: string[]) {
-  if (ratings.length === 0) return 0;
-  return (
-    ratings.reduce(
-      (sum, rating) => sum + ratingImpactScore(rating, categoryIds),
-      0,
-    ) / ratings.length
-  );
-}
 
-function totalPoints(ratings: Rating[], categoryIds?: string[]) {
-  return ratings.reduce(
-    (sum, rating) => sum + ratingImpactPoints(rating, categoryIds),
-    0,
-  );
-}
-
-function averageImpact(
-  nomination: Nomination,
-  categoryIds = nomination.category_ids,
-) {
-  if (nomination.ratings.length === 0) return 0;
-  return Math.round(
-    totalPoints(nomination.ratings, categoryIds) / nomination.ratings.length,
-  );
-}
 
 function countdownToNextCeremony() {
   const now = new Date();
@@ -772,65 +602,7 @@ function isCurrentMonth(dateValue: string) {
   );
 }
 
-function parseRating(row: Record<string, unknown>): Rating {
-  const legacyRating = clampRating(toNumber(row.rating_stars, 0));
-  const scores = cloneScores({
-    rire: clampDimension(toNumber(row.rire_score, legacyRating)),
-    surprise: clampDimension(toNumber(row.surprise_score, legacyRating)),
-    gene: clampDimension(toNumber(row.gene_score, legacyRating)),
-    fierte: clampDimension(toNumber(row.fierte_score, legacyRating)),
-    interet: clampDimension(toNumber(row.interet_score, legacyRating)),
-  });
-  const computedScore = scoreAverage(scores);
-  const computedPoints = scoreTotal(scores);
 
-  return {
-    id: toText(
-      row.id,
-      `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
-    ),
-    nomination_id: toText(row.nomination_id),
-    voter_id: toText(row.voter_id),
-    rating_stars: clampRating(
-      toNumber(row.rating_stars, Math.round(computedScore)),
-    ),
-    rating_score: Math.min(
-      5,
-      Math.max(0, toNumber(row.rating_score, computedScore)),
-    ),
-    rating_points: Math.min(
-      100,
-      Math.max(0, toNumber(row.rating_points, computedPoints)),
-    ),
-    scores,
-    comment: toText(row.comment),
-    created_at: toText(row.created_at, new Date().toISOString()),
-  };
-}
-
-function makeRatingFromDraft(
-  nominationId: string,
-  voterId: string,
-  scores: DimensionScores,
-  comment: string,
-  categoryIds?: string[],
-): Rating {
-  const safeScores = cloneScores(scores);
-  const points = scoreTotal(safeScores, categoryIds);
-  const ratingScore = Math.round((points / 20) * 100) / 100;
-
-  return {
-    id: `${nominationId}-${voterId}`,
-    nomination_id: nominationId,
-    voter_id: voterId,
-    rating_stars: clampRating(Math.round(ratingScore)),
-    rating_score: ratingScore,
-    rating_points: points,
-    scores: safeScores,
-    comment,
-    created_at: new Date().toISOString(),
-  };
-}
 
 function readPendingRatings(): PendingRatingPayload[] {
   if (typeof localStorage === "undefined") return [];
@@ -867,38 +639,7 @@ function queuePendingRating(payload: PendingRatingPayload) {
   writePendingRatings([...rest, payload]);
 }
 
-function parseNomination(row: Record<string, unknown>): Nomination {
-  const ratings = Array.isArray(row.ratings)
-    ? row.ratings.filter(isRecord).map(parseRating)
-    : [];
-  const rawMediaKind = toText(row.media_kind, "image");
-  const fallbackCategory = toText(row.category_id, CATEGORIES[0].id);
-  const categoryIds = normalizeCategoryIds(row.category_ids, fallbackCategory);
-  const computedStatus = statusFromRatings(ratings);
 
-  return {
-    id: toText(
-      row.id,
-      `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
-    ),
-    room_id: toText(row.room_id),
-    category_id: primaryCategoryId(categoryIds),
-    category_ids: categoryIds,
-    tiktoker_name:
-      sanitizeTiktokerName(toText(row.tiktoker_name, "TikToker mystère")) ||
-      "TikToker mystère",
-    media_url: toText(row.media_url, FALLBACK_IMAGE_URL),
-    video_storage_path: toText(row.video_storage_path) || null,
-    thumbnail_url: toText(row.thumbnail_url) || null,
-    thumbnail_storage_path: toText(row.thumbnail_storage_path) || null,
-    media_kind: rawMediaKind === "video" ? "video" : "image",
-    comment: toText(row.comment),
-    submitted_by: toText(row.submitted_by, "session-inconnue"),
-    status: computedStatus,
-    created_at: toText(row.created_at, new Date().toISOString()),
-    ratings,
-  };
-}
 
 function isLegacyDemoMedia(url: string) {
   return url === LEGACY_FLOWER_VIDEO_URL;
