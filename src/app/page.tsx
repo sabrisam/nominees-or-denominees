@@ -2029,6 +2029,7 @@ export default function Home() {
                 mediaKind={mediaKind}
                 isPreparingMedia={isPreparingMedia}
                 uploadLoading={uploadLoading}
+                isUploading={uploadLoading}
                 mediaProgress={mediaProgress}
                 tiktokerName={tiktokerName}
                 setTiktokerName={setTiktokerName}
