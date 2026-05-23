@@ -286,7 +286,7 @@ export function StudioTab({
         <button
           type="button"
           className="rounded-[10px] border border-[#d4af37]/30 bg-[#d4af37]/10 px-3 py-1 text-[#f0d889] transition hover:bg-[#d4af37]/15"
-          onClick={() => console.info("AI punchline stub")}
+          onClick={handleAIPunchline}
         >
           IA PUNCHLINE
         </button>
