@@ -1,23 +1,21 @@
 import { motion } from "framer-motion";
-import { BrutalCard } from "@/components/ui/BrutalCard";
-import { PalmaresList } from "@/components/trophies/PalmaresList";
+import { BrutalCard } from "../ui/BrutalCard";
+import { PalmaresList } from "../trophies/PalmaresList";
 import type { PalmaresRow, Tab } from "@/types";
-
-export interface PalmaresTabProps {
-  palmaresRows: PalmaresRow[];
-  switchTab: (nextTab: Tab) => void;
-  reduceMotion: boolean;
-  handleSectionDrag: (info: any) => void;
-  pageTransition: any;
-}
 
 export function PalmaresTab({
   palmaresRows,
   switchTab,
-  reduceMotion,
   handleSectionDrag,
+  reduceMotion,
   pageTransition
-}: PalmaresTabProps) {
+}: {
+  palmaresRows: PalmaresRow[];
+  switchTab: (t: Tab) => void;
+  handleSectionDrag: (info: any) => void;
+  reduceMotion: boolean;
+  pageTransition: any;
+}) {
   return (
     <motion.section
       key="palmares"

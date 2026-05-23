@@ -15,6 +15,13 @@ import {
   uploadMediaFile
 } from "@/lib/storage";
 import { Ticker } from "@/components/ui/Ticker";
+import { BrutalCard } from "@/components/ui/BrutalCard";
+import { CeremonyBulletin } from "@/components/direct/CeremonyBulletin";
+import { DirectTab } from "@/components/direct/DirectTab";
+import { VoteTab } from "@/components/vote/VoteTab";
+import { StudioTab } from "@/components/studio/StudioTab";
+import { PalmaresTab } from "@/components/palmares/PalmaresTab";
+import { WinnersTab } from "@/components/winners/WinnersTab";
 import { AnimatePresence, motion, type PanInfo, useReducedMotion } from "framer-motion";
 import { usePalmares } from "@/hooks/usePalmares";
 import {
@@ -679,523 +686,7 @@ function buildCategoryRaces(nominations: Nomination[]): CategoryRace[] {
   });
 }
 
-function initialsFor(name: string) {
-  return name
-    .split(/\s+/)
-    .filter(Boolean)
-    .slice(0, 2)
-    .map((part) => part[0]?.toUpperCase())
-    .join("");
-}
 
-function Sticker({
-  children,
-  tone = "red",
-  className = ""
-}: {
-  children: ReactNode;
-  tone?: "red" | "yellow" | "black" | "paper";
-  className?: string;
-}) {
-  const toneClass =
-    tone === "yellow"
-      ? "border-[#d4af37]/60 bg-[#d4af37]/15 text-[#f0d889]"
-      : tone === "black"
-        ? "border-white/10 bg-black/70 text-white"
-        : tone === "paper"
-          ? "border-white/10 bg-white/5 text-white"
-          : "border-red-400/30 bg-red-950/40 text-red-100";
-
-  return <span className={`inline-flex rounded-[10px] border px-2 py-0.5 text-[8px] font-black uppercase tracking-[0.1em] leading-none ${toneClass} ${className}`}>{children}</span>;
-}
-
-function SectionTitle({ children, tone = "black" }: { children: ReactNode; tone?: "black" | "red" | "yellow" }) {
-  const toneClass = tone === "red" ? "border-red-400/30 text-red-100" : tone === "yellow" ? "border-[#d4af37]/60 text-[#f0d889]" : "border-white/10 text-white";
-  return (
-    <div className={`rounded-[10px] border bg-white/[0.035] px-2.5 py-1.5 ${toneClass}`}>
-      <h2 className="tabloid-headline text-[clamp(1.1rem,5.7vw,1.95rem)] leading-[0.84]">{children}</h2>
-    </div>
-  );
-}
-
-function MicroDimensionBars({ scores }: { scores: DimensionScores }) {
-  const max = Math.max(1, ...RATING_DIMENSIONS.map((dimension) => scores[dimension.key]));
-
-  return (
-    <div className="grid grid-cols-5 gap-1" aria-label="Télémétrie émotionnelle">
-      {RATING_DIMENSIONS.map((dimension) => {
-        const value = clampDimension(scores[dimension.key]);
-        const width = Math.max(6, Math.round((value / max) * 100));
-
-        return (
-          <div key={dimension.key} className="min-w-0" title={`${dimension.label}: ${value}`}>
-            <div className="h-[3px] overflow-hidden rounded-full bg-white/10">
-              <span className="block h-full rounded-full" style={{ width: `${width}%`, backgroundColor: dimension.color }} />
-            </div>
-            <p className="mt-0.5 truncate text-[7px] font-black uppercase leading-none tracking-tighter text-zinc-500">{dimension.shortLabel}</p>
-          </div>
-        );
-      })}
-    </div>
-  );
-}
-
-function BrutalCard({
-  children,
-  className = "",
-  tone = "paper",
-  layout
-}: {
-  children: ReactNode;
-  className?: string;
-  tone?: "paper" | "red" | "yellow" | "black";
-  layout?: boolean | string;
-}) {
-  const toneClass = tone === "red" ? "brutal-card-red" : tone === "yellow" ? "brutal-card-yellow" : tone === "black" ? "brutal-card-black" : "";
-
-  return (
-    <motion.div layout={layout} whileTap={{ scale: 0.985 }} transition={{ type: "spring", stiffness: 520, damping: 24 }} className={`brutal-card ${toneClass} ${className}`}>
-      {children}
-    </motion.div>
-  );
-}
-
-function ScorePresetRail({
-  value,
-  onSelect,
-  compact = false,
-  label = "Profils rapides"
-}: {
-  value: DimensionScores;
-  onSelect: (next: DimensionScores) => void;
-  compact?: boolean;
-  label?: string;
-}) {
-  return (
-    <div className="score-preset-rail flex gap-1 overflow-x-auto pb-0.5" role="group" aria-label={label}>
-      {SCORE_PRESETS.map((preset) => {
-        const active = sameScores(value, preset.scores);
-        return (
-          <motion.button
-            key={preset.id}
-            type="button"
-            whileTap={TAP_REBOUND}
-            transition={TAP_TRANSITION}
-            aria-pressed={active}
-            onClick={() => {
-              haptic(HAPTICS.option);
-              onSelect(cloneScores(preset.scores));
-            }}
-            className={`shrink-0 rounded-[9px] border px-2 py-1 text-left transition ${active ? "border-[#d4af37]/80 bg-[#d4af37]/18 text-[#f0d889]" : "border-white/10 bg-white/[0.035] text-zinc-400"}`}
-          >
-            <span className={`${compact ? "text-[8px]" : "text-[9px]"} block font-black uppercase leading-none tracking-tighter`}>{preset.label}</span>
-            <span className="mt-0.5 block text-[7px] font-bold uppercase leading-none tracking-tighter opacity-70">{preset.hint}</span>
-          </motion.button>
-        );
-      })}
-    </div>
-  );
-}
-
-function DimensionScoreGrid({
-  value,
-  onChange,
-  compact = false
-}: {
-  value: DimensionScores;
-  onChange: (next: DimensionScores) => void;
-  compact?: boolean;
-}) {
-  const setDimension = (key: RatingDimensionKey, score: number) => {
-    haptic(HAPTICS.tap);
-    onChange({ ...value, [key]: clampDimension(score) });
-  };
-
-  return (
-    <div className={compact ? "space-y-0.5" : "space-y-1"} role="group" aria-label="Méta-jugement émotionnel">
-      {RATING_DIMENSIONS.map((dimension) => {
-        const activeScore = clampDimension(value[dimension.key]);
-
-        return (
-          <div key={dimension.key} className="grid grid-cols-[3.9rem_1fr] items-center gap-1 py-0.5">
-            <p className="truncate text-[8px] font-black uppercase leading-none tracking-tighter text-zinc-300">
-              <span className="mr-1">{dimension.emoji}</span>
-              {dimension.label}
-            </p>
-            <div className="grid grid-cols-6 gap-0.5">
-              {[0, 1, 2, 3, 4, 5].map((score) => (
-                <motion.button
-                  key={`${dimension.key}-${score}`}
-                  type="button"
-                  whileTap={TAP_REBOUND}
-                  transition={TAP_TRANSITION}
-                  onClick={() => setDimension(dimension.key, score)}
-                  aria-pressed={activeScore === score}
-                  className={`h-4 rounded-[7px] border text-[8px] font-black leading-none transition ${activeScore === score ? "border-[#d4af37]/80 bg-[#d4af37]/20 text-[#f0d889]" : "border-white/10 bg-white/[0.035] text-zinc-500"}`}
-                  aria-label={`${dimension.label} ${score} sur 5`}
-                >
-                  {score}
-                </motion.button>
-              ))}
-            </div>
-          </div>
-        );
-      })}
-    </div>
-  );
-}
-
-function MediaFrame({
-  nomination,
-  height = "h-72"
-}: {
-  nomination: Nomination;
-  height?: string;
-  controls?: boolean;
-}) {
-  const [mediaFailed, setMediaFailed] = useState(false);
-  const [engaged, setEngaged] = useState(false);
-  const [resolving, setResolving] = useState(true);
-
-  useEffect(() => {
-    setMediaFailed(false);
-    setEngaged(false);
-    setResolving(true);
-  }, [nomination.media_url, nomination.thumbnail_url]);
-
-  if (mediaFailed || isLegacyDemoMedia(nomination.media_url)) {
-    return (
-      <div className={`${height} relative flex w-full items-center justify-center bg-black`}>
-        {nomination.thumbnail_url ? <img src={nomination.thumbnail_url} alt="" className="absolute inset-0 h-full w-full object-cover opacity-55" /> : null}
-        <div className="relative z-10 mx-3 rounded-full border border-[#d4af37]/60 bg-black/70 px-3 py-2 text-center text-[11px] font-bold uppercase tracking-[0.12em] leading-none text-[#f0d889]">
-          Rec à renvoyer depuis le Studio
-        </div>
-      </div>
-    );
-  }
-
-  if (nomination.media_kind === "video") {
-    return (
-      <div className={`${height} relative w-full overflow-hidden bg-black`}>
-        {resolving && (
-          <div className="media-shimmer absolute inset-0 z-10 flex items-center justify-center" aria-hidden="true">
-            <Loader2 className="h-5 w-5 animate-spin text-[#d4af37]" />
-          </div>
-        )}
-        <video
-          src={nomination.media_url}
-          poster={nomination.thumbnail_url ?? undefined}
-          autoPlay
-          controls={false}
-          loop
-          muted
-          playsInline
-          preload="metadata"
-          {...({ "webkit-playsinline": "true" } as Record<string, string>)}
-          onLoadedMetadata={() => setResolving(false)}
-          onCanPlay={() => setResolving(false)}
-          onClick={(event) => {
-            haptic(HAPTICS.media);
-            setEngaged(true);
-            void event.currentTarget.play().catch(() => undefined);
-          }}
-          onTouchStart={() => setEngaged(true)}
-          onError={() => {
-            setResolving(false);
-            setMediaFailed(true);
-          }}
-          className="prestige-media block h-full w-full bg-black object-cover"
-        />
-        {engaged ? null : <span className="pointer-events-none absolute bottom-2 left-2 z-20 rounded-full border border-[#d4af37]/40 bg-black/60 px-2 py-1 text-[8px] font-black uppercase tracking-tighter text-[#f0d889]">Rec</span>}
-      </div>
-    );
-  }
-
-  return (
-    <div className={`${height} relative w-full overflow-hidden bg-black`}>
-      {resolving && (
-        <div className="media-shimmer absolute inset-0 z-10 flex items-center justify-center" aria-hidden="true">
-          <Loader2 className="h-5 w-5 animate-spin text-[#d4af37]" />
-        </div>
-      )}
-      <img
-        src={nomination.media_url || nomination.thumbnail_url || FALLBACK_IMAGE_URL}
-        alt=""
-        onLoad={() => setResolving(false)}
-        onError={() => {
-          setResolving(false);
-          setMediaFailed(true);
-        }}
-        className="prestige-media block h-full w-full bg-black object-cover"
-      />
-    </div>
-  );
-}
-
-function OwnershipBadge({ owned, className = "" }: { owned: boolean; className?: string }) {
-  return (
-    <span className={`inline-flex items-center gap-1 rounded-[10px] border px-2 py-0.5 text-[8px] font-black uppercase tracking-[0.08em] leading-none ${owned ? "border-[#d4af37]/70 bg-[#d4af37]/15 text-[#f0d889]" : "border-white/10 bg-white/10 text-white"} ${className}`}>
-      {owned ? (
-        <>
-          PAR VOUS <Pencil className="h-2.5 w-2.5" strokeWidth={3} />
-        </>
-      ) : (
-        <>
-          PAR AUTRE <Lock className="h-2.5 w-2.5" strokeWidth={3} />
-        </>
-      )}
-    </span>
-  );
-}
-
-function NominationTile({
-  nomination,
-  index = 0,
-  owned = false,
-  onEdit,
-  onRemove,
-  busy = false
-}: {
-  nomination: Nomination;
-  index?: number;
-  owned?: boolean;
-  onEdit?: () => void;
-  onRemove?: () => void;
-  busy?: boolean;
-}) {
-  const category = getCategoryMeta(nomination.category_id);
-  const Icon = category.icon;
-  const rating = averageRating(nomination.ratings, nomination.category_ids);
-  const impact = averageImpact(nomination);
-  const categories = categorySummary(nomination.category_ids);
-
-  return (
-    <BrutalCard layout tone={index % 3 === 0 ? "yellow" : "paper"} className="overflow-hidden">
-      <div className="media-cut relative aspect-[4/3] border-b border-[#d4af37]/20">
-        <MediaFrame nomination={nomination} height="h-full" controls={false} />
-        <OwnershipBadge owned={owned} className="absolute left-2 top-2" />
-        <Sticker tone={nomination.status === "pending" ? "yellow" : "paper"} className="absolute bottom-2 right-2">
-          {statusLabel(nomination.status)}
-        </Sticker>
-      </div>
-      <div className="min-w-0 p-2">
-        <p className="tabloid-headline text-[clamp(0.96rem,4.8vw,1.32rem)] leading-[0.86] text-white">{nomination.tiktoker_name}</p>
-        <p className="mt-0.5 line-clamp-2 text-[9px] font-medium leading-tight text-zinc-300">&quot;{nomination.comment || "Dossier à juger"}&quot;</p>
-        <p className="mt-1 flex min-w-0 items-center gap-1 truncate text-[7px] font-black uppercase tracking-[0.05em] leading-none text-[#d4af37]">
-          <Icon className="h-2.5 w-2.5 shrink-0" /> {categories} / {nomination.ratings.length} notes / {impact || "-"} indice / {rating ? rating.toFixed(1) : "-"}★
-        </p>
-        {owned && (
-          <div className="mt-1 grid grid-cols-2 gap-1">
-            <motion.button whileTap={TAP_REBOUND} transition={TAP_TRANSITION} onClick={onEdit} className="owner-action bg-white/10 text-white" type="button" aria-label={`Modifier le dossier ${nomination.tiktoker_name}`}>
-              Modifier
-            </motion.button>
-            <motion.button whileTap={TAP_REBOUND} transition={TAP_TRANSITION} onClick={onRemove} disabled={busy} className="owner-action bg-red-950/50 text-red-100 disabled:opacity-60" type="button" aria-label={`Retirer le dossier ${nomination.tiktoker_name}`}>
-              Retirer
-            </motion.button>
-          </div>
-        )}
-      </div>
-    </BrutalCard>
-  );
-}
-
-function PalmaresList({ rows, onOpenStudio }: { rows: PalmaresRow[]; onOpenStudio?: () => void }) {
-  if (rows.length === 0) {
-    return (
-      <BrutalCard className="p-3 text-center">
-        <Trophy className="mx-auto mb-2 h-8 w-8 text-[#d4af37]" />
-        <p className="tabloid-headline text-2xl leading-none">Aucun classement.</p>
-        <p className="mx-auto mt-1 max-w-[15rem] text-[10px] font-semibold uppercase tracking-tighter text-zinc-500">Le palmarès commence dès le premier dossier noté.</p>
-        {onOpenStudio ? (
-          <motion.button type="button" whileTap={TAP_REBOUND} transition={TAP_TRANSITION} onClick={onOpenStudio} className="brutal-action mt-3 bg-[#d4af37] px-4 text-black">
-            Inviter les Zins à voter
-          </motion.button>
-        ) : null}
-      </BrutalCard>
-    );
-  }
-
-  return (
-    <div className="overflow-hidden rounded-[12px] border border-white/10 bg-black/25">
-      {rows.map((row, index) => (
-        <motion.article
-          key={row.tiktokerName}
-          initial={{ opacity: 0, y: 10 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: index * 0.035, type: "spring", stiffness: 240, damping: 26 }}
-          className="border-b border-white/10 px-2 py-1.5 last:border-b-0"
-        >
-          <div className="grid grid-cols-[1.15rem_2.25rem_minmax(0,1fr)_auto] items-center gap-2">
-            <p className="rank-number text-[1.45rem] leading-none text-[#d4af37]">{index + 1}</p>
-            <div className="relative h-9 w-9 overflow-hidden rounded-full border border-[#d4af37]/45 bg-[#d4af37]/10">
-              {row.avatarUrl ? <img src={row.avatarUrl} alt="" className="h-full w-full object-cover" /> : null}
-              {!row.avatarUrl && <span className="flex h-full w-full items-center justify-center text-[10px] font-black text-[#f0d889]">{initialsFor(row.tiktokerName)}</span>}
-            </div>
-            <div className="min-w-0">
-              <p className="truncate text-xs font-black leading-none tracking-tighter text-white">@{row.tiktokerName}</p>
-              <p className="mt-0.5 truncate text-[9px] font-semibold uppercase leading-none tracking-tighter text-zinc-500">
-                {row.acceptedDossiers}/{row.totalDossiers} nominés · {row.votes} notes · {row.average ? row.average.toFixed(1) : "-"}★
-              </p>
-            </div>
-            <span className="gold-pill shrink-0">{row.points} pts</span>
-          </div>
-
-          <div className="mt-1 grid grid-cols-[minmax(0,1fr)_7.25rem_2.25rem] items-end gap-2 pl-[3.4rem]">
-            <div className="stat-bar">
-              <motion.div className="stat-bar-fill" initial={{ width: 0 }} animate={{ width: `${row.successRate}%` }} transition={{ delay: index * 0.035 + 0.1, duration: 0.45 }} />
-            </div>
-            <MicroDimensionBars scores={row.dimensionTotals} />
-            <p className="text-right text-[10px] font-black leading-none tracking-tighter text-[#f0d889]">{row.successRate}%</p>
-          </div>
-        </motion.article>
-      ))}
-    </div>
-  );
-}
-
-function CategoryRaceBoard({ races }: { races: CategoryRace[] }) {
-  return (
-    <div className="space-y-2">
-      {races.map(({ category, rows, totalDossiers }) => {
-        const Icon = category.icon;
-        const leader = rows[0];
-
-        return (
-          <BrutalCard key={category.id} className="p-0">
-            <div className="flex items-center justify-between gap-2 border-b border-white/10 px-2 py-1.5">
-              <div className="min-w-0">
-                <p className="flex items-center gap-1.5 text-[9px] font-black uppercase leading-none tracking-tighter text-[#d4af37]">
-                  <Icon className="h-3 w-3 shrink-0" /> {category.label}
-                </p>
-                <p className="mt-0.5 truncate text-[10px] font-semibold uppercase leading-none tracking-tighter text-zinc-500">{leader ? `Leader · ${leader.tiktokerName}` : "En attente"}</p>
-              </div>
-              <span className="gold-pill shrink-0">{totalDossiers} dossiers</span>
-            </div>
-
-            <div className="divide-y divide-white/10">
-              {rows.length === 0 ? (
-                <div className="px-2 py-2 text-center text-xs font-semibold text-zinc-500">Aucun nommé pour l&apos;instant.</div>
-              ) : (
-                rows.map((row, index) => (
-                  <motion.div
-                    key={`${category.id}-${row.tiktokerName}`}
-                    initial={{ opacity: 0, y: 8 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    transition={{ delay: index * 0.028, type: "spring", stiffness: 240, damping: 26 }}
-                    className="px-2 py-1.5"
-                  >
-                    <div className="grid grid-cols-[1rem_2rem_minmax(0,1fr)_auto] items-center gap-2">
-                      <p className="rank-number text-[1.1rem] leading-none text-[#d4af37]">{index + 1}</p>
-                      <div className="h-8 w-8 overflow-hidden rounded-full border border-[#d4af37]/45 bg-[#d4af37]/10">
-                        {row.avatarUrl ? <img src={row.avatarUrl} alt="" className="h-full w-full object-cover" /> : <span className="flex h-full w-full items-center justify-center text-[9px] font-black text-[#f0d889]">{initialsFor(row.tiktokerName)}</span>}
-                      </div>
-                      <div className="min-w-0">
-                        <p className="truncate text-xs font-black leading-none tracking-tighter text-white">@{row.tiktokerName}</p>
-                        <p className="mt-0.5 truncate text-[9px] font-semibold uppercase leading-none tracking-tighter text-zinc-500">
-                          {row.acceptedDossiers}/{row.totalDossiers} nominés · {row.votes} notes · {row.average ? row.average.toFixed(1) : "-"}★
-                        </p>
-                      </div>
-                      <span className="gold-pill shrink-0">{row.points} pts</span>
-                    </div>
-
-                    <div className="mt-1 grid grid-cols-[minmax(0,1fr)_7rem_2.25rem] items-end gap-2 pl-[3rem]">
-                      <div className="stat-bar">
-                        <motion.div className="stat-bar-fill" initial={{ width: 0 }} animate={{ width: `${row.successRate}%` }} transition={{ delay: index * 0.03 + 0.08, duration: 0.42 }} />
-                      </div>
-                      <MicroDimensionBars scores={row.dimensionTotals} />
-                      <p className="text-right text-[10px] font-black leading-none tracking-tighter text-[#f0d889]">{row.successRate}%</p>
-                    </div>
-                  </motion.div>
-                ))
-              )}
-            </div>
-          </BrutalCard>
-        );
-      })}
-    </div>
-  );
-}
-
-function CeremonyBulletin({
-  pendingCount,
-  nextPending,
-  leader,
-  bestDossier,
-  currentUserId,
-  onOpenVote,
-  onOpenStudio,
-  onOpenPalmares
-}: {
-  pendingCount: number;
-  nextPending?: Nomination;
-  leader: ScoreBoard | null;
-  bestDossier?: Nomination;
-  currentUserId?: string;
-  onOpenVote: () => void;
-  onOpenStudio: () => void;
-  onOpenPalmares: () => void;
-}) {
-  const hasPending = Boolean(nextPending);
-  const spotlight = bestDossier ? `${bestDossier.tiktoker_name} · ${averageImpact(bestDossier)} indice` : null;
-
-  if (hasPending && nextPending) {
-    const category = getCategoryMeta(nextPending.category_id);
-    const isMine = currentUserId && nextPending.submitted_by === currentUserId;
-
-    return (
-      <BrutalCard tone={isMine ? "paper" : "yellow"} className="mb-2 p-2">
-        <div className="grid grid-cols-[minmax(0,1fr)_auto] items-center gap-2">
-          <div className="min-w-0">
-            <Sticker tone={isMine ? "paper" : "yellow"}>{isMine ? "Votre dossier" : pendingCount > 1 ? `${pendingCount} dossiers à juger` : "Dossier à juger"}</Sticker>
-            <p className="tabloid-headline mt-1 text-[clamp(1.05rem,5.5vw,1.8rem)] leading-[0.84] text-white">{nextPending.tiktoker_name}</p>
-            <p className="mt-0.5 truncate text-[9px] font-black uppercase tracking-tighter text-[#d4af37]">{category.label} · {isMine ? "en attente de vote" : "ta note peut le nominer"}</p>
-          </div>
-          {isMine ? (
-            <div className="brutal-action bg-zinc-800/80 px-3 text-zinc-400">
-              Attente
-            </div>
-          ) : (
-            <motion.button type="button" whileTap={TAP_REBOUND} transition={TAP_TRANSITION} onClick={onOpenVote} className="brutal-action bg-[#d4af37] px-3 text-black">
-              Juger
-            </motion.button>
-          )}
-        </div>
-      </BrutalCard>
-    );
-  }
-
-  if (leader) {
-    return (
-      <BrutalCard className="mb-2 p-2">
-        <div className="grid grid-cols-[minmax(0,1fr)_auto] items-center gap-2">
-          <div className="min-w-0">
-            <Sticker tone="paper">Favori du mois</Sticker>
-            <p className="tabloid-headline mt-1 text-[clamp(1.05rem,5.5vw,1.8rem)] leading-[0.84] text-white">{leader.tiktokerName}</p>
-            <p className="mt-0.5 truncate text-[9px] font-black uppercase tracking-tighter text-[#d4af37]">{leader.points} points de saison{spotlight ? ` · ${spotlight}` : ""}</p>
-          </div>
-          <motion.button type="button" whileTap={TAP_REBOUND} transition={TAP_TRANSITION} onClick={onOpenPalmares} className="brutal-action bg-white/10 px-3 text-white">
-            Classement
-          </motion.button>
-        </div>
-      </BrutalCard>
-    );
-  }
-
-  return (
-    <BrutalCard className="mb-2 p-2">
-      <div className="grid grid-cols-[minmax(0,1fr)_auto] items-center gap-2">
-        <div className="min-w-0">
-          <Sticker tone="paper">Saison ouverte</Sticker>
-          <p className="tabloid-headline mt-1 text-[clamp(1.05rem,5.5vw,1.8rem)] leading-[0.84] text-white">Premier rec attendu</p>
-          <p className="mt-0.5 truncate text-[9px] font-black uppercase tracking-tighter text-[#d4af37]">Le trophée commence au premier dossier</p>
-        </div>
-        <motion.button type="button" whileTap={TAP_REBOUND} transition={TAP_TRANSITION} onClick={onOpenStudio} className="brutal-action bg-[#d4af37] px-3 text-black">
-          Studio
-        </motion.button>
-      </div>
-    </BrutalCard>
-  );
-}
 
 function PaperBackdrop() {
   return (
@@ -1208,7 +699,7 @@ function PaperBackdrop() {
 }
 
 export default function Home() {
-  const reduceMotion = useReducedMotion();
+  const reduceMotion = !!useReducedMotion();
   const [supabase, setSupabase] = useState<ReturnType<typeof getSupabaseBrowserClient>>(null);
   const [bootingSession, setBootingSession] = useState(true);
   const [participant, setParticipant] = useState<Participant | null>(null);
@@ -1265,7 +756,7 @@ export default function Home() {
     return () => window.clearTimeout(timer);
   }, [globalShake]);
 
-  const fileInputRef = useRef<HTMLInputElement | null>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
   const channelRef = useRef<RealtimeChannel | null>(null);
   const shellRef = useRef<HTMLDivElement | null>(null);
 
@@ -1879,8 +1370,9 @@ export default function Home() {
       // Prevent PostgreSQL "operator does not exist: uuid = text" if liveUid is not a valid UUID format
       const isUuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(liveUid);
       if (!isUuid) {
-        const isParticipantUuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(participant.id);
-        liveUid = isParticipantUuid ? participant.id : "00000000-0000-0000-0000-000000000000";
+        liveUid = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(participant.id)
+          ? participant.id
+          : "00000000-0000-0000-0000-000000000000"; // Safe empty UUID fallback
       }
       
       console.info("[NOD Insert] liveUid=", liveUid, "participant.id=", participant.id);
@@ -1939,7 +1431,7 @@ export default function Home() {
         thumbnail_storage_path: thumbnailUpload.key,
         media_kind: mediaKind,
         comment: cleanedComment,
-        submitted_by: liveUid,
+        submitted_by: participant.id,
         status: "pending",
         created_at: new Date().toISOString(),
         ratings: []
@@ -2098,268 +1590,91 @@ export default function Home() {
           />
 
           <AnimatePresence mode="wait">
-          {tab === "direct" && (
-            <motion.section key="direct" {...pageTransition} {...revealContainer} drag={reduceMotion ? false : "x"} dragConstraints={{ left: 0, right: 0 }} onDragEnd={(_, info) => handleSectionDrag(info)} transition={{ duration: reduceMotion ? 0.01 : 0.26, type: "spring", stiffness: 230, damping: 25 }} className="space-y-1.5">
-              <motion.div {...revealItem}>
-                <BrutalCard className="relative overflow-hidden p-2.5">
-                  <p className="mb-1 text-[7px] font-black uppercase tracking-[0.18em] text-[#d4af37]">Club live</p>
-                  <h1 className="tabloid-headline text-[clamp(1.78rem,8.9vw,3rem)] leading-[0.84] text-[#f5f1e8]">
-                    NOMINEES
-                    <span className="mx-1.5 inline-block rounded-[8px] border border-[#d4af37]/70 bg-[#d4af37]/15 px-1.5 py-0.5 text-[clamp(0.72rem,3.55vw,1.1rem)] font-black uppercase leading-none text-[#f0d889]">or</span>
-                    <span className="block text-[#d4af37]">DENOMINEES</span>
-                  </h1>
-                  <div className="paper-tear -mt-[4px]" />
-                  <div className="rounded-[10px] border border-[#d4af37]/30 bg-black/40 px-2 py-1 text-white">
-                    <p className="text-[8px] font-black uppercase tracking-[0.14em] text-zinc-400">Le club des recs du mois</p>
-                  </div>
-                </BrutalCard>
-              </motion.div>
+            {tab === "direct" && (
+              <DirectTab
+                feedItems={feedItems}
+                directFilter={directFilter}
+                setDirectFilter={setDirectFilter}
+                directFilterCounts={directFilterCounts}
+                ownsNomination={ownsNomination}
+                startEditNomination={startEditNomination}
+                removeNomination={removeNomination}
+                mutationBusyId={mutationBusyId}
+                handleSectionDrag={handleSectionDrag}
+                reduceMotion={reduceMotion}
+                revealContainer={revealContainer}
+                revealItem={revealItem}
+                pageTransition={pageTransition}
+              />
+            )}
 
-              <motion.div {...revealItem} className="space-y-1.5">
-                <div className="grid grid-cols-5 gap-1" aria-label="Filtres du direct" role="group">
-                  {DIRECT_FILTERS.map((filter) => {
-                    const active = directFilter === filter.id;
-                    return (
-                      <motion.button
-                        key={filter.id}
-                        type="button"
-                        whileTap={TAP_REBOUND}
-                        transition={TAP_TRANSITION}
-                        aria-pressed={active}
-                        onClick={() => {
-                          haptic(HAPTICS.option);
-                          setDirectFilter(filter.id);
-                        }}
-                        className={`rounded-[9px] border px-1 py-1 text-center transition ${active ? "border-[#d4af37]/70 bg-[#d4af37]/18 text-[#f0d889]" : "border-white/10 bg-white/[0.035] text-zinc-500"}`}
-                      >
-                        <span className="block truncate text-[7px] font-black uppercase leading-none tracking-tighter">{filter.label}</span>
-                        <span className="mt-0.5 block text-[10px] font-black leading-none tracking-tighter">{directFilterCounts[filter.id]}</span>
-                      </motion.button>
-                    );
-                  })}
-                </div>
-                <SectionTitle>{DIRECT_TITLE}</SectionTitle>
-                {feedItems.length === 0 ? (
-                  <motion.div layout initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }} exit={{ opacity: 0, scale: 0.95 }}>
-                    <BrutalCard className="p-4 text-center">
-                      <Camera className="mx-auto mb-2 h-8 w-8 text-zinc-600" />
-                      <p className="text-xl font-black uppercase leading-none text-zinc-500">Aucun rec.</p>
-                      <p className="mt-1 text-[9px] font-black uppercase text-zinc-600">Le club est vide</p>
-                    </BrutalCard>
-                  </motion.div>
-                ) : (
-                  <motion.div layout className="grid grid-cols-2 gap-1.5">
-                    <AnimatePresence mode="popLayout">
-                      {feedItems.map((nomination, index) => (
-                        <NominationTile key={nomination.id} nomination={nomination} index={index} owned={ownsNomination(nomination)} onEdit={() => startEditNomination(nomination)} onRemove={() => void removeNomination(nomination)} busy={mutationBusyId === nomination.id} />
-                      ))}
-                    </AnimatePresence>
-                  </motion.div>
-                )}
-              </motion.div>
-            </motion.section>
-          )}
+            {tab === "vote" && (
+              <VoteTab
+                pendingForMe={pendingForMe}
+                scoreDraftById={scoreDraftById}
+                setScoreDraftById={setScoreDraftById}
+                reviewDraftById={reviewDraftById}
+                setReviewDraftById={setReviewDraftById}
+                applyRating={applyRating}
+                voteBusyId={voteBusyId}
+                shakeId={shakeId}
+                ownsNomination={ownsNomination}
+                handleSectionDrag={handleSectionDrag}
+                reduceMotion={reduceMotion}
+                pageTransition={pageTransition}
+              />
+            )}
 
-          {tab === "vote" && (
-            <motion.section key="vote" {...pageTransition} drag={reduceMotion ? false : "x"} dragConstraints={{ left: 0, right: 0 }} onDragEnd={(_, info) => handleSectionDrag(info)} transition={{ duration: reduceMotion ? 0.01 : 0.26, type: "spring", stiffness: 230, damping: 25 }} className="space-y-1.5">
-              <SectionTitle tone="yellow">{VOTE_TITLE}</SectionTitle>
-              {pendingForMe.length === 0 ? (
-                <motion.div layout initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }} exit={{ opacity: 0, scale: 0.95 }}>
-                  <BrutalCard tone="yellow" className="p-5 text-center">
-                    <motion.div animate={{ rotate: [0, 8, -8, 0] }} transition={{ duration: 2, repeat: Infinity, ease: "easeInOut" }}>
-                      <Check className="mx-auto mb-3 h-10 w-10 text-[#d4af37]" />
-                    </motion.div>
-                    <p className="text-2xl font-black uppercase leading-none text-[#f0d889]">File vide.</p>
-                    <p className="mt-1.5 text-[10px] font-black uppercase text-[#d4af37]/70">Tous les dossiers ont été jugés</p>
-                  </BrutalCard>
-                </motion.div>
-              ) : (
-                pendingForMe.map((nomination) => {
-                  const category = getCategoryMeta(nomination.category_id);
-                  const Icon = category.icon;
-                  const draftScores = cloneScores(scoreDraftById[nomination.id] ?? DEFAULT_DIMENSION_SCORES);
+            {tab === "studio" && (
+              <StudioTab
+                editingNomination={editingNomination}
+                fileInputRef={fileInputRef}
+                prepareMedia={prepareMedia}
+                previewUrl={previewUrl}
+                thumbnailPreviewUrl={thumbnailPreviewUrl}
+                mediaKind={mediaKind}
+                isPreparingMedia={isPreparingMedia}
+                uploadLoading={uploadLoading}
+                mediaProgress={mediaProgress}
+                tiktokerName={tiktokerName}
+                setTiktokerName={setTiktokerName}
+                cleanCategoryIds={cleanCategoryIds}
+                toggleCategory={toggleCategory}
+                comment={comment}
+                setComment={setComment}
+                initialScores={initialScores}
+                setInitialScores={setInitialScores}
+                uploadNomination={uploadNomination}
+                cancelEditNomination={cancelEditNomination}
+                uploadReady={uploadReady}
+                mutationBusyId={mutationBusyId}
+                handleSectionDrag={handleSectionDrag}
+                reduceMotion={reduceMotion}
+                pageTransition={pageTransition}
+              />
+            )}
 
-                  return (
-                    <motion.article layout key={nomination.id} animate={shakeId === nomination.id ? { x: [0, -8, 8, -5, 5, 0], scale: [1, 0.99, 1.01, 1] } : { x: 0, scale: 1 }} transition={{ duration: 0.42, layout: { type: "spring", stiffness: 350, damping: 30 } }} className="brutal-card overflow-hidden">
-                      <div className="relative border-b border-[#d4af37]/20 bg-black">
-                        <MediaFrame nomination={nomination} height="aspect-[9/16] max-h-[52svh]" />
-                        <Sticker tone="yellow" className="absolute left-2 top-2 -rotate-2">
-                          À voter
-                        </Sticker>
-                        <OwnershipBadge owned={ownsNomination(nomination)} className="absolute right-2 top-2 rotate-2" />
-                        <div className="absolute bottom-2 left-2 right-2 rounded-[10px] border border-[#d4af37]/35 bg-black/75 p-2 backdrop-blur-md">
-                          <p className="flex items-center gap-1 text-[8px] font-black uppercase tracking-[0.12em] text-[#d4af37]">
-                            <Icon className="h-3 w-3" /> {category.label}
-                          </p>
-                          <p className="tabloid-headline text-[clamp(1.22rem,6.2vw,2rem)] leading-[0.84] text-white">{nomination.tiktoker_name}</p>
-                        </div>
-                      </div>
-                      <div className="space-y-1.5 p-2">
-                        <p className="rounded-[10px] border border-white/10 bg-white/[0.04] p-2 text-xs font-medium leading-tight text-zinc-200">&quot;{nomination.comment}&quot;</p>
-                        <ScorePresetRail value={draftScores} compact onSelect={(value) => setScoreDraftById((prev) => ({ ...prev, [nomination.id]: value }))} label="Profils rapides pour ce vote" />
-                        <DimensionScoreGrid value={draftScores} onChange={(value) => setScoreDraftById((prev) => ({ ...prev, [nomination.id]: value }))} compact />
-                        <textarea aria-label="Ta réaction sur ce dossier" value={reviewDraftById[nomination.id] ?? ""} onFocus={() => haptic(HAPTICS.tap)} onChange={(event) => setReviewDraftById((prev) => ({ ...prev, [nomination.id]: event.target.value }))} placeholder="Ta réaction sur ce dossier ?" rows={2} maxLength={180} className="brutal-input w-full resize-none p-2 text-xs font-black uppercase" />
-                        <motion.button whileTap={TAP_REBOUND} transition={TAP_TRANSITION} onClick={() => void applyRating(nomination.id)} disabled={voteBusyId === nomination.id} className="brutal-action w-full bg-[#d4af37] text-black disabled:opacity-50">
-                          Enregistrer la note · {scoreTotal(draftScores, nomination.category_ids)}/100
-                        </motion.button>
-                      </div>
-                    </motion.article>
-                  );
-                })
-              )}
-            </motion.section>
-          )}
+            {tab === "palmares" && (
+              <PalmaresTab
+                palmaresRows={palmaresRows}
+                switchTab={switchTab}
+                handleSectionDrag={handleSectionDrag}
+                reduceMotion={reduceMotion}
+                pageTransition={pageTransition}
+              />
+            )}
 
-          {tab === "studio" && (
-            <motion.section key="studio" {...pageTransition} drag={reduceMotion ? false : "x"} dragConstraints={{ left: 0, right: 0 }} onDragEnd={(_, info) => handleSectionDrag(info)} transition={{ duration: reduceMotion ? 0.01 : 0.26, type: "spring", stiffness: 230, damping: 25 }} className="space-y-1.5">
-              <BrutalCard tone="black" className="p-2">
-                <h2 className="tabloid-headline text-[clamp(1.28rem,6.8vw,2.2rem)] leading-[0.82] text-white">{isEditingStudio ? "MODIFIER LE DOSSIER" : STUDIO_TITLE}</h2>
-              </BrutalCard>
-
-              <BrutalCard className="p-1.5">
-                {editingNomination ? (
-                  <div className="relative overflow-hidden rounded-[10px] border border-[#d4af37]/25 bg-black">
-                    <MediaFrame nomination={editingNomination} height="aspect-[9/16] max-h-[52svh]" />
-                    <OwnershipBadge owned className="absolute left-2 top-2 -rotate-2" />
-                  </div>
-                ) : (
-                  <motion.button
-                    whileTap={TAP_REBOUND}
-                    transition={TAP_TRANSITION}
-                    onClick={() => {
-                      haptic(HAPTICS.media);
-                      fileInputRef.current?.click();
-                    }}
-                    disabled={isPreparingMedia || uploadLoading}
-                    className="relative flex aspect-[9/16] max-h-[52svh] w-full items-center justify-center overflow-hidden rounded-[10px] border border-[#d4af37]/25 bg-black text-left transition disabled:opacity-70"
-                    aria-label="Choisir une vidéo ou une capture"
-                  >
-                    {previewUrl ? (
-                      mediaKind === "video" ? (
-                        <video src={previewUrl} poster={thumbnailPreviewUrl ?? undefined} className="absolute inset-0 h-full w-full object-cover" controls loop playsInline muted preload="metadata" {...({ "webkit-playsinline": "true" } as Record<string, string>)} />
-                      ) : (
-                        <img src={previewUrl} alt="" className="absolute inset-0 h-full w-full object-cover" />
-                      )
-                    ) : (
-                      <span className="flex flex-col items-center px-6 text-center text-white">
-                        {isPreparingMedia ? <Loader2 className="mb-3 h-9 w-9 animate-spin text-[#d4af37]" /> : <UploadCloud className="mb-3 h-9 w-9 text-[#d4af37]" />}
-                        <span className="tabloid-headline text-xl leading-none">{isPreparingMedia ? "Chargement du studio..." : "Déposer le rec"}</span>
-                        <span className="mt-1.5 text-[10px] font-black uppercase tracking-[0.12em] text-[#d4af37]">Vidéo ou capture libre</span>
-                      </span>
-                    )}
-                    <input ref={fileInputRef} type="file" accept="video/*,image/*,.heic,.heif" onChange={(event) => void prepareMedia(event.target.files?.[0] ?? null)} className="hidden" aria-label="Fichier média du dossier" />
-                  </motion.button>
-                )}
-              </BrutalCard>
-
-              {(isPreparingMedia || uploadLoading) && (
-                <BrutalCard tone="yellow" className="p-2">
-                  <p className="tabloid-headline text-[clamp(1.05rem,5.6vw,1.65rem)] leading-[0.82]">{uploadLoading ? "CHARGEMENT DU DOSSIER..." : "PRÉPARATION DU REC..."}</p>
-                  <div className="stat-bar mt-2">
-                    <motion.div className="stat-bar-fill" animate={{ width: `${Math.round(mediaProgress * 100)}%` }} />
-                  </div>
-                </BrutalCard>
-              )}
-
-              <label className="sr-only" htmlFor="tiktoker-name">
-                TikToker visé
-              </label>
-              <input id="tiktoker-name" aria-label="TikToker visé" value={tiktokerName} onFocus={() => haptic(HAPTICS.tap)} onChange={(event) => setTiktokerName(event.target.value)} placeholder="TikToker visé" maxLength={48} className="brutal-input w-full px-2.5 py-2 text-xs font-black uppercase" />
-
-              <div className="grid grid-cols-3 gap-1">
-                {CATEGORIES.map((category) => {
-                  const Icon = category.icon;
-                  const active = cleanCategoryIds.includes(category.id);
-                  return (
-                    <motion.button
-                      key={category.id}
-                      type="button"
-                      whileTap={TAP_REBOUND}
-                      transition={TAP_TRANSITION}
-                      onClick={() => toggleCategory(category.id)}
-                      aria-pressed={active}
-                      className={`min-h-10 rounded-[10px] border px-1.5 py-1 text-left ${active ? "border-[#d4af37]/75 bg-[#d4af37]/18 text-[#f0d889]" : "border-white/10 bg-white/[0.035] text-zinc-500"}`}
-                    >
-                      <Icon className="mb-1 h-3 w-3" />
-                      <span className="line-clamp-2 text-[8px] font-black uppercase leading-none tracking-tighter">{category.label}</span>
-                    </motion.button>
-                  );
-                })}
-              </div>
-
-              <label className="sr-only" htmlFor="dossier-comment">
-                Contexte du dossier
-              </label>
-              <textarea id="dossier-comment" aria-label="Contexte du dossier" value={comment} onFocus={() => haptic(HAPTICS.tap)} onChange={(event) => setComment(event.target.value)} placeholder="Pourquoi ce dossier mérite le club ?" rows={3} maxLength={240} className="brutal-input w-full resize-none p-2.5 text-xs font-black uppercase" />
-
-              {!isEditingStudio && (
-                <BrutalCard tone="yellow" className="p-2">
-                  <ScorePresetRail value={initialScores} onSelect={setInitialScores} label="Profils rapides du score initial" />
-                  <DimensionScoreGrid value={initialScores} onChange={setInitialScores} />
-                  <p className="mt-2 border-t border-[#d4af37]/20 pt-2 text-center text-[10px] font-black uppercase tracking-[0.12em] text-[#d4af37]">Indice initial : {scoreTotal(initialScores, cleanCategoryIds)} / 100</p>
-                </BrutalCard>
-              )}
-
-              {isEditingStudio ? (
-                <div className="grid grid-cols-[1fr_auto] gap-2">
-                  <motion.button whileTap={TAP_REBOUND} transition={TAP_TRANSITION} onClick={() => void saveEditedNomination()} disabled={mutationBusyId === editingNominationId || !uploadReady} className="brutal-submit flex w-full items-center justify-center gap-2 disabled:opacity-50">
-                    {mutationBusyId === editingNominationId ? <Loader2 className="h-6 w-6 animate-spin" /> : "Sauvegarder"}
-                  </motion.button>
-                  <motion.button whileTap={TAP_REBOUND} transition={TAP_TRANSITION} onClick={cancelEditNomination} className="rounded-[10px] border border-white/10 bg-white/[0.06] px-3 text-xs font-black uppercase tracking-[0.1em] text-white pointer-events-auto" type="button">
-                    Annuler
-                  </motion.button>
-                </div>
-              ) : (
-                <motion.button whileTap={TAP_REBOUND} transition={TAP_TRANSITION} onClick={() => void uploadNomination()} disabled={uploadLoading || !uploadReady} className="brutal-submit flex w-full items-center justify-center gap-2 disabled:opacity-50">
-                  {uploadLoading ? <span className="flex items-center gap-2 animate-pulse"><Loader2 className="h-6 w-6 animate-spin" /> TRANSMISSION EN COURS...</span> : "Lancer le dossier"}
-                </motion.button>
-              )}
-            </motion.section>
-          )}
-
-          {tab === "palmares" && (
-            <motion.section key="palmares" {...pageTransition} drag={reduceMotion ? false : "x"} dragConstraints={{ left: 0, right: 0 }} onDragEnd={(_, info) => handleSectionDrag(info)} transition={{ duration: reduceMotion ? 0.01 : 0.26, type: "spring", stiffness: 230, damping: 25 }} className="space-y-2">
-              <BrutalCard tone="black" className="p-3 text-white">
-                <p className="mb-1 text-[8px] font-black uppercase tracking-[0.2em] text-[#d4af37]">Classement</p>
-                <h2 className="tabloid-headline text-[clamp(1.55rem,7.8vw,2.7rem)] leading-[0.84]">{PALMARES_TITLE}</h2>
-              </BrutalCard>
-              <PalmaresList rows={palmaresRows} onOpenStudio={() => switchTab("studio")} />
-            </motion.section>
-          )}
-
-          {tab === "winners" && (
-            <motion.section key="winners" {...pageTransition} drag={reduceMotion ? false : "x"} dragConstraints={{ left: 0, right: 0 }} onDragEnd={(_, info) => handleSectionDrag(info)} transition={{ duration: reduceMotion ? 0.01 : 0.26, type: "spring", stiffness: 230, damping: 25 }} className="space-y-2">
-              <BrutalCard tone="black" className="p-3 text-white">
-                <p className="mb-1 text-[8px] font-black uppercase tracking-[0.2em] text-[#d4af37]">Cérémonie</p>
-                <h2 className="tabloid-headline text-[clamp(1.55rem,7.8vw,2.7rem)] leading-[0.84]">{WINNERS_TITLE}</h2>
-              </BrutalCard>
-
-              {ultimateWinner && (
-                <BrutalCard tone="yellow" className="p-3">
-                  <Sticker tone="yellow">TikToker du mois</Sticker>
-                  <p className="tabloid-headline mt-1.5 text-[clamp(1.35rem,6.8vw,2.25rem)] leading-[0.84] text-white">{ultimateWinner.tiktokerName}</p>
-                  <span className="gold-pill mt-2">{ultimateWinner.points} points</span>
-                </BrutalCard>
-              )}
-
-              {paparazziOr && (
-                <BrutalCard className="p-3">
-                  <Sticker tone="paper">Paparazzi d&apos;Or</Sticker>
-                  <p className="tabloid-headline mt-1.5 text-[clamp(1.18rem,6.1vw,1.95rem)] leading-[0.84] text-white">{paparazziOr.tiktoker_name}</p>
-                  <span className="gold-pill mt-2">{totalPoints(paparazziOr.ratings)} points sur un dossier</span>
-                </BrutalCard>
-              )}
-
-              <BrutalCard tone="black" className="p-2.5">
-                <p className="text-[8px] font-black uppercase tracking-[0.2em] text-[#d4af37]">Course aux trophées</p>
-                <h3 className="tabloid-headline mt-0.5 text-[clamp(1.16rem,6vw,1.95rem)] leading-[0.84] text-white">Toutes les catégories</h3>
-              </BrutalCard>
-
-              <CategoryRaceBoard races={categoryRaces} />
-            </motion.section>
-          )}
-
-        </AnimatePresence>
+            {tab === "winners" && (
+              <WinnersTab
+                ultimateWinner={ultimateWinner}
+                paparazziOr={paparazziOr}
+                categoryRaces={categoryRaces}
+                handleSectionDrag={handleSectionDrag}
+                reduceMotion={reduceMotion}
+                pageTransition={pageTransition}
+              />
+            )}
+          </AnimatePresence>
           </div>
         </main>
 

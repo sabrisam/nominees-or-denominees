@@ -1,55 +1,26 @@
 import { motion } from "framer-motion";
-import { Loader2, UploadCloud } from "lucide-react";
-import { BrutalCard } from "@/components/ui/BrutalCard";
-import { MediaFrame } from "@/components/direct/MediaFrame";
-import { OwnershipBadge } from "@/components/direct/OwnershipBadge";
-import { ScorePresetRail } from "@/components/studio/ScorePresetRail";
-import { DimensionScoreGrid } from "@/components/studio/DimensionScoreGrid";
+import { UploadCloud, Loader2 } from "lucide-react";
+import { BrutalCard } from "../ui/BrutalCard";
+import { MediaFrame } from "../direct/MediaFrame";
+import { OwnershipBadge } from "../direct/OwnershipBadge";
+import { ScorePresetRail } from "./ScorePresetRail";
+import { DimensionScoreGrid } from "./DimensionScoreGrid";
 import { CATEGORIES } from "@/constants/categories";
-import { haptic, HAPTICS, TAP_REBOUND, TAP_TRANSITION } from "@/lib/haptic";
-import { scoreTotal } from "@/lib/scoring";
-import type { Nomination, DimensionScores, MediaKind } from "@/types";
+import { scoreTotal, primaryCategoryId } from "@/lib/scoring";
+import type { Nomination, MediaKind, DimensionScores } from "@/types";
 
-export interface StudioTabProps {
-  isEditingStudio: boolean;
-  editingNomination: Nomination | null;
-  isPreparingMedia: boolean;
-  uploadLoading: boolean;
-  previewUrl: string | null;
-  mediaKind: MediaKind | null;
-  thumbnailPreviewUrl: string | null;
-  prepareMedia: (file: File | null) => Promise<void>;
-  fileInputRef: React.RefObject<HTMLInputElement | null>;
-  mediaProgress: number;
-  tiktokerName: string;
-  setTiktokerName: React.Dispatch<React.SetStateAction<string>>;
-  cleanCategoryIds: string[];
-  toggleCategory: (categoryId: string) => void;
-  comment: string;
-  setComment: React.Dispatch<React.SetStateAction<string>>;
-  initialScores: DimensionScores;
-  setInitialScores: React.Dispatch<React.SetStateAction<DimensionScores>>;
-  saveEditedNomination: () => Promise<void>;
-  cancelEditNomination: () => void;
-  uploadNomination: () => Promise<void>;
-  uploadReady: boolean;
-  editingNominationId: string | null;
-  mutationBusyId: string | null;
-  reduceMotion: boolean;
-  handleSectionDrag: (info: any) => void;
-  pageTransition: any;
-}
+const TAP_REBOUND = { scale: 0.965, rotate: -0.35 };
+const TAP_TRANSITION = { type: "spring", stiffness: 900, damping: 32, mass: 0.42 } as const;
 
 export function StudioTab({
-  isEditingStudio,
   editingNomination,
+  fileInputRef,
+  prepareMedia,
+  previewUrl,
+  thumbnailPreviewUrl,
+  mediaKind,
   isPreparingMedia,
   uploadLoading,
-  previewUrl,
-  mediaKind,
-  thumbnailPreviewUrl,
-  prepareMedia,
-  fileInputRef,
   mediaProgress,
   tiktokerName,
   setTiktokerName,
@@ -59,16 +30,41 @@ export function StudioTab({
   setComment,
   initialScores,
   setInitialScores,
-  saveEditedNomination,
-  cancelEditNomination,
   uploadNomination,
+  cancelEditNomination,
   uploadReady,
-  editingNominationId,
   mutationBusyId,
-  reduceMotion,
   handleSectionDrag,
+  reduceMotion,
   pageTransition
-}: StudioTabProps) {
+}: {
+  editingNomination: Nomination | null;
+  fileInputRef: React.RefObject<HTMLInputElement>;
+  prepareMedia: (file: File | null) => Promise<void>;
+  previewUrl: string | null;
+  thumbnailPreviewUrl: string | null;
+  mediaKind: MediaKind | null;
+  isPreparingMedia: boolean;
+  uploadLoading: boolean;
+  mediaProgress: number;
+  tiktokerName: string;
+  setTiktokerName: (val: string) => void;
+  cleanCategoryIds: string[];
+  toggleCategory: (id: string) => void;
+  comment: string;
+  setComment: (val: string) => void;
+  initialScores: DimensionScores;
+  setInitialScores: (scores: DimensionScores) => void;
+  uploadNomination: () => Promise<void>;
+  cancelEditNomination: () => void;
+  uploadReady: boolean;
+  mutationBusyId: string | null;
+  handleSectionDrag: (info: any) => void;
+  reduceMotion: boolean;
+  pageTransition: any;
+}) {
+  const isEditingStudio = Boolean(editingNomination);
+
   return (
     <motion.section
       key="studio"
@@ -96,7 +92,6 @@ export function StudioTab({
             whileTap={TAP_REBOUND}
             transition={TAP_TRANSITION}
             onClick={() => {
-              haptic(HAPTICS.media);
               fileInputRef.current?.click();
             }}
             disabled={isPreparingMedia || uploadLoading}
@@ -121,17 +116,9 @@ export function StudioTab({
               )
             ) : (
               <span className="flex flex-col items-center px-6 text-center text-white">
-                {isPreparingMedia ? (
-                  <Loader2 className="mb-3 h-9 w-9 animate-spin text-[#d4af37]" />
-                ) : (
-                  <UploadCloud className="mb-3 h-9 w-9 text-[#d4af37]" />
-                )}
-                <span className="tabloid-headline text-xl leading-none">
-                  {isPreparingMedia ? "Chargement du studio..." : "Déposer le rec"}
-                </span>
-                <span className="mt-1.5 text-[10px] font-black uppercase tracking-[0.12em] text-[#d4af37]">
-                  Vidéo ou capture libre
-                </span>
+                {isPreparingMedia ? <Loader2 className="mb-3 h-9 w-9 animate-spin text-[#d4af37]" /> : <UploadCloud className="mb-3 h-9 w-9 text-[#d4af37]" />}
+                <span className="tabloid-headline text-xl leading-none">{isPreparingMedia ? "Chargement du studio..." : "Déposer le rec"}</span>
+                <span className="mt-1.5 text-[10px] font-black uppercase tracking-[0.12em] text-[#d4af37]">Vidéo ou capture libre</span>
               </span>
             )}
             <input
@@ -148,9 +135,7 @@ export function StudioTab({
 
       {(isPreparingMedia || uploadLoading) && (
         <BrutalCard tone="yellow" className="p-2">
-          <p className="tabloid-headline text-[clamp(1.05rem,5.6vw,1.65rem)] leading-[0.82]">
-            {uploadLoading ? "CHARGEMENT DU DOSSIER..." : "PRÉPARATION DU REC..."}
-          </p>
+          <p className="tabloid-headline text-[clamp(1.05rem,5.6vw,1.65rem)] leading-[0.82]">{uploadLoading ? "CHARGEMENT DU DOSSIER..." : "PRÉPARATION DU REC..."}</p>
           <div className="stat-bar mt-2">
             <motion.div className="stat-bar-fill" animate={{ width: `${Math.round(mediaProgress * 100)}%` }} />
           </div>
@@ -164,7 +149,6 @@ export function StudioTab({
         id="tiktoker-name"
         aria-label="TikToker visé"
         value={tiktokerName}
-        onFocus={() => haptic(HAPTICS.tap)}
         onChange={(event) => setTiktokerName(event.target.value)}
         placeholder="TikToker visé"
         maxLength={48}
@@ -186,9 +170,7 @@ export function StudioTab({
               className={`min-h-10 rounded-[10px] border px-1.5 py-1 text-left ${active ? "border-[#d4af37]/75 bg-[#d4af37]/18 text-[#f0d889]" : "border-white/10 bg-white/[0.035] text-zinc-500"}`}
             >
               <Icon className="mb-1 h-3 w-3" />
-              <span className="line-clamp-2 text-[8px] font-black uppercase leading-none tracking-tighter">
-                {category.label}
-              </span>
+              <span className="line-clamp-2 text-[8px] font-black uppercase leading-none tracking-tighter">{category.label}</span>
             </motion.button>
           );
         })}
@@ -201,7 +183,6 @@ export function StudioTab({
         id="dossier-comment"
         aria-label="Contexte du dossier"
         value={comment}
-        onFocus={() => haptic(HAPTICS.tap)}
         onChange={(event) => setComment(event.target.value)}
         placeholder="Pourquoi ce dossier mérite le club ?"
         rows={3}
@@ -224,11 +205,11 @@ export function StudioTab({
           <motion.button
             whileTap={TAP_REBOUND}
             transition={TAP_TRANSITION}
-            onClick={() => void saveEditedNomination()}
-            disabled={mutationBusyId === editingNominationId || !uploadReady}
+            onClick={() => void uploadNomination()}
+            disabled={mutationBusyId === editingNomination?.id || !uploadReady}
             className="brutal-submit flex w-full items-center justify-center gap-2 disabled:opacity-50"
           >
-            {mutationBusyId === editingNominationId ? <Loader2 className="h-6 w-6 animate-spin" /> : "Sauvegarder"}
+            {mutationBusyId === editingNomination?.id ? <Loader2 className="h-6 w-6 animate-spin" /> : "Sauvegarder"}
           </motion.button>
           <motion.button
             whileTap={TAP_REBOUND}

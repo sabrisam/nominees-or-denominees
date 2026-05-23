@@ -74,17 +74,15 @@ export async function POST(request: NextRequest) {
     const fallbackRegion = configuredRegion && !isPlaceholder(configuredRegion) ? configuredRegion : DEFAULT_REGION;
     const bucket = configuredBucket && !isPlaceholder(configuredBucket) ? configuredBucket : DEFAULT_BUCKET;
     const endpoint = configuredEndpoint && !isPlaceholder(configuredEndpoint) ? configuredEndpoint : `https://${fallbackRegion}.digitaloceanspaces.com`;
-    
     const accessKeyId = process.env.DO_SPACES_KEY || process.env.SPACES_KEY || "";
-    if (!accessKeyId || isPlaceholder(accessKeyId)) {
-      throw new Error("Variable manquante: DO_SPACES_KEY ou SPACES_KEY");
-    }
-    
     const secretAccessKey = process.env.DO_SPACES_SECRET || process.env.SPACES_SECRET || "";
-    if (!secretAccessKey || isPlaceholder(secretAccessKey)) {
-      throw new Error("Variable manquante: DO_SPACES_SECRET ou SPACES_SECRET");
+
+    if (!accessKeyId || isPlaceholder(accessKeyId)) {
+      throw new Error("Variable manquante: DO_SPACES_KEY / SPACES_KEY");
     }
-    
+    if (!secretAccessKey || isPlaceholder(secretAccessKey)) {
+      throw new Error("Variable manquante: DO_SPACES_SECRET / SPACES_SECRET");
+    }
     const region = getRegion(endpoint, bucket);
     
     const key = `${folder}/${new Date().getUTCFullYear()}-${String(new Date().getUTCMonth() + 1).padStart(2, "0")}/${crypto.randomUUID()}-${fileName.replace(/[^a-zA-Z0-9.-]/g, "_")}`;

@@ -32,11 +32,13 @@ export default defineConfig({
     trace: 'on-first-retry',
   },
 
-  /* Contrôle mobile prestige: WebKit + iPhone 15 Pro */
   projects: [
     {
-      name: 'webkit-iphone-15-pro',
-      use: { ...devices['iPhone 15 Pro'] },
+      name: 'chromium-iphone-15-pro',
+      use: { 
+        ...devices['iPhone 15 Pro'],
+        defaultBrowserType: 'chromium'
+      },
     },
   ],
 

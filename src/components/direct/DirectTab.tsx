@@ -1,10 +1,12 @@
 import { motion, AnimatePresence } from "framer-motion";
-import { Camera } from "lucide-react";
-import { BrutalCard } from "@/components/ui/BrutalCard";
-import { SectionTitle } from "@/components/ui/SectionTitle";
-import { NominationTile } from "@/components/direct/NominationTile";
-import { haptic, HAPTICS, TAP_REBOUND, TAP_TRANSITION } from "@/lib/haptic";
-import type { Nomination, DirectFilter } from "@/types";
+import { Camera, Sparkles } from "lucide-react";
+import { BrutalCard } from "../ui/BrutalCard";
+import { SectionTitle } from "../ui/SectionTitle";
+import { NominationTile } from "./NominationTile";
+import type { Nomination, DirectFilter, Tab } from "@/types";
+
+const TAP_REBOUND = { scale: 0.965, rotate: -0.35 };
+const TAP_TRANSITION = { type: "spring", stiffness: 900, damping: 32, mass: 0.42 } as const;
 
 const DIRECT_FILTERS: Array<{ id: DirectFilter; label: string }> = [
   { id: "all", label: "Tout" },
@@ -14,37 +16,35 @@ const DIRECT_FILTERS: Array<{ id: DirectFilter; label: string }> = [
   { id: "mine", label: "Moi" }
 ];
 
-export interface DirectTabProps {
-  directFilter: DirectFilter;
-  setDirectFilter: (filter: DirectFilter) => void;
-  directFilterCounts: Record<DirectFilter, number>;
-  feedItems: Nomination[];
-  ownsNomination: (nomination: Nomination) => boolean;
-  startEditNomination: (nomination: Nomination) => void;
-  removeNomination: (nomination: Nomination) => Promise<void>;
-  mutationBusyId: string | null;
-  reduceMotion: boolean;
-  handleSectionDrag: (info: any) => void;
-  pageTransition: any;
-  revealContainer: any;
-  revealItem: any;
-}
-
 export function DirectTab({
+  feedItems,
   directFilter,
   setDirectFilter,
   directFilterCounts,
-  feedItems,
   ownsNomination,
   startEditNomination,
   removeNomination,
   mutationBusyId,
-  reduceMotion,
   handleSectionDrag,
-  pageTransition,
+  reduceMotion,
   revealContainer,
-  revealItem
-}: DirectTabProps) {
+  revealItem,
+  pageTransition
+}: {
+  feedItems: Nomination[];
+  directFilter: DirectFilter;
+  setDirectFilter: (f: DirectFilter) => void;
+  directFilterCounts: Record<DirectFilter, number>;
+  ownsNomination: (n: Nomination) => boolean;
+  startEditNomination: (n: Nomination) => void;
+  removeNomination: (n: Nomination) => Promise<void>;
+  mutationBusyId: string | null;
+  handleSectionDrag: (info: any) => void;
+  reduceMotion: boolean;
+  revealContainer: any;
+  revealItem: any;
+  pageTransition: any;
+}) {
   return (
     <motion.section
       key="direct"
@@ -82,10 +82,7 @@ export function DirectTab({
                 whileTap={TAP_REBOUND}
                 transition={TAP_TRANSITION}
                 aria-pressed={active}
-                onClick={() => {
-                  haptic(HAPTICS.option);
-                  setDirectFilter(filter.id);
-                }}
+                onClick={() => setDirectFilter(filter.id)}
                 className={`rounded-[9px] border px-1 py-1 text-center transition ${active ? "border-[#d4af37]/70 bg-[#d4af37]/18 text-[#f0d889]" : "border-white/10 bg-white/[0.035] text-zinc-500"}`}
               >
                 <span className="block truncate text-[7px] font-black uppercase leading-none tracking-tighter">{filter.label}</span>

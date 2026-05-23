@@ -38,24 +38,13 @@ export function MediaFrame({
     setResolving(true);
   }, [nomination.media_url, nomination.thumbnail_url]);
 
-  if (isLegacyDemoMedia(nomination.media_url)) {
+  if (mediaFailed || isLegacyDemoMedia(nomination.media_url)) {
+    const isDemo = isLegacyDemoMedia(nomination.media_url);
     return (
       <div className={`${height} relative flex w-full items-center justify-center bg-black`}>
         {nomination.thumbnail_url ? <img src={nomination.thumbnail_url} alt="" className="absolute inset-0 h-full w-full object-cover opacity-55" /> : null}
         <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} className="relative z-10 mx-3 rounded-full border border-[#d4af37]/60 bg-black/70 px-3 py-2 text-center text-[11px] font-bold uppercase tracking-[0.12em] leading-none text-[#f0d889]">
-          Média de démo à renvoyer depuis le Studio
-        </motion.div>
-      </div>
-    );
-  }
-
-  if (mediaFailed) {
-    return (
-      <div className={`${height} relative flex w-full items-center justify-center bg-black`}>
-        {nomination.thumbnail_url ? <img src={nomination.thumbnail_url} alt="" className="absolute inset-0 h-full w-full object-cover opacity-35" /> : null}
-        <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} className="relative z-10 mx-3 flex flex-col items-center gap-1.5 rounded border border-red-500/40 bg-black/80 px-4 py-3 text-center text-[11px] font-bold uppercase tracking-[0.06em] text-red-400">
-          <span>Erreur de chargement du média</span>
-          <span className="text-[9px] font-medium normal-case tracking-normal text-zinc-400">Vérifie ta connexion réseau ou les clés S3.</span>
+          {isDemo ? "Rec à renvoyer depuis le Studio" : "Média indisponible ou non supporté"}
         </motion.div>
       </div>
     );

@@ -1,35 +1,20 @@
 import { motion } from "framer-motion";
 import { Check } from "lucide-react";
-import { BrutalCard } from "@/components/ui/BrutalCard";
-import { SectionTitle } from "@/components/ui/SectionTitle";
-import { MediaFrame } from "@/components/direct/MediaFrame";
-import { OwnershipBadge } from "@/components/direct/OwnershipBadge";
-import { Sticker } from "@/components/ui/Sticker";
-import { ScorePresetRail } from "@/components/studio/ScorePresetRail";
-import { DimensionScoreGrid } from "@/components/studio/DimensionScoreGrid";
-import { getCategoryMeta, cloneScores, scoreTotal } from "@/lib/scoring";
-import { haptic, HAPTICS, TAP_REBOUND, TAP_TRANSITION } from "@/lib/haptic";
+import { BrutalCard } from "../ui/BrutalCard";
+import { SectionTitle } from "../ui/SectionTitle";
+import { MediaFrame } from "../direct/MediaFrame";
+import { OwnershipBadge } from "../direct/OwnershipBadge";
+import { ScorePresetRail } from "../studio/ScorePresetRail";
+import { DimensionScoreGrid } from "../studio/DimensionScoreGrid";
+import { getCategoryMeta, scoreTotal, cloneScores } from "@/lib/scoring";
 import { DEFAULT_DIMENSION_SCORES } from "@/constants/categories";
 import type { Nomination, DimensionScores } from "@/types";
 
-export interface VoteTabProps {
-  pendingForMe: Nomination[];
-  ownsNomination: (nomination: Nomination) => boolean;
-  scoreDraftById: Record<string, DimensionScores>;
-  setScoreDraftById: React.Dispatch<React.SetStateAction<Record<string, DimensionScores>>>;
-  reviewDraftById: Record<string, string>;
-  setReviewDraftById: React.Dispatch<React.SetStateAction<Record<string, string>>>;
-  applyRating: (nominationId: string) => Promise<void>;
-  voteBusyId: string | null;
-  shakeId: string | null;
-  reduceMotion: boolean;
-  handleSectionDrag: (info: any) => void;
-  pageTransition: any;
-}
+const TAP_REBOUND = { scale: 0.965, rotate: -0.35 };
+const TAP_TRANSITION = { type: "spring", stiffness: 900, damping: 32, mass: 0.42 } as const;
 
 export function VoteTab({
   pendingForMe,
-  ownsNomination,
   scoreDraftById,
   setScoreDraftById,
   reviewDraftById,
@@ -37,10 +22,24 @@ export function VoteTab({
   applyRating,
   voteBusyId,
   shakeId,
-  reduceMotion,
+  ownsNomination,
   handleSectionDrag,
+  reduceMotion,
   pageTransition
-}: VoteTabProps) {
+}: {
+  pendingForMe: Nomination[];
+  scoreDraftById: Record<string, DimensionScores>;
+  setScoreDraftById: (updater: (prev: Record<string, DimensionScores>) => Record<string, DimensionScores>) => void;
+  reviewDraftById: Record<string, string>;
+  setReviewDraftById: (updater: (prev: Record<string, string>) => Record<string, string>) => void;
+  applyRating: (id: string) => Promise<void>;
+  voteBusyId: string | null;
+  shakeId: string | null;
+  ownsNomination: (n: Nomination) => boolean;
+  handleSectionDrag: (info: any) => void;
+  reduceMotion: boolean;
+  pageTransition: any;
+}) {
   return (
     <motion.section
       key="vote"
@@ -78,9 +77,9 @@ export function VoteTab({
             >
               <div className="relative border-b border-[#d4af37]/20 bg-black">
                 <MediaFrame nomination={nomination} height="aspect-[9/16] max-h-[52svh]" />
-                <Sticker tone="yellow" className="absolute left-2 top-2 -rotate-2">
+                <span className="absolute left-2 top-2 -rotate-2 inline-flex rounded-[10px] border px-2 py-0.5 text-[8px] font-black uppercase tracking-[0.1em] leading-none border-[#d4af37]/60 bg-[#d4af37]/15 text-[#f0d889]">
                   À voter
-                </Sticker>
+                </span>
                 <OwnershipBadge owned={ownsNomination(nomination)} className="absolute right-2 top-2 rotate-2" />
                 <div className="absolute bottom-2 left-2 right-2 rounded-[10px] border border-[#d4af37]/35 bg-black/75 p-2 backdrop-blur-md">
                   <p className="flex items-center gap-1 text-[8px] font-black uppercase tracking-[0.12em] text-[#d4af37]">
@@ -105,7 +104,6 @@ export function VoteTab({
                 <textarea
                   aria-label="Ta réaction sur ce dossier"
                   value={reviewDraftById[nomination.id] ?? ""}
-                  onFocus={() => haptic(HAPTICS.tap)}
                   onChange={(event) => setReviewDraftById((prev) => ({ ...prev, [nomination.id]: event.target.value }))}
                   placeholder="Ta réaction sur ce dossier ?"
                   rows={2}

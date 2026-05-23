@@ -1,27 +1,25 @@
 import { motion } from "framer-motion";
-import { BrutalCard } from "@/components/ui/BrutalCard";
-import { Sticker } from "@/components/ui/Sticker";
-import { CategoryRaceBoard } from "@/components/trophies/CategoryRaceBoard";
+import { BrutalCard } from "../ui/BrutalCard";
+import { Sticker } from "../ui/Sticker";
+import { CategoryRaceBoard } from "../trophies/CategoryRaceBoard";
 import { totalPoints } from "@/lib/scoring";
-import type { ScoreBoard, Nomination, CategoryRace } from "@/types";
-
-export interface WinnersTabProps {
-  ultimateWinner: ScoreBoard | null;
-  paparazziOr: Nomination | null;
-  categoryRaces: CategoryRace[];
-  reduceMotion: boolean;
-  handleSectionDrag: (info: any) => void;
-  pageTransition: any;
-}
+import type { Nomination, ScoreBoard, CategoryRace } from "@/types";
 
 export function WinnersTab({
   ultimateWinner,
   paparazziOr,
   categoryRaces,
-  reduceMotion,
   handleSectionDrag,
+  reduceMotion,
   pageTransition
-}: WinnersTabProps) {
+}: {
+  ultimateWinner: ScoreBoard | null;
+  paparazziOr: Nomination | null;
+  categoryRaces: CategoryRace[];
+  handleSectionDrag: (info: any) => void;
+  reduceMotion: boolean;
+  pageTransition: any;
+}) {
   return (
     <motion.section
       key="winners"

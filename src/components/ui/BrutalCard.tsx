@@ -10,7 +10,7 @@ export function BrutalCard({
   children: ReactNode;
   className?: string;
   tone?: "paper" | "red" | "yellow" | "black";
-  layout?: boolean | string;
+  layout?: boolean | "size" | "position" | "preserve-aspect";
 }) {
   const toneClass = tone === "red" ? "brutal-card-red" : tone === "yellow" ? "brutal-card-yellow" : tone === "black" ? "brutal-card-black" : "";
 

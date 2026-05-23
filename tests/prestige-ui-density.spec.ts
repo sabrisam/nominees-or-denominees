@@ -2,7 +2,7 @@ import { expect, test, devices, type Page } from '@playwright/test';
 
 const tabs = ['Direct', 'À voter', 'Studio', 'Palmarès', 'Trophées'] as const;
 
-test.use({ ...devices['iPhone 15 Pro'] });
+test.use({ ...devices['iPhone 15 Pro'], defaultBrowserType: 'chromium' });
 
 function tabNameMatcher(label: string) {
   return new RegExp(`^${label.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}`, 'i');
@@ -17,6 +17,8 @@ async function assertNoHorizontalBreakage(page: Page) {
         const rect = element.getBoundingClientRect();
         const style = window.getComputedStyle(element);
         if (style.display === 'none' || style.visibility === 'hidden' || rect.width === 0 || rect.height === 0) return false;
+        // Ignore ticker components which naturally slide off-screen by design
+        if (element.closest('.ticker') || element.closest('.ticker-track') || element.classList.contains('ticker')) return false;
         return rect.left < -1 || rect.right > viewportWidth + 1;
       })
       .slice(0, 8)
