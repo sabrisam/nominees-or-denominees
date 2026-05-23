@@ -201,10 +201,15 @@ export function DirectTab({
     >
       {/* Brutal Header Cover */}
       <motion.div {...revealItem}>
-        <BrutalCard className="relative overflow-hidden p-3.5 bg-[#0c0c0c] border-[#d4af37]/20">
-          <p className="mb-1 text-[7.5px] font-black uppercase tracking-[0.2em] text-[#d4af37] font-sans">
-            Club live
-          </p>
+        <BrutalCard className="relative overflow-hidden p-3.5 bg-[#0c0c0c] border-[#d4af37]/20 shadow-[8px_8px_0px_0px_#000000]">
+          <div className="flex items-center justify-between gap-3">
+            <p className="mb-1 text-[7.5px] font-black uppercase tracking-[0.2em] text-[#d4af37] font-sans">
+              Club live
+            </p>
+            <span className="rounded-[8px] border border-[#d4af37]/30 bg-[#d4af37]/10 px-2 py-1 text-[8px] font-black uppercase tracking-[0.18em] text-[#f0d889] font-sans">
+              {activeMemberCount} MEMBRES
+            </span>
+          </div>
           <h1 className="tabloid-headline text-[clamp(1.78rem,8.9vw,3rem)] leading-[0.84] text-[#f5f1e8] font-serif italic normal-case">
             Nominees
             <span className="mx-1.5 inline-block rounded-[8px] border border-[#d4af37]/70 bg-[#d4af37]/15 px-1.5 py-0.5 text-[clamp(0.72rem,3.55vw,1.1rem)] font-sans font-black uppercase leading-none text-[#f0d889] not-italic">
