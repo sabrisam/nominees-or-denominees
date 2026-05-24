@@ -730,7 +730,7 @@ function PaperBackdrop() {
 }
 
 export default function Home() {
-  const reduceMotion = !!useReducedMotion();
+  const reduceMotion = true; // Optimisé : désactive les animations lourdes et le drag tactiles sur mobile
   const [supabase, setSupabase] =
     useState<ReturnType<typeof getSupabaseBrowserClient>>(null);
   const [bootingSession, setBootingSession] = useState(true);
@@ -1073,6 +1073,13 @@ export default function Home() {
   useEffect(() => {
     if (!participant || !supabase || !roomId) return;
 
+    // Strict clean-up: remove any existing stacked channel first before recreating
+    if (channelRef.current) {
+      void channelRef.current.unsubscribe();
+      void supabase.removeChannel(channelRef.current);
+      channelRef.current = null;
+    }
+
     const poll = window.setInterval(() => {
       if (!isBusyRef.current) void fetchNominations(true);
     }, 20000);
@@ -1173,6 +1180,7 @@ export default function Home() {
     return () => {
       window.clearInterval(poll);
       channelRef.current = null;
+      void channel.unsubscribe();
       void supabase.removeChannel(channel);
     };
   }, [fetchNominations, participant, roomId, showToast, supabase]);
@@ -1455,20 +1463,12 @@ export default function Home() {
         },
       };
 
-  const pageTransition = reduceMotion
-    ? {
-        initial: { opacity: 1, x: 0 },
-        animate: { opacity: 1, x: 0 },
-        exit: { opacity: 1, x: 0 },
-      }
-    : {
-        custom: dir,
-        variants: pageVariants,
-        initial: "enter",
-        animate: "center",
-        exit: "exit",
-        transition: { type: "spring", stiffness: 380, damping: 38 },
-      };
+  const pageTransition = {
+    initial: { opacity: 1, x: 0 },
+    animate: { opacity: 1, x: 0 },
+    exit: { opacity: 1, x: 0 },
+    transition: { duration: 0 }
+  } as const;
 
   const handleSectionDrag = useCallback(
     (info: PanInfo) => {
@@ -2063,7 +2063,7 @@ export default function Home() {
       </AnimatePresence>
 
       <main className="tabloid-main">
-        <header className="sticky top-0 z-50 bg-void/95 backdrop-blur-md border-b border-[#d4af37]/20 py-1.5 w-full mx-auto max-w-[30rem] px-2">
+        <header className="sticky top-0 z-50 bg-void/95 backdrop-blur-md border-b border-[#d4af37]/20 pt-[calc(env(safe-area-inset-top)+8px)] pb-1.5 w-full mx-auto max-w-[30rem] px-2">
           <Ticker>
             CÉRÉMONIE DE LA SAISON 1 LE 1ER DU MOIS / DANS{" "}
             {ceremonyCountdown.days}J {ceremonyCountdown.hours}H{" "}
