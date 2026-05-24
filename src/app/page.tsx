@@ -998,10 +998,6 @@ export default function Home() {
         }
 
         const rawRows = (data ?? []) as Record<string, unknown>[];
-        if (silent && rawRows.length === 0) {
-          setSyncing(false);
-          return;
-        }
         const rows = rawRows.map(parseNomination);
 
         if (
@@ -1128,7 +1124,6 @@ export default function Home() {
 
           if (!isBusyRef.current) {
             void fetchNominations(true);
-            void fetchPalmaresData();
           }
         },
       )
@@ -1173,21 +1168,14 @@ export default function Home() {
 
           if (!isBusyRef.current) {
             void fetchNominations(true);
-            void fetchPalmaresData();
           }
         },
       )
       .on("broadcast", { event: "nomination" }, () => {
-        if (!isBusyRef.current) {
-          void fetchNominations(true);
-          void fetchPalmaresData();
-        }
+        if (!isBusyRef.current) void fetchNominations(true);
       })
       .on("broadcast", { event: "rating" }, () => {
-        if (!isBusyRef.current) {
-          void fetchNominations(true);
-          void fetchPalmaresData();
-        }
+        if (!isBusyRef.current) void fetchNominations(true);
       })
       .subscribe();
 
@@ -1195,12 +1183,11 @@ export default function Home() {
 
     return () => {
       window.clearInterval(poll);
-      if (channelRef.current) {
-        void supabase.removeChannel(channelRef.current);
-        channelRef.current = null;
-      }
+      channelRef.current = null;
+      void channel.unsubscribe();
+      void supabase.removeChannel(channel);
     };
-  }, [fetchNominations, fetchPalmaresData, participant, roomId, showToast, supabase]);
+  }, [fetchNominations, participant, roomId, showToast, supabase]);
 
   const pendingForMe = useMemo(() => {
     if (!participant) return [];
@@ -1280,7 +1267,7 @@ export default function Home() {
   );
   const paparazziOr = useMemo(() => bestSubmission(nominations), [nominations]);
   const nextPendingForMe = pendingForMe[0];
-  const { palmaresRows, isLoading: isLoadingPalmares, fetchPalmaresData } = usePalmares(
+  const { palmaresRows, isLoading: isLoadingPalmares } = usePalmares(
     supabase,
     roomCode,
   );
@@ -1761,20 +1748,20 @@ export default function Home() {
         participant.id,
       );
 
-      // 1. Atomic UPSERT on the tiktokers table using the unique name/handle
+      // 1. Atomic UPSERT on the tiktokers table using the unique username/handle
       let tiktokerId: string | null = null;
       try {
-        const { data: tiktoker, error: tiktokerErr } = await supabase
+        const { data: tiktoker, error: tiktokerError } = await supabase
           .from("tiktokers")
           .upsert(
-            { name: tiktokerName.trim(), avatar_url: thumbnailUpload.publicUrl },
-            { onConflict: "name" }
+            { username: cleanTiktokerName, avatar_url: thumbnailUpload.publicUrl },
+            { onConflict: "username" }
           )
-          .select()
+          .select("id")
           .single();
 
-        if (tiktokerErr) {
-          console.error("[NOD Upsert Tiktoker] error:", tiktokerErr);
+        if (tiktokerError) {
+          console.error("[NOD Upsert Tiktoker] error:", tiktokerError);
         } else {
           tiktokerId = tiktoker?.id || null;
         }
@@ -1886,7 +1873,6 @@ export default function Home() {
         payload: { id: nominationId },
       });
       void fetchNominations(true, activeRoomId);
-      void fetchPalmaresData();
       window.setTimeout(() => {
         setShowStudioOverlay(false);
         switchTab("direct");
@@ -1972,7 +1958,6 @@ export default function Home() {
           payload: { id },
         });
         void fetchNominations(true);
-        void fetchPalmaresData();
       }
     } catch {
       queuePendingRating({
@@ -2116,104 +2101,105 @@ export default function Home() {
 
         <div className="tabloid-scroll mx-auto w-full max-w-[30rem] px-2">
 
-          {showSandbox ? (
-            <PreviewCatalog key="sandbox" onClose={() => setShowSandbox(false)} />
-          ) : (
-            <>
-              <div className={tab === "direct" ? "block" : "hidden"}>
-                <DirectTab
-                  feedItems={feedItems}
-                  directFilter={directFilter}
-                  setDirectFilter={setDirectFilter}
-                  directFilterCounts={directFilterCounts}
-                  ownsNomination={ownsNomination}
-                  startEditNomination={startEditNomination}
-                  removeNomination={removeNomination}
-                  mutationBusyId={mutationBusyId}
-                  handleSectionDrag={handleSectionDrag}
-                  reduceMotion={reduceMotion}
-                  revealContainer={revealContainer}
-                  revealItem={revealItem}
-                  pageTransition={pageTransition}
-                  pendingForMe={pendingForMe}
-                  allNominations={nominations}
-                  ceremonyCountdown={ceremonyCountdown}
-                  palmaresRows={palmaresRows}
-                  activeMemberCount={activeMemberCount}
-                  switchTab={switchTab}
-                  setShowSandbox={setShowSandbox}
-                />
-              </div>
+          <AnimatePresence mode="wait" custom={dir}>
+            {showSandbox && (
+              <PreviewCatalog key="sandbox" onClose={() => setShowSandbox(false)} />
+            )}
 
-              <div className={tab === "vote" ? "block" : "hidden"}>
-                <VoteTab
-                  pendingForMe={pendingForMe}
-                  scoreDraftById={scoreDraftById}
-                  setScoreDraftById={setScoreDraftById}
-                  reviewDraftById={reviewDraftById}
-                  setReviewDraftById={setReviewDraftById}
-                  applyRating={applyRating}
-                  voteBusyId={voteBusyId}
-                  shakeId={shakeId}
-                  ownsNomination={ownsNomination}
-                  handleSectionDrag={handleSectionDrag}
-                  reduceMotion={reduceMotion}
-                  pageTransition={pageTransition}
-                />
-              </div>
+            {!showSandbox && tab === "direct" && (
+              <DirectTab
+                key="direct"
+                feedItems={feedItems}
+                directFilter={directFilter}
+                setDirectFilter={setDirectFilter}
+                directFilterCounts={directFilterCounts}
+                ownsNomination={ownsNomination}
+                startEditNomination={startEditNomination}
+                removeNomination={removeNomination}
+                mutationBusyId={mutationBusyId}
+                handleSectionDrag={handleSectionDrag}
+                reduceMotion={reduceMotion}
+                revealContainer={revealContainer}
+                revealItem={revealItem}
+                pageTransition={pageTransition}
+                pendingForMe={pendingForMe}
+                allNominations={nominations}
+                ceremonyCountdown={ceremonyCountdown}
+                palmaresRows={palmaresRows}
+                activeMemberCount={activeMemberCount}
+                switchTab={switchTab}
+                setShowSandbox={setShowSandbox}
+              />
+            )}
 
-              <div className={tab === "studio" ? "block" : "hidden"}>
-                <StudioTab
-                  editingNomination={editingNomination}
-                  fileInputRef={fileInputRef}
-                  prepareMedia={prepareMedia}
-                  previewUrl={previewUrl}
-                  thumbnailPreviewUrl={thumbnailPreviewUrl}
-                  mediaKind={mediaKind}
-                  isPreparingMedia={isPreparingMedia}
-                  uploadLoading={uploadLoading}
-                  isUploading={uploadLoading}
-                  mediaProgress={mediaProgress}
-                  tiktokerName={tiktokerName}
-                  setTiktokerName={setTiktokerName}
-                  cleanCategoryIds={cleanCategoryIds}
-                  toggleCategory={toggleCategory}
-                  comment={comment}
-                  setComment={setComment}
-                  initialScores={initialScores}
-                  setInitialScores={setInitialScores}
-                  uploadNomination={uploadNomination}
-                  cancelEditNomination={cancelEditNomination}
-                  uploadReady={uploadReady}
-                  mutationBusyId={mutationBusyId}
-                  handleSectionDrag={handleSectionDrag}
-                  reduceMotion={reduceMotion}
-                  pageTransition={pageTransition}
-                />
-              </div>
+            {!showSandbox && tab === "vote" && (
+              <VoteTab
+                pendingForMe={pendingForMe}
+                scoreDraftById={scoreDraftById}
+                setScoreDraftById={setScoreDraftById}
+                reviewDraftById={reviewDraftById}
+                setReviewDraftById={setReviewDraftById}
+                applyRating={applyRating}
+                voteBusyId={voteBusyId}
+                shakeId={shakeId}
+                ownsNomination={ownsNomination}
+                handleSectionDrag={handleSectionDrag}
+                reduceMotion={reduceMotion}
+                pageTransition={pageTransition}
+              />
+            )}
 
-              <div className={tab === "palmares" ? "block" : "hidden"}>
-                <PalmaresTab
-                  palmaresRows={palmaresRows}
-                  switchTab={switchTab}
-                  handleSectionDrag={handleSectionDrag}
-                  reduceMotion={reduceMotion}
-                  pageTransition={pageTransition}
-                />
-              </div>
+            {!showSandbox && tab === "studio" && (
+              <StudioTab
+                editingNomination={editingNomination}
+                fileInputRef={fileInputRef}
+                prepareMedia={prepareMedia}
+                previewUrl={previewUrl}
+                thumbnailPreviewUrl={thumbnailPreviewUrl}
+                mediaKind={mediaKind}
+                isPreparingMedia={isPreparingMedia}
+                uploadLoading={uploadLoading}
+                isUploading={uploadLoading}
+                mediaProgress={mediaProgress}
+                tiktokerName={tiktokerName}
+                setTiktokerName={setTiktokerName}
+                cleanCategoryIds={cleanCategoryIds}
+                toggleCategory={toggleCategory}
+                comment={comment}
+                setComment={setComment}
+                initialScores={initialScores}
+                setInitialScores={setInitialScores}
+                uploadNomination={uploadNomination}
+                cancelEditNomination={cancelEditNomination}
+                uploadReady={uploadReady}
+                mutationBusyId={mutationBusyId}
+                handleSectionDrag={handleSectionDrag}
+                reduceMotion={reduceMotion}
+                pageTransition={pageTransition}
+              />
+            )}
 
-              <div className={tab === "winners" ? "block" : "hidden"}>
-                <WinnersTab
-                  ultimateWinner={ultimateWinner}
-                  paparazziOr={paparazziOr}
-                  categoryRaces={categoryRaces}
-                  handleSectionDrag={handleSectionDrag}
-                  reduceMotion={reduceMotion}
-                  pageTransition={pageTransition}
-                />
-              </div>
-            </>
-          )}
+            {!showSandbox && tab === "palmares" && (
+              <PalmaresTab
+                palmaresRows={palmaresRows}
+                switchTab={switchTab}
+                handleSectionDrag={handleSectionDrag}
+                reduceMotion={reduceMotion}
+                pageTransition={pageTransition}
+              />
+            )}
+
+            {!showSandbox && tab === "winners" && (
+              <WinnersTab
+                ultimateWinner={ultimateWinner}
+                paparazziOr={paparazziOr}
+                categoryRaces={categoryRaces}
+                handleSectionDrag={handleSectionDrag}
+                reduceMotion={reduceMotion}
+                pageTransition={pageTransition}
+              />
+            )}
+          </AnimatePresence>
         </div>
       </main>
 

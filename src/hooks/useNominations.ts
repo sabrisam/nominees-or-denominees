@@ -45,13 +45,7 @@ export function useNominations({
 
         if (error) throw error;
 
-        const rawRows = (data ?? []) as Record<string, unknown>[];
-        if (silent && rawRows.length === 0) {
-          setSyncing(false);
-          return;
-        }
-
-        const rows = rawRows.map(parseNomination);
+        const rows = ((data ?? []) as Record<string, unknown>[]).map(parseNomination);
         const localExclusions = typeof localStorage !== "undefined"
           ? JSON.parse(localStorage.getItem("nod_voted_nominations") || "[]") as string[]
           : [];
