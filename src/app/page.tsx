@@ -745,6 +745,7 @@ export default function Home() {
   const [nominations, setNominations] = useState<Nomination[]>([]);
   const [syncing, setSyncing] = useState(false);
 
+  const [isPending, startTransition] = useTransition();
   const [toast, setToast] = useState<ToastState>(null);
   const toastTimeoutRef = useRef<number | null>(null);
   const [ceremonyCountdown, setCeremonyCountdown] = useState(
@@ -831,13 +832,15 @@ export default function Home() {
 
   const switchTab = useCallback((nextTab: Tab) => {
     haptic(HAPTICS.nav);
-    setTab((prevTab) => {
-      const prevIndex = TAB_ORDER.indexOf(prevTab);
-      const nextIndex = TAB_ORDER.indexOf(nextTab);
-      if (nextIndex !== prevIndex) {
-        setDir(nextIndex > prevIndex ? "forward" : "backward");
-      }
-      return nextTab;
+    startTransition(() => {
+      setTab((prevTab) => {
+        const prevIndex = TAB_ORDER.indexOf(prevTab);
+        const nextIndex = TAB_ORDER.indexOf(nextTab);
+        if (nextIndex !== prevIndex) {
+          setDir(nextIndex > prevIndex ? "forward" : "backward");
+        }
+        return nextTab;
+      });
     });
   }, []);
 
