@@ -111,22 +111,6 @@ export function DirectTab({
   loading?: boolean;
   currentLiveEvent?: any;
 }) {
-  // Force this structural guard pattern at the head of DirectTab.tsx
-  if (loading) {
-    return (
-      <div className="flex min-h-screen items-center justify-center bg-void text-center">
-        <div className="font-serif text-champagne animate-pulse tracking-widest">CHARGEMENT DU DIRECT</div>
-      </div>
-    );
-  }
-
-  if (!currentLiveEvent) {
-    return (
-      <div className="flex min-h-screen items-center justify-center bg-void text-center">
-        <p className="font-sans text-xs text-neutral-500 uppercase tracking-widest">AUCUN ÉVÉNEMENT EN DIRECT</p>
-      </div>
-    );
-  }
   // Submitter stats to identify top Paparazzi
   const topPaparazzi = useMemo(() => {
     const counts: Record<string, number> = {};
@@ -204,6 +188,23 @@ export function DirectTab({
 
     return result;
   }, [directFilter, allNominations, pendingForMe]);
+
+  // Force this structural guard pattern to avoid layout collapses and render fallbacks safely
+  if (loading) {
+    return (
+      <div className="flex min-h-screen items-center justify-center bg-void text-center">
+        <div className="font-serif text-champagne animate-pulse tracking-widest">CHARGEMENT DU DIRECT</div>
+      </div>
+    );
+  }
+
+  if (!currentLiveEvent) {
+    return (
+      <div className="flex min-h-screen items-center justify-center bg-void text-center">
+        <p className="font-sans text-xs text-neutral-500 uppercase tracking-widest">AUCUN ÉVÉNEMENT EN DIRECT</p>
+      </div>
+    );
+  }
 
   return (
     <motion.section
