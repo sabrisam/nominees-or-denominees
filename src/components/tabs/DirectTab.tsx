@@ -85,6 +85,8 @@ export function DirectTab({
   activeMemberCount,
   switchTab,
   setShowSandbox,
+  loading = false,
+  currentLiveEvent = feedItems && feedItems.length > 0 ? feedItems[0] : null,
 }: {
   feedItems: Nomination[];
   directFilter: DirectFilter;
@@ -106,7 +108,25 @@ export function DirectTab({
   activeMemberCount: number;
   switchTab: (t: Tab) => void;
   setShowSandbox: (show: boolean) => void;
+  loading?: boolean;
+  currentLiveEvent?: any;
 }) {
+  // Force this structural guard pattern at the head of DirectTab.tsx
+  if (loading) {
+    return (
+      <div className="flex min-h-screen items-center justify-center bg-void text-center">
+        <div className="font-serif text-champagne animate-pulse tracking-widest">CHARGEMENT DU DIRECT</div>
+      </div>
+    );
+  }
+
+  if (!currentLiveEvent) {
+    return (
+      <div className="flex min-h-screen items-center justify-center bg-void text-center">
+        <p className="font-sans text-xs text-neutral-500 uppercase tracking-widest">AUCUN ÉVÉNEMENT EN DIRECT</p>
+      </div>
+    );
+  }
   // Submitter stats to identify top Paparazzi
   const topPaparazzi = useMemo(() => {
     const counts: Record<string, number> = {};
