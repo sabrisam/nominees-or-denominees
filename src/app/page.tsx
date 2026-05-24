@@ -998,6 +998,10 @@ export default function Home() {
         }
 
         const rawRows = (data ?? []) as Record<string, unknown>[];
+        if (silent && rawRows.length === 0) {
+          setSyncing(false);
+          return;
+        }
         const rows = rawRows.map(parseNomination);
 
         if (
