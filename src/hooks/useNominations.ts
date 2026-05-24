@@ -47,8 +47,13 @@ export function useNominations({
 
         const rows = ((data ?? []) as Record<string, unknown>[]).map(parseNomination);
         const activeDeviceId = participantId || localDeviceId;
+        const localExclusions = typeof localStorage !== "undefined"
+          ? JSON.parse(localStorage.getItem("nod_voted_nominations") || "[]") as string[]
+          : [];
         const filtered = rows.filter(
-          (nomination) => !nomination.ratings.some((r) => r.voter_id === activeDeviceId)
+          (nomination) =>
+            !localExclusions.includes(nomination.id) &&
+            !nomination.ratings.some((r) => r.voter_id === activeDeviceId)
         );
         setNominations(filtered);
       } catch (err) {
@@ -78,7 +83,7 @@ export function useNominations({
       .on("postgres_changes", { event: "*", schema: "public", table: "nominations", filter: `room_id=eq.${roomId}` }, (payload) => {
         if (payload.eventType === "INSERT") {
           const submittedBy = String((payload.new as Record<string, unknown>).submitted_by || "");
-          if (submittedBy !== participantId && showToast) showToast("info", "Nouveau dossier à juger.");
+          if (submittedBy !== participantId && showToast) showToast("info", "Nouveau dossier à juger");
         }
         void fetchNominations(true);
       })
