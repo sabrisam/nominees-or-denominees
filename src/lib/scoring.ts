@@ -52,17 +52,19 @@ export function normalizedCategoryId(categoryId: string) {
 }
 
 export function scoreForCategory(scores: DimensionScores, categoryId?: string): number {
-  const resolvedId = categoryId ? normalizedCategoryId(categoryId) : null;
-  const profile = resolvedId ? CATEGORY_SCORING[resolvedId] : CATEGORY_SCORING[CATEGORIES[0].id];
-  const lowIsStrong = profile?.lowIsStrong ?? {};
-  const weights = profile?.weights ?? { rire: 0.2, surprise: 0.2, gene: 0.2, fierte: 0.2, interet: 0.2 };
-
   let sum = 0;
+  const resolvedId = categoryId ? normalizedCategoryId(categoryId) : "le-zin-du-mois";
+  const config = CATEGORY_SCORING[resolvedId];
+
   for (const [dimension, value] of Object.entries(scores)) {
-    const rawValue = clampDimension(value);
-    const adjustedValue = lowIsStrong[dimension as keyof DimensionScores] ? (5 - rawValue) : rawValue;
-    const weight = weights[dimension as keyof DimensionScores] ?? 0.2;
-    sum += adjustedValue * weight;
+    let clamped = Math.min(5, Math.max(0, Math.round(value)));
+    
+    if (config?.lowIsStrong?.[dimension as keyof DimensionScores]) {
+      clamped = 5 - clamped;
+    }
+    
+    const weight = config?.weights?.[dimension as keyof DimensionScores] ?? 0.20;
+    sum += clamped * weight;
   }
 
   return Math.min(100, Math.max(0, Math.round(sum * 20)));
