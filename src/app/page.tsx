@@ -1752,20 +1752,20 @@ export default function Home() {
         participant.id,
       );
 
-      // 1. Atomic UPSERT on the tiktokers table using the unique username/handle
+      // 1. Atomic UPSERT on the tiktokers table using the unique name/handle
       let tiktokerId: string | null = null;
       try {
-        const { data: tiktoker, error: tiktokerError } = await supabase
+        const { data: tiktoker, error: tiktokerErr } = await supabase
           .from("tiktokers")
           .upsert(
-            { username: cleanTiktokerName, avatar_url: thumbnailUpload.publicUrl },
-            { onConflict: "username" }
+            { name: tiktokerName.trim(), avatar_url: thumbnailUpload.publicUrl },
+            { onConflict: "name" }
           )
-          .select("id")
+          .select()
           .single();
 
-        if (tiktokerError) {
-          console.error("[NOD Upsert Tiktoker] error:", tiktokerError);
+        if (tiktokerErr) {
+          console.error("[NOD Upsert Tiktoker] error:", tiktokerErr);
         } else {
           tiktokerId = tiktoker?.id || null;
         }
