@@ -1886,6 +1886,7 @@ export default function Home() {
         payload: { id: nominationId },
       });
       void fetchNominations(true, activeRoomId);
+      void fetchPalmaresData();
       window.setTimeout(() => {
         setShowStudioOverlay(false);
         switchTab("direct");
@@ -1971,6 +1972,7 @@ export default function Home() {
           payload: { id },
         });
         void fetchNominations(true);
+        void fetchPalmaresData();
       }
     } catch {
       queuePendingRating({
