@@ -1200,7 +1200,7 @@ export default function Home() {
         channelRef.current = null;
       }
     };
-  }, [fetchNominations, participant, roomId, showToast, supabase]);
+  }, [fetchNominations, fetchPalmaresData, participant, roomId, showToast, supabase]);
 
   const pendingForMe = useMemo(() => {
     if (!participant) return [];
