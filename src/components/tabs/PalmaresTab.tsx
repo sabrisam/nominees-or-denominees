@@ -37,22 +37,26 @@ export function PalmaresTab({
         drag={reduceMotion ? false : "x"}
         dragConstraints={{ left: 0, right: 0 }}
         onDragEnd={(_, info) => handleSectionDrag(info)}
-        className="space-y-2"
+        className="space-y-3 px-4"
       >
-        <BrutalCard tone="black" className="p-3 text-white border-champagne/30 bg-monolith">
-          <p className="mb-1 text-[8px] font-black uppercase tracking-[0.2em] text-champagne font-sans">
+        <BrutalCard
+          tone="black"
+          className="p-4 text-white border-[#d4af37]/20 bg-monolith"
+        >
+          <p className="mb-1 text-[8px] font-black uppercase tracking-[0.2em] text-[#d4af37] font-sans">
             Stats central
           </p>
-          <h2 className="tabloid-headline text-[clamp(1.55rem,7.8vw,2.7rem)] leading-[0.84] font-serif italic normal-case">
+          <h2 className="tabloid-headline text-[clamp(1.75rem,8vw,3rem)] leading-[0.84] font-serif italic normal-case font-black">
             Palmarès
           </h2>
         </BrutalCard>
-        <BrutalCard className="p-6 text-center border-white/5 bg-black/50">
-          <Trophy className="mx-auto mb-2 h-8 w-8 text-champagne" />
-          <p className="tabloid-headline text-2xl leading-none text-white">
+
+        <BrutalCard className="p-8 text-center border-white/5 bg-monolith shadow-brutal">
+          <Trophy className="mx-auto mb-3 h-10 w-10 text-[#d4af37]" />
+          <p className="tabloid-headline text-2xl leading-none text-white font-serif italic font-bold">
             AUCUN PROFIL ÉVALUÉ POUR L{"'"}INSTANT
           </p>
-          <p className="mx-auto mt-1 max-w-[15rem] text-[10px] font-semibold uppercase tracking-tighter text-zinc-500 font-sans">
+          <p className="mx-auto mt-2 max-w-[18rem] text-[9px] font-black uppercase tracking-wider text-zinc-500 font-sans">
             Le palmarès se mettra à jour après le premier SCREEN noté
           </p>
         </BrutalCard>
@@ -67,23 +71,23 @@ export function PalmaresTab({
       drag={reduceMotion ? false : "x"}
       dragConstraints={{ left: 0, right: 0 }}
       onDragEnd={(_, info) => handleSectionDrag(info)}
-      className="space-y-3 pb-8"
+      className="space-y-4 px-4 pb-[calc(env(safe-area-inset-bottom)+80px)]"
     >
-      {/* Title */}
+      {/* Editorial Header */}
       <BrutalCard
         tone="black"
-        className="p-3 text-white border-champagne/20 bg-monolith"
+        className="p-4 text-white border-[#d4af37]/20 bg-monolith shadow-brutal"
       >
-        <p className="mb-1 text-[8px] font-black uppercase tracking-[0.2em] text-champagne font-sans">
+        <p className="mb-1 text-[8px] font-black uppercase tracking-[0.2em] text-[#d4af37] font-sans">
           Stats central
         </p>
-        <h2 className="tabloid-headline text-[clamp(1.55rem,7.8vw,2.7rem)] leading-[0.84] font-serif italic normal-case">
+        <h2 className="tabloid-headline text-[clamp(1.75rem,8vw,3rem)] leading-[0.84] font-serif italic normal-case font-black">
           Palmarès
         </h2>
       </BrutalCard>
 
-      {/* Vertical list of high-density TikToker profile sheets */}
-      <div className="space-y-2.5">
+      {/* High-Density Row List */}
+      <div className="space-y-3">
         {palmaresRows.map((row, index) => {
           const isExpanded = expandedIdx === index;
           const successRateFormatted = row.successRate.toFixed(0);
@@ -98,156 +102,170 @@ export function PalmaresTab({
             <BrutalCard
               key={row.tiktokerName}
               tone="black"
-              className={`p-3 bg-monolith border-champagne/20 transition-all ${
-                isExpanded ? "border-champagne/55 ring-1 ring-champagne/30" : "hover:border-champagne/40"
+              className={`p-4 bg-monolith transition-all duration-300 ${
+                isExpanded
+                  ? "border-[#d4af37]/60 ring-1 ring-[#d4af37]/30 shadow-[0_0_15px_rgba(212,175,55,0.1)]"
+                  : "border-white/5 hover:border-[#d4af37]/40"
               }`}
             >
-              {/* Card Header clickable for toggle */}
+              {/* Row Header - Clickable Trigger */}
               <div
                 onClick={() => setExpandedIdx(isExpanded ? null : index)}
                 className="flex items-center justify-between cursor-pointer select-none"
               >
-                <div className="flex items-center gap-3">
-                  {/* Rank Badge */}
-                  <span className="font-mono text-xs font-black text-champagne/80 tracking-tighter">
+                <div className="flex items-center gap-4 min-w-0">
+                  {/* Rank */}
+                  <span className="font-serif text-lg font-black text-[#d4af37]/70 italic w-6">
                     #{index + 1}
                   </span>
-                  
-                  {/* Avatar */}
-                  <div className="relative h-8 w-8 overflow-hidden rounded-full border border-champagne bg-void shrink-0">
+
+                  {/* Avatar Frame */}
+                  <div className="relative h-10 w-10 overflow-hidden rounded-full border border-[#d4af37]/40 bg-void shrink-0 shadow-inner">
                     {row.avatarUrl ? (
                       <Image
                         src={row.avatarUrl}
                         alt=""
                         fill
                         unoptimized
-                        sizes="32px"
+                        sizes="40px"
                         className="object-cover"
                       />
                     ) : (
-                      <span className="flex h-full w-full items-center justify-center text-[10px] font-black text-champagneSoft font-sans">
+                      <span className="flex h-full w-full items-center justify-center text-xs font-black text-[#d4af37] font-mono tracking-tighter">
                         {row.tiktokerName.slice(0, 2).toUpperCase()}
                       </span>
                     )}
                   </div>
 
-                  {/* Name & Quick Info */}
-                  <div>
-                    <h3 className="text-sm font-black uppercase tracking-tight text-white font-serif italic normal-case leading-none">
-                      @{row.tiktokerName}
+                  {/* Creator Identity */}
+                  <div className="min-w-0">
+                    <h3 className="text-xl font-serif font-black tracking-tight text-white capitalize leading-tight truncate">
+                      {row.tiktokerName}
                     </h3>
-                    <p className="text-[9px] text-zinc-500 uppercase tracking-wider font-sans mt-0.5">
-                      {row.totalDossiers} {row.totalDossiers > 1 ? "dossiers soumis" : "dossier soumis"}
+                    <p className="text-[9px] text-zinc-500 uppercase tracking-widest font-sans mt-0.5 font-bold">
+                      {row.totalDossiers}{" "}
+                      {row.totalDossiers > 1
+                        ? "dossiers soumis"
+                        : "dossier soumis"}
                     </p>
                   </div>
                 </div>
 
-                <div className="flex items-center gap-2">
-                  {/* Points Badge */}
-                  <span className="gold-pill text-[9px] font-black px-2 py-0.5 font-sans tracking-tight">
+                {/* Performance Pill & Controls */}
+                <div className="flex items-center gap-3 shrink-0">
+                  <span className="gold-pill text-[10px] font-black px-2.5 py-1 font-sans tracking-tight bg-[#d4af37]/10 text-[#d4af37] border border-[#d4af37]/30 rounded-[4px]">
                     {row.points} PTS
                   </span>
                   {isExpanded ? (
-                    <ChevronUp className="h-4 w-4 text-champagne/70 shrink-0" />
+                    <ChevronUp className="h-4 w-4 text-[#d4af37] shrink-0" />
                   ) : (
-                    <ChevronDown className="h-4 w-4 text-zinc-500 shrink-0" />
+                    <ChevronDown className="h-4 w-4 text-zinc-600 shrink-0" />
                   )}
                 </div>
               </div>
 
-              {/* Individual Profile Sheet details */}
+              {/* Collapsible Micro-Dashboard Sheet */}
               <AnimatePresence initial={false}>
                 {isExpanded && (
                   <motion.div
-                    initial={reduceMotion ? { opacity: 1, height: "auto" } : { opacity: 0, height: 0 }}
-                    animate={reduceMotion ? { opacity: 1, height: "auto" } : { opacity: 1, height: "auto" }}
-                    exit={reduceMotion ? { opacity: 0, height: 0 } : { opacity: 0, height: 0 }}
-                    transition={{ duration: reduceMotion ? 0.01 : 0.2 }}
+                    initial={
+                      reduceMotion
+                        ? { opacity: 1, height: "auto" }
+                        : { opacity: 0, height: 0 }
+                    }
+                    animate={{ opacity: 1, height: "auto" }}
+                    exit={{ opacity: 0, height: 0 }}
+                    transition={{
+                      duration: reduceMotion ? 0.01 : 0.25,
+                      ease: "easeInOut",
+                    }}
                     className="overflow-hidden"
                   >
-                    {/* Stats Grid */}
-                    <div className="grid grid-cols-2 xs:grid-cols-4 gap-2 mt-4 pt-3 border-t border-white/5">
-                      {/* Cumulative Points */}
-                      <div className="rounded-[8px] border border-white/5 bg-void/50 p-2 text-center">
-                        <Award className="mx-auto mb-1 h-4 w-4 text-champagne" />
-                        <span className="block text-base font-serif font-black leading-none text-white">
+                    {/* High-Contrast Analytical Grid */}
+                    <div className="grid grid-cols-2 sm:grid-cols-4 gap-2.5 mt-4 pt-4 border-t border-[#d4af37]/20 bg-[#070707]/60 p-2 rounded-[6px]">
+                      {/* Cumulative Weight */}
+                      <div className="rounded-[4px] border border-white/5 bg-monolith p-2.5 text-center">
+                        <Award className="mx-auto mb-1 h-4 w-4 text-[#d4af37]" />
+                        <span className="block text-lg font-serif font-black leading-none text-white">
                           {row.points}
                         </span>
-                        <span className="mt-0.5 block text-[7px] font-black uppercase tracking-tighter text-zinc-500 font-sans">
+                        <span className="mt-1 block text-[7px] font-black uppercase tracking-wider text-zinc-500 font-sans">
                           POINTS CUMULÉS
                         </span>
                       </div>
 
-                      {/* Average Score */}
-                      <div className="rounded-[8px] border border-white/5 bg-void/50 p-2 text-center">
+                      {/* Score Index */}
+                      <div className="rounded-[4px] border border-white/5 bg-monolith p-2.5 text-center">
                         <TrendingUp className="mx-auto mb-1 h-4 w-4 text-sky" />
-                        <span className="block text-base font-serif font-black leading-none text-white">
+                        <span className="block text-lg font-serif font-black leading-none text-white">
                           {averageScoreFormatted}%
                         </span>
-                        <span className="mt-0.5 block text-[7px] font-black uppercase tracking-tighter text-zinc-500 font-sans">
+                        <span className="mt-1 block text-[7px] font-black uppercase tracking-wider text-zinc-500 font-sans">
                           INDICE DE NOTE
                         </span>
                       </div>
 
-                      {/* Votes Received */}
-                      <div className="rounded-[8px] border border-white/5 bg-void/50 p-2 text-center">
+                      {/* Total Engagement */}
+                      <div className="rounded-[4px] border border-white/5 bg-monolith p-2.5 text-center">
                         <Activity className="mx-auto mb-1 h-4 w-4 text-violet" />
-                        <span className="block text-base font-serif font-black leading-none text-white">
+                        <span className="block text-lg font-serif font-black leading-none text-white">
                           {row.votes}
                         </span>
-                        <span className="mt-0.5 block text-[7px] font-black uppercase tracking-tighter text-zinc-500 font-sans">
+                        <span className="mt-1 block text-[7px] font-black uppercase tracking-wider text-zinc-500 font-sans">
                           VOTES REÇUS
                         </span>
                       </div>
 
                       {/* Success Rate */}
-                      <div className="rounded-[8px] border border-white/5 bg-void/50 p-2 text-center">
+                      <div className="rounded-[4px] border border-white/5 bg-monolith p-2.5 text-center">
                         <CheckCircle className="mx-auto mb-1 h-4 w-4 text-emerald-400" />
-                        <span className="block text-base font-serif font-black leading-none text-white">
+                        <span className="block text-lg font-serif font-black leading-none text-white">
                           {successRateFormatted}%
                         </span>
-                        <span className="mt-0.5 block text-[7px] font-black uppercase tracking-tighter text-zinc-500 font-sans">
+                        <span className="mt-1 block text-[7px] font-black uppercase tracking-wider text-zinc-500 font-sans">
                           TAUX DE SUCCÈS
                         </span>
                       </div>
                     </div>
 
-                    {/* Nominated Categories Section */}
-                    <div className="mt-3.5 pt-3.5 border-t border-white/5">
-                      <h4 className="text-[8px] font-black uppercase tracking-[0.16em] text-champagne mb-2 font-sans">
+                    {/* Categorized Impact Track */}
+                    <div className="mt-4 pt-3.5 border-t border-white/5">
+                      <h4 className="text-[8px] font-black uppercase tracking-[0.16em] text-[#d4af37]/80 mb-2.5 font-sans">
                         CATÉGORIES NOMINÉES CE MOIS-CI
                       </h4>
                       {nominatedCategories.length === 0 ? (
-                        <p className="text-[10px] font-black uppercase tracking-tight text-zinc-500 py-2 font-sans">
+                        <p className="text-[9px] font-black uppercase tracking-wide text-zinc-600 py-1 font-sans italic">
                           Aucune catégorie enregistrée
                         </p>
                       ) : (
-                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-1.5">
+                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
                           {nominatedCategories.map(({ id, count }) => {
                             const meta = getCategoryMeta(id);
                             const Icon = meta.icon;
-                            
-                            // Category mood coloring
+
                             const colors = {
-                              positive: "border-champagne/30 text-champagne bg-champagne/5",
+                              positive:
+                                "border-[#d4af37]/30 text-[#d4af37] bg-[#d4af37]/5",
                               fun: "border-violet/30 text-violet bg-violet/5",
                               critical: "border-rose/30 text-rose bg-rose/5",
                               surprise: "border-sky/30 text-sky bg-sky/5",
                             };
-                            const themeClass = colors[meta.mood] || "border-white/10 text-white bg-white/5";
+                            const themeClass =
+                              colors[meta.mood] ||
+                              "border-white/10 text-white bg-white/5";
 
                             return (
                               <div
                                 key={id}
-                                className={`flex items-center justify-between px-2.5 py-1.5 rounded-[6px] border ${themeClass}`}
+                                className={`flex items-center justify-between px-3 py-2 rounded-[4px] border ${themeClass}`}
                               >
-                                <div className="flex items-center gap-2 min-w-0">
+                                <div className="flex items-center gap-2.5 min-w-0">
                                   <Icon className="h-3.5 w-3.5 shrink-0" />
-                                  <span className="text-[9px] font-black uppercase tracking-tight text-white truncate font-sans">
+                                  <span className="text-[10px] font-black uppercase tracking-tight text-white truncate font-sans">
                                     {meta.label}
                                   </span>
                                 </div>
-                                <span className="text-[10px] font-mono font-black text-champagneSoft">
+                                <span className="text-[9px] font-mono font-black text-[#d4af37]/80 shrink-0">
                                   {count} {count > 1 ? "DOSSIERS" : "DOSSIER"}
                                 </span>
                               </div>
