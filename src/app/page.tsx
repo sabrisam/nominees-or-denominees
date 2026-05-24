@@ -1748,11 +1748,33 @@ export default function Home() {
         participant.id,
       );
 
+      // 1. Atomic UPSERT on the tiktokers table using the unique username/handle
+      let tiktokerId: string | null = null;
+      try {
+        const { data: tiktoker, error: tiktokerError } = await supabase
+          .from("tiktokers")
+          .upsert(
+            { username: cleanTiktokerName, avatar_url: thumbnailUpload.publicUrl },
+            { onConflict: "username" }
+          )
+          .select("id")
+          .single();
+
+        if (tiktokerError) {
+          console.error("[NOD Upsert Tiktoker] error:", tiktokerError);
+        } else {
+          tiktokerId = tiktoker?.id || null;
+        }
+      } catch (err) {
+        console.error("[NOD Upsert Tiktoker] exception:", err);
+      }
+
       const nominationInsert = {
         room_id: activeRoomId,
         category_id: primaryCategoryId(cleanCategoryIds),
         category_ids: cleanCategoryIds,
         tiktoker_name: cleanTiktokerName,
+        tiktoker_id: tiktokerId,
         media_url: mediaUpload.publicUrl,
         video_storage_path: mediaKind === "video" ? mediaUpload.key : null,
         thumbnail_url: thumbnailUpload.publicUrl,
@@ -1778,13 +1800,14 @@ export default function Home() {
         });
       }
 
-      // Fallback: if category_ids column doesn't exist OR any 4xx error on insert
+      // Fallback: if category_ids/tiktoker_id columns don't exist OR any 4xx error on insert
       if (insertError) {
         const legacyInsert: Partial<typeof nominationInsert> = {
           ...nominationInsert,
         };
         delete legacyInsert.category_ids;
-        console.info("[NOD Insert] Retrying without category_ids...");
+        delete (legacyInsert as any).tiktoker_id;
+        console.info("[NOD Insert] Retrying without category_ids or tiktoker_id...");
         const legacy = await supabase
           .from("nominations")
           .insert(legacyInsert)
