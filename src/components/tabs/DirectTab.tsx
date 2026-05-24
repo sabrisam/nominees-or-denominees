@@ -84,6 +84,7 @@ export function DirectTab({
   palmaresRows,
   activeMemberCount,
   switchTab,
+  setShowSandbox,
 }: {
   feedItems: Nomination[];
   directFilter: DirectFilter;
@@ -104,6 +105,7 @@ export function DirectTab({
   palmaresRows: PalmaresRow[];
   activeMemberCount: number;
   switchTab: (t: Tab) => void;
+  setShowSandbox: (show: boolean) => void;
 }) {
   // Submitter stats to identify top Paparazzi
   const topPaparazzi = useMemo(() => {
@@ -206,9 +208,21 @@ export function DirectTab({
             <p className="mb-1 text-[7.5px] font-black uppercase tracking-[0.2em] text-champagne font-sans">
               Club live
             </p>
-            <span className="rounded-[8px] border border-champagne/30 bg-champagne/10 px-2 py-1 text-[8px] font-black uppercase tracking-[0.18em] text-champagneSoft font-sans">
-              {activeMemberCount} MEMBRES
-            </span>
+            <div className="flex items-center gap-1.5">
+              <span className="rounded-[8px] border border-champagne/30 bg-champagne/10 px-2 py-1 text-[8px] font-black uppercase tracking-[0.18em] text-champagneSoft font-sans">
+                {activeMemberCount} MEMBRES
+              </span>
+              <button
+                type="button"
+                onClick={() => {
+                  haptic(HAPTICS.option);
+                  setShowSandbox(true);
+                }}
+                className="rounded-[8px] border border-champagne bg-champagne/15 px-2 py-1 text-[8px] font-black uppercase tracking-[0.12em] text-champagneSoft hover:bg-champagne/25 font-sans"
+              >
+                Sandbox OD
+              </button>
+            </div>
           </div>
           <h1 className="tabloid-headline text-[clamp(1.78rem,8.9vw,3rem)] leading-[0.84] text-cream font-serif italic normal-case">
             Nominees

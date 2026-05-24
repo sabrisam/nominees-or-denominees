@@ -51,25 +51,21 @@ export function normalizedCategoryId(categoryId: string) {
   return CATEGORY_BY_ID[resolved] ? resolved : CATEGORIES[0].id;
 }
 
-export function scoreForCategory(scores: DimensionScores, categoryId?: string) {
+export function scoreForCategory(scores: DimensionScores, categoryId?: string): number {
   const resolvedId = categoryId ? normalizedCategoryId(categoryId) : null;
-  const rules = resolvedId ? CATEGORY_SCORING[resolvedId] : null;
-  const lowIsStrong = rules?.lowIsStrong ?? {};
+  const profile = resolvedId ? CATEGORY_SCORING[resolvedId] : CATEGORY_SCORING[CATEGORIES[0].id];
+  const lowIsStrong = profile?.lowIsStrong ?? {};
+  const weights = profile?.weights ?? { rire: 0.2, surprise: 0.2, gene: 0.2, fierte: 0.2, interet: 0.2 };
 
-  const rireVal = clampDimension(scores.rire);
-  const surpriseVal = clampDimension(scores.surprise);
-  const geneVal = clampDimension(scores.gene);
-  const fierteVal = clampDimension(scores.fierte);
-  const interetVal = clampDimension(scores.interet);
+  let sum = 0;
+  for (const [dimension, value] of Object.entries(scores)) {
+    const rawValue = clampDimension(value);
+    const adjustedValue = lowIsStrong[dimension as keyof DimensionScores] ? (5 - rawValue) : rawValue;
+    const weight = weights[dimension as keyof DimensionScores] ?? 0.2;
+    sum += adjustedValue * weight;
+  }
 
-  const rire = lowIsStrong.rire ? (5 - rireVal) : rireVal;
-  const surprise = lowIsStrong.surprise ? (5 - surpriseVal) : surpriseVal;
-  const gene = lowIsStrong.gene ? (5 - geneVal) : geneVal;
-  const fierte = lowIsStrong.fierte ? (5 - fierteVal) : fierteVal;
-  const interet = lowIsStrong.interet ? (5 - interetVal) : interetVal;
-
-  const sum = rire + surprise + gene + fierte + interet;
-  return Math.min(100, Math.max(0, Math.round(sum * 4)));
+  return Math.min(100, Math.max(0, Math.round(sum * 20)));
 }
 
 export function pointsForCategory(scores: DimensionScores, categoryId: string) {

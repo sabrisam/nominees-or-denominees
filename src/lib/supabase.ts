@@ -52,3 +52,20 @@ export async function exportAccountRecoveryCode(client: SupabaseClient): Promise
   const { data: { session } } = await client.auth.getSession();
   return session?.refresh_token ?? null;
 }
+
+export const getLocalDeviceId = (): string => {
+  if (typeof window === 'undefined') return '';
+  try {
+    let deviceId = localStorage.getItem('nod_user_device_id');
+    if (!deviceId) {
+      deviceId = crypto.randomUUID();
+      localStorage.setItem('nod_user_device_id', deviceId);
+    }
+    return deviceId;
+  } catch (e) {
+    // Fallback if localStorage throws in incognito
+    return crypto.randomUUID();
+  }
+};
+
+export const localDeviceId = getLocalDeviceId();

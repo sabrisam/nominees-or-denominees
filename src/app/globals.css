@@ -653,3 +653,16 @@ video {
     transform: none;
   }
 }
+
+@layer base {
+  input, textarea, select {
+    font-size: 16px !important;
+    line-height: normal !important;
+  }
+}
+
+button, .action-btn, [interactive], .bottom-tabloid {
+  -webkit-user-select: none;
+  user-select: none;
+  -webkit-tap-highlight-color: transparent;
+}

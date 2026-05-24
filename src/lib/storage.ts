@@ -175,7 +175,7 @@ export async function extractVideoThumbnail(file: File) {
   }
 }
 
-/** Direct browser upload to DigitalOcean Spaces via Presigned URL. Supabase Storage is removed. */
+/** Direct browser upload to DigitalOcean Spaces via Presigned URL with automatic zero-cost Supabase Storage fallback. */
 export async function uploadMediaFile(
   supabase: SupabaseClient,
   file: File,
@@ -200,12 +200,12 @@ export async function uploadMediaFile(
   
   // 2. Convert File to ArrayBuffer to bypass iOS WebKit native File stream bug
   const buffer = await typed.arrayBuffer();
-  console.info(`[NOD Upload] Buffer prêt: ${buffer.byteLength} bytes. Provider: DO Spaces (Forced)`);
+  console.info(`[NOD Upload] Buffer prêt: ${buffer.byteLength} bytes.`);
 
-  // ---- DIGITALOCEAN SPACES VIA PRESIGNED URL ----
-  let presignRes;
+  // ---- STEP 1: TRY DIGITALOCEAN SPACES ----
   try {
-    presignRes = await fetch("/api/media/upload", {
+    console.info(`[NOD Upload] Tentative DO Spaces pour ${file.name}...`);
+    const presignRes = await fetch("/api/media/upload", {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
@@ -218,21 +218,14 @@ export async function uploadMediaFile(
       }),
       signal
     });
-  } catch (err: any) {
-    throw new Error(`[S1] Réseau API injoignable: ${err?.message}`);
-  }
 
-  if (!presignRes.ok) {
-    const err = await presignRes.json().catch(() => ({}));
-    throw new Error(`[S1] Erreur Vercel: ${err.error || presignRes.statusText}`);
-  }
+    if (!presignRes.ok) {
+      throw new Error(`presign error HTTP ${presignRes.status}`);
+    }
 
-  const { presignedUrl, publicUrl, key } = await presignRes.json();
+    const { presignedUrl, publicUrl, key } = await presignRes.json();
 
-  let uploadRes;
-  try {
-    console.info(`[NOD Upload Spaces] Envoi PUT direct de ${buffer.byteLength} bytes...`);
-    uploadRes = await fetch(presignedUrl, {
+    const uploadRes = await fetch(presignedUrl, {
       method: "PUT",
       headers: {
         "Content-Type": contentType,
@@ -241,17 +234,40 @@ export async function uploadMediaFile(
       body: buffer,
       signal
     });
+
+    if (!uploadRes.ok) {
+      throw new Error(`Spaces PUT error HTTP ${uploadRes.status}`);
+    }
+
+    console.info(`[NOD Upload Spaces] Succès: publicUrl=${publicUrl}`);
+    return { key, publicUrl, provider: "spaces" };
   } catch (err: any) {
-    throw new Error(`[S2] DO Spaces bloqué (CORS/Réseau): ${err?.message}`);
-  }
+    // ---- STEP 2: FALLBACK TO SUPABASE STORAGE ----
+    console.warn(`[NOD Upload] Échec Spaces (${err?.message || err}). Repli sur Supabase Storage...`);
+    try {
+      const path = `${folder}/${mediaMonthKey()}/${crypto.randomUUID()}-${sanitizeStorageFileName(file.name)}`;
+      
+      const { data: uploadData, error: uploadError } = await supabase.storage
+        .from(SUPABASE_STORAGE_BUCKET)
+        .upload(path, buffer, {
+          contentType,
+          cacheControl: "3600",
+          upsert: true
+        });
 
-  if (!uploadRes.ok) {
-    console.error("[NOD Upload Spaces] Erreur PUT:", uploadRes.status, uploadRes.statusText);
-    throw new Error(`[S2] Échec DO Spaces HTTP ${uploadRes.status}`);
-  }
+      if (uploadError) throw uploadError;
 
-  console.info(`[NOD Upload Spaces] Succès: publicUrl=${publicUrl}`);
-  return { key, publicUrl, provider: "spaces" };
+      const { data: publicUrlData } = supabase.storage
+        .from(SUPABASE_STORAGE_BUCKET)
+        .getPublicUrl(path);
+
+      console.info(`[NOD Upload Supabase] Succès: publicUrl=${publicUrlData.publicUrl}`);
+      return { key: path, publicUrl: publicUrlData.publicUrl, provider: "supabase" };
+    } catch (fallbackErr: any) {
+      console.error("[NOD Upload] Les deux providers ont échoué.", fallbackErr);
+      throw new Error(`${STORAGE_UNAVAILABLE_NOTICE} Details: ${fallbackErr?.message || fallbackErr}`);
+    }
+  }
 }
 
 export function isStorageUnavailableMessage(message: string) {

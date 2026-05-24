@@ -1,5 +1,5 @@
 import { useState, useCallback, useEffect } from "react";
-import { getSupabaseBrowserClient } from "@/lib/supabase";
+import { getSupabaseBrowserClient, localDeviceId } from "@/lib/supabase";
 import { parseNomination } from "@/lib/scoring";
 import type { Nomination, ToastTone } from "@/types";
 
@@ -46,7 +46,11 @@ export function useNominations({
         if (error) throw error;
 
         const rows = ((data ?? []) as Record<string, unknown>[]).map(parseNomination);
-        setNominations(rows);
+        const activeDeviceId = participantId || localDeviceId;
+        const filtered = rows.filter(
+          (nomination) => !nomination.ratings.some((r) => r.voter_id === activeDeviceId)
+        );
+        setNominations(filtered);
       } catch (err) {
         if (!silent && showToast) {
           const message = err instanceof Error ? err.message : "Le direct refuse de répondre.";
@@ -56,7 +60,7 @@ export function useNominations({
         setSyncing(false);
       }
     },
-    [roomId, showToast]
+    [roomId, participantId, showToast]
   );
 
   useEffect(() => {

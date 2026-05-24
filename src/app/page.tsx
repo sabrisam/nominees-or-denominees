@@ -15,6 +15,7 @@ import { theme } from "@/lib/tokens";
 import {
   getSupabaseBrowserClient,
   ensureAnonymousSession,
+  localDeviceId,
 } from "@/lib/supabase";
 import {
   STORAGE_UNAVAILABLE_NOTICE,
@@ -63,6 +64,7 @@ import { VoteTab } from "@/components/tabs/VoteTab";
 import { StudioTab } from "@/components/tabs/StudioTab";
 import { PalmaresTab } from "@/components/tabs/PalmaresTab";
 import { WinnersTab } from "@/components/tabs/WinnersTab";
+import { PreviewCatalog } from "@/components/tabs/PreviewCatalog";
 import {
   AnimatePresence,
   motion,
@@ -727,6 +729,7 @@ export default function Home() {
   );
 
   const [showStudioOverlay, setShowStudioOverlay] = useState(false);
+  const [showSandbox, setShowSandbox] = useState(false);
   const [preparedFile, setPreparedFile] = useState<File | null>(null);
   const [thumbnailFile, setThumbnailFile] = useState<File | null>(null);
   const [mediaKind, setMediaKind] = useState<MediaKind | null>(null);
@@ -827,12 +830,12 @@ export default function Home() {
             localStorage.getItem(PSEUDO_KEY) || "",
           );
           const nextPseudo =
-            storedPseudo || `Joueur ${user.id.slice(0, 4).toUpperCase()}`;
+            storedPseudo || `Joueur ${localDeviceId.slice(0, 4).toUpperCase()}`;
 
           if (storedPseudo !== nextPseudo)
             localStorage.setItem(PSEUDO_KEY, nextPseudo);
 
-          setParticipant({ id: user.id, pseudo: nextPseudo });
+          setParticipant({ id: localDeviceId, pseudo: nextPseudo });
         } else {
           const { error } = await client.auth.signInAnonymously();
           if (error) {
@@ -1978,8 +1981,13 @@ export default function Home() {
           </header>
 
           <AnimatePresence mode="wait" custom={dir}>
-            {tab === "direct" && (
+            {showSandbox && (
+              <PreviewCatalog key="sandbox" onClose={() => setShowSandbox(false)} />
+            )}
+
+            {!showSandbox && tab === "direct" && (
               <DirectTab
+                key="direct"
                 feedItems={feedItems}
                 directFilter={directFilter}
                 setDirectFilter={setDirectFilter}
@@ -1999,10 +2007,11 @@ export default function Home() {
                 palmaresRows={palmaresRows}
                 activeMemberCount={activeMemberCount}
                 switchTab={switchTab}
+                setShowSandbox={setShowSandbox}
               />
             )}
 
-            {tab === "vote" && (
+            {!showSandbox && tab === "vote" && (
               <VoteTab
                 pendingForMe={pendingForMe}
                 scoreDraftById={scoreDraftById}
@@ -2019,7 +2028,7 @@ export default function Home() {
               />
             )}
 
-            {tab === "studio" && (
+            {!showSandbox && tab === "studio" && (
               <StudioTab
                 editingNomination={editingNomination}
                 fileInputRef={fileInputRef}
@@ -2049,7 +2058,7 @@ export default function Home() {
               />
             )}
 
-            {tab === "palmares" && (
+            {!showSandbox && tab === "palmares" && (
               <PalmaresTab
                 palmaresRows={palmaresRows}
                 switchTab={switchTab}
@@ -2059,7 +2068,7 @@ export default function Home() {
               />
             )}
 
-            {tab === "winners" && (
+            {!showSandbox && tab === "winners" && (
               <WinnersTab
                 ultimateWinner={ultimateWinner}
                 paparazziOr={paparazziOr}
