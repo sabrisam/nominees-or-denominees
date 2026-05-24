@@ -283,7 +283,7 @@ export function VoteTab({
                           >
                             ⏳
                           </motion.span>
-                          Enregistrement...
+                          Enregistrement en cours
                         </>
                       ) : (
                         <>
