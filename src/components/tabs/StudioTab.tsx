@@ -185,9 +185,9 @@ export function StudioTab({
                 ) : (
                   <UploadCloud className="mb-3 h-9 w-9 text-champagne" />
                 )}
-                <span className="tabloid-headline text-xl leading-none font-serif">
+                <span className="tabloid-headline text-[clamp(1.15rem,5.6vw,1.85rem)] leading-none font-serif">
                   {isPreparingMedia
-                    ? "Chargement du studio..."
+                    ? "Chargement du studio"
                     : "Déposer le SCREEN"}
                 </span>
                 <span className="mt-1.5 text-[10px] font-black uppercase tracking-[0.12em] text-champagne font-sans">
