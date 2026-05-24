@@ -20,7 +20,7 @@ export function usePalmares(supabaseClientOverride?: any, roomCodeOverride?: str
         .from("tiktokers")
         .select(`
           id,
-          username,
+          name,
           avatar_url,
           nominations (
             id,
@@ -40,7 +40,6 @@ export function usePalmares(supabaseClientOverride?: any, roomCodeOverride?: str
         `);
 
       if (error) {
-        // Safe fallback to avoid breaking UI if table or columns do not exist yet
         if (/relation ".*" does not exist/i.test(error.message)) {
           console.warn("[NOD usePalmares] tiktokers table not found, fallback to empty leaderboard");
         } else {
@@ -64,7 +63,6 @@ export function usePalmares(supabaseClientOverride?: any, roomCodeOverride?: str
         const dimensionTotals = { rire: 0, surprise: 0, gene: 0, fierte: 0, interet: 0 };
 
         linkedNominations.forEach((n: any) => {
-          // Track category nominations count
           if (n.category_ids && Array.isArray(n.category_ids)) {
             n.category_ids.forEach((catId: string) => {
               categoryCounts[catId] = (categoryCounts[catId] ?? 0) + 1;
@@ -90,7 +88,7 @@ export function usePalmares(supabaseClientOverride?: any, roomCodeOverride?: str
         const average = votes > 0 ? points / votes / 20 : 0;
 
         return {
-          tiktokerName: t.username,
+          tiktokerName: t.name,
           avatarUrl: t.avatar_url || "",
           points,
           votes,
