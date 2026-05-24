@@ -1128,6 +1128,7 @@ export default function Home() {
 
           if (!isBusyRef.current) {
             void fetchNominations(true);
+            void fetchPalmaresData();
           }
         },
       )
@@ -1172,14 +1173,21 @@ export default function Home() {
 
           if (!isBusyRef.current) {
             void fetchNominations(true);
+            void fetchPalmaresData();
           }
         },
       )
       .on("broadcast", { event: "nomination" }, () => {
-        if (!isBusyRef.current) void fetchNominations(true);
+        if (!isBusyRef.current) {
+          void fetchNominations(true);
+          void fetchPalmaresData();
+        }
       })
       .on("broadcast", { event: "rating" }, () => {
-        if (!isBusyRef.current) void fetchNominations(true);
+        if (!isBusyRef.current) {
+          void fetchNominations(true);
+          void fetchPalmaresData();
+        }
       })
       .subscribe();
 
@@ -1187,9 +1195,10 @@ export default function Home() {
 
     return () => {
       window.clearInterval(poll);
-      channelRef.current = null;
-      void channel.unsubscribe();
-      void supabase.removeChannel(channel);
+      if (channelRef.current) {
+        void supabase.removeChannel(channelRef.current);
+        channelRef.current = null;
+      }
     };
   }, [fetchNominations, participant, roomId, showToast, supabase]);
 
