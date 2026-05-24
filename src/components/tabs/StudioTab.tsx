@@ -218,8 +218,8 @@ export function StudioTab({
         >
           <p className="tabloid-headline text-[clamp(1.05rem,5.6vw,1.65rem)] leading-[0.82] font-serif">
             {uploadLoading
-              ? "CHARGEMENT DU DOSSIER..."
-              : "PRÉPARATION DU SCREEN..."}
+              ? "CHARGEMENT DU DOSSIER"
+              : "PRÉPARATION DU SCREEN"}
           </p>
           <div className="stat-bar mt-2">
             <motion.div
@@ -349,7 +349,7 @@ export function StudioTab({
           {uploadLoading || isUploading ? (
             <span className="flex items-center gap-2 animate-pulse">
               <Loader2 className="h-6 w-6 animate-spin" /> TRANSMISSION EN
-              COURS...
+              COURS
             </span>
           ) : (
             "ENVOYER LE SCREEN"
