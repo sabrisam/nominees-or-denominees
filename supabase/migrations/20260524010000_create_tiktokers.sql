@@ -1,7 +1,7 @@
 -- Migration: Create tiktokers table and link nominations
 CREATE TABLE IF NOT EXISTS public.tiktokers (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-    username TEXT UNIQUE NOT NULL,
+    name TEXT UNIQUE NOT NULL,
     avatar_url TEXT,
     created_at TIMESTAMP WITH TIME ZONE DEFAULT timezone('utc'::text, now()) NOT NULL
 );
