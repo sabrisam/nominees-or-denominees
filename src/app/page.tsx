@@ -641,6 +641,28 @@ function queuePendingRating(payload: PendingRatingPayload) {
   writePendingRatings([...rest, payload]);
 }
 
+function readVotedNominations(): string[] {
+  if (typeof localStorage === "undefined") return [];
+  try {
+    return JSON.parse(localStorage.getItem("nod_voted_nominations") || "[]");
+  } catch {
+    return [];
+  }
+}
+
+function addVotedNomination(id: string) {
+  if (typeof localStorage === "undefined") return;
+  try {
+    const current = readVotedNominations();
+    if (!current.includes(id)) {
+      localStorage.setItem(
+        "nod_voted_nominations",
+        JSON.stringify([...current, id].slice(-200)),
+      );
+    }
+  } catch {}
+}
+
 
 
 function isLegacyDemoMedia(url: string) {
@@ -764,6 +786,12 @@ export default function Home() {
   const [bootError, setBootError] = useState<string | null>(null);
   const [shakeId, setShakeId] = useState<string | null>(null);
   const [globalShake, setGlobalShake] = useState<number>(0);
+
+  const isBusy = Boolean(voteBusyId || uploadLoading || mutationBusyId);
+  const isBusyRef = useRef(isBusy);
+  useEffect(() => {
+    isBusyRef.current = isBusy;
+  }, [isBusy]);
 
   useEffect(() => {
     const onHaptic = () => setGlobalShake(Date.now());
@@ -1046,7 +1074,7 @@ export default function Home() {
     if (!participant || !supabase || !roomId) return;
 
     const poll = window.setInterval(() => {
-      void fetchNominations(true);
+      if (!isBusyRef.current) void fetchNominations(true);
     }, 20000);
 
     const channel = supabase
@@ -1061,20 +1089,82 @@ export default function Home() {
         },
         (payload) => {
           if (payload.eventType === "INSERT") {
-            const submittedBy = toText(
-              (payload.new as Record<string, unknown>).submitted_by,
+            const parsed = parseNomination(payload.new as Record<string, unknown>);
+            if (parsed.submitted_by !== participant.id) {
+              showToast("info", "Nouveau dossier à juger");
+            }
+            setNominations((prev) => {
+              if (prev.some((n) => n.id === parsed.id)) return prev;
+              return [parsed, ...prev];
+            });
+          } else if (payload.eventType === "UPDATE") {
+            const parsed = parseNomination(payload.new as Record<string, unknown>);
+            setNominations((prev) =>
+              prev.map((n) =>
+                n.id === parsed.id
+                  ? { ...n, ...parsed, ratings: n.ratings }
+                  : n
+              )
             );
-            if (submittedBy !== participant.id)
-              showToast("info", "Nouveau dossier à juger.");
+          } else if (payload.eventType === "DELETE") {
+            const deletedId = toText(payload.old?.id);
+            setNominations((prev) => prev.filter((n) => n.id !== deletedId));
           }
-          void fetchNominations(true);
+
+          if (!isBusyRef.current) {
+            void fetchNominations(true);
+          }
+        },
+      )
+      .on(
+        "postgres_changes",
+        {
+          event: "*",
+          schema: "public",
+          table: "ratings",
+        },
+        (payload) => {
+          if (payload.eventType === "INSERT" || payload.eventType === "UPDATE") {
+            const rating = parseRating(payload.new as Record<string, unknown>);
+            setNominations((prev) =>
+              prev.map((n) => {
+                if (n.id !== rating.nomination_id) return n;
+                const exists = n.ratings.some((r) => r.id === rating.id);
+                const nextRatings = exists
+                  ? n.ratings.map((r) => (r.id === rating.id ? rating : r))
+                  : [...n.ratings, rating];
+                nextRatings.sort(
+                  (a, b) =>
+                    new Date(b.created_at).getTime() -
+                    new Date(a.created_at).getTime(),
+                );
+                return {
+                  ...n,
+                  ratings: nextRatings,
+                  status: statusFromRatings(nextRatings),
+                };
+              })
+            );
+          } else if (payload.eventType === "DELETE") {
+            const deletedId = toText(payload.old?.id);
+            setNominations((prev) =>
+              prev.map((n) => ({
+                ...n,
+                ratings: n.ratings.filter((r) => r.id !== deletedId),
+              }))
+            );
+          }
+
+          if (!isBusyRef.current) {
+            void fetchNominations(true);
+          }
         },
       )
       .on("broadcast", { event: "nomination" }, () => {
-        void fetchNominations(true);
+        if (!isBusyRef.current) void fetchNominations(true);
       })
       .on("broadcast", { event: "rating" }, () => {
-        void fetchNominations(true);
+        if (!isBusyRef.current) void fetchNominations(true);
       })
       .subscribe();
 
@@ -1089,10 +1179,12 @@ export default function Home() {
 
   const pendingForMe = useMemo(() => {
     if (!participant) return [];
+    const localExclusions = readVotedNominations();
     return nominations.filter(
       (nomination) =>
         nomination.status === "pending" &&
         nomination.submitted_by !== participant.id &&
+        !localExclusions.includes(nomination.id) &&
         !nomination.ratings.some(
           (rating) => rating.voter_id === participant.id,
         ),
@@ -1407,7 +1499,7 @@ export default function Home() {
   const startEditNomination = useCallback(
     (nomination: Nomination) => {
       if (!ownsNomination(nomination)) {
-        showToast("info", "Dossier verrouillé.");
+        showToast("info", "Dossier verrouillé");
         return;
       }
 
@@ -1418,7 +1510,7 @@ export default function Home() {
       setComment(nomination.comment);
       setSelectedCategoryIds(nomination.category_ids);
       setCatId(primaryCategoryId(nomination.category_ids));
-      showToast("info", "Mode modif : auteur seulement.");
+      showToast("info", "Mode modif : auteur seulement");
       switchTab("studio");
     },
     [clearPreparedMedia, ownsNomination, showToast, switchTab],
@@ -1433,7 +1525,7 @@ export default function Home() {
   const prepareMedia = async (nextFile: File | null) => {
     if (!nextFile) return;
     if (!isImageMedia(nextFile) && !isVideoMedia(nextFile)) {
-      showToast("error", "Choisis une vidéo, une photo ou une capture.");
+      showToast("error", "Choisis une vidéo, une photo ou une capture");
       return;
     }
 
@@ -1451,7 +1543,7 @@ export default function Home() {
         setUrl(setThumbnailPreviewUrlState, null, compressed);
         setMediaProgress(1);
         haptic(HAPTICS.success);
-        showToast("success", "Capture prête.");
+        showToast("success", "Capture prête");
         return;
       }
 
@@ -1463,7 +1555,7 @@ export default function Home() {
       setUrl(setThumbnailPreviewUrlState, null, thumbnail);
       setMediaProgress(1);
       haptic(HAPTICS.success);
-      showToast("success", "Screen prêt.");
+      showToast("success", "Screen prêt");
     } catch (err) {
       clearPreparedMedia();
       const message =
@@ -1486,7 +1578,7 @@ export default function Home() {
 
     const cleanedComment = comment.trim();
     if (cleanedComment.length < 3 || cleanTiktokerName.length < 2) {
-      showToast("error", "Ajoute le TikToker et le contexte.");
+      showToast("error", "Ajoute le TikToker et le contexte");
       return;
     }
 
@@ -1519,7 +1611,7 @@ export default function Home() {
 
       if (error) throw error;
 
-      showToast("success", "Dossier modifié.");
+      showToast("success", "Dossier modifié");
       setEditingNominationId(null);
       resetStudioDraft();
       switchTab("direct");
@@ -1565,7 +1657,7 @@ export default function Home() {
         resetStudioDraft();
       }
 
-      showToast("info", "Dossier retiré.");
+      showToast("info", "Dossier retiré");
       await channelRef.current?.send({
         type: "broadcast",
         event: "nomination",
@@ -1588,7 +1680,7 @@ export default function Home() {
     }
 
     if (!participant || !supabase) {
-      showToast("error", "Le studio n'est pas encore branché.");
+      showToast("error", "Le studio n'est pas encore branché");
       return;
     }
 
@@ -1600,7 +1692,7 @@ export default function Home() {
       cleanedComment.length < 3 ||
       cleanTiktokerName.length < 2
     ) {
-      showToast("error", "Ajoute le TikToker, le média et le contexte.");
+      showToast("error", "Ajoute le TikToker, le média et le contexte");
       return;
     }
 
@@ -1796,6 +1888,7 @@ export default function Home() {
     setVoteBusyId(id);
     setShakeId(id);
     window.setTimeout(() => setShakeId(null), 520);
+    addVotedNomination(id);
     patchRatingLocally(id, localRating);
 
     try {
@@ -1828,8 +1921,8 @@ export default function Home() {
       showToast(
         "success",
         remoteSaved
-          ? `Note enregistrée · ${impactPoints}/100.`
-          : `Note gardée · ${impactPoints}/100.`,
+          ? `Note enregistrée · ${impactPoints}/100`
+          : `Note gardée · ${impactPoints}/100`,
       );
       if (remoteSaved) {
         await channelRef.current?.send({
@@ -1848,7 +1941,7 @@ export default function Home() {
         createdAt: localRating.created_at,
       });
       voteBurst(impactPoints);
-      showToast("success", `Note gardée · ${impactPoints}/100.`);
+      showToast("success", `Note gardée · ${impactPoints}/100`);
     } finally {
       setVoteBusyId(null);
     }
@@ -1970,15 +2063,16 @@ export default function Home() {
       </AnimatePresence>
 
       <main className="tabloid-main">
+        <header className="sticky top-0 z-50 bg-void/95 backdrop-blur-md border-b border-[#d4af37]/20 py-1.5 w-full mx-auto max-w-[30rem] px-2">
+          <Ticker>
+            CÉRÉMONIE DE LA SAISON 1 LE 1ER DU MOIS / DANS{" "}
+            {ceremonyCountdown.days}J {ceremonyCountdown.hours}H{" "}
+            {ceremonyCountdown.mins}M / TOURNOI DU MOIS /{" "}
+            {monthlyNominations.length} DOSSIERS EN JEU /
+          </Ticker>
+        </header>
+
         <div className="tabloid-scroll mx-auto w-full max-w-[30rem] px-2">
-          <header className="sticky top-0 z-30 mb-2 overflow-hidden bg-void/85 py-1.5 backdrop-blur-xl">
-            <Ticker>
-              CÉRÉMONIE DE LA SAISON 1 LE 1ER DU MOIS / DANS{" "}
-              {ceremonyCountdown.days}J {ceremonyCountdown.hours}H{" "}
-              {ceremonyCountdown.mins}M / TOURNOI DU MOIS /{" "}
-              {monthlyNominations.length} DOSSIERS EN JEU /
-            </Ticker>
-          </header>
 
           <AnimatePresence mode="wait" custom={dir}>
             {showSandbox && (
