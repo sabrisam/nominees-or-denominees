@@ -46,14 +46,13 @@ export function useNominations({
         if (error) throw error;
 
         const rows = ((data ?? []) as Record<string, unknown>[]).map(parseNomination);
-        const activeDeviceId = participantId || localDeviceId;
         const localExclusions = typeof localStorage !== "undefined"
           ? JSON.parse(localStorage.getItem("nod_voted_nominations") || "[]") as string[]
           : [];
         const filtered = rows.filter(
           (nomination) =>
             !localExclusions.includes(nomination.id) &&
-            !nomination.ratings.some((r) => r.voter_id === activeDeviceId)
+            !nomination.ratings.some((r) => r.voter_id === localDeviceId)
         );
         setNominations(filtered);
       } catch (err) {
