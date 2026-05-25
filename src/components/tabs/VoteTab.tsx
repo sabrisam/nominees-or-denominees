@@ -31,6 +31,7 @@ const VoteItemCard = React.memo(({
   ownsNomination,
   applyRating,
   reduceMotion,
+  onCardClick,
 }: {
   nomination: Nomination;
   draftScores: DimensionScores;
@@ -43,6 +44,7 @@ const VoteItemCard = React.memo(({
   ownsNomination: (n: Nomination) => boolean;
   applyRating: (id: string) => Promise<void>;
   reduceMotion: boolean;
+  onCardClick?: (n: Nomination) => void;
 }) => {
   const category = useMemo(() => getCategoryMeta(nomination.category_id), [nomination.category_id]);
   const categoryLabel = category.label;
@@ -56,6 +58,7 @@ const VoteItemCard = React.memo(({
     <motion.article
       layout={reduceMotion ? false : "position"}
       key={nomination.id}
+      onClick={() => onCardClick?.(nomination)}
       initial={{ opacity: 0, y: 12, scale: 0.97 }}
       animate={
         shakeId === nomination.id
@@ -72,7 +75,7 @@ const VoteItemCard = React.memo(({
         duration: reduceMotion ? 0.01 : 0.42,
         layout: { type: "spring", stiffness: 380, damping: 32 },
       }}
-      className="brutal-card overflow-hidden"
+      className="brutal-card overflow-hidden cursor-pointer"
     >
       {/* Media + overlay info */}
       <div className="relative border-b border-champagne/20 bg-void">
@@ -101,7 +104,7 @@ const VoteItemCard = React.memo(({
       </div>
 
       {/* Interaction zone */}
-      <div className="space-y-1.5 p-2 bg-monolith">
+      <div onClick={(event) => event.stopPropagation()} className="space-y-1.5 p-2 bg-monolith">
         {/* Commentaire du dossier */}
         {nomination.comment && (
           <p className="rounded-[8px] border border-white/10 bg-void p-2 text-xs font-medium leading-tight text-zinc-300 font-sans">
@@ -206,6 +209,7 @@ export function VoteTab({
   handleSectionDrag,
   reduceMotion,
   pageTransition,
+  onCardClick,
 }: {
   pendingForMe: Nomination[];
   scoreDraftById: Record<string, DimensionScores>;
@@ -225,6 +229,7 @@ export function VoteTab({
   handleSectionDrag: (info: any) => void;
   reduceMotion: boolean;
   pageTransition: any;
+  onCardClick?: (n: Nomination) => void;
 }) {
   return (
     <motion.section
@@ -327,6 +332,7 @@ export function VoteTab({
                   ownsNomination={ownsNomination}
                   applyRating={applyRating}
                   reduceMotion={reduceMotion}
+                  onCardClick={onCardClick}
                 />
               );
             })}
