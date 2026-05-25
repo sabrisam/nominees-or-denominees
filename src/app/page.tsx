@@ -1811,7 +1811,7 @@ export default function Home() {
 
       if (insertError) throw insertError;
       const nominationId = toText(insertedNomination?.id);
-      if (!nominationId) throw new Error("Dossier non créé.");
+      if (!nominationId) throw new Error("Dossier non créé");
 
       const initialNomination: Nomination = {
         id: nominationId,
@@ -1863,7 +1863,7 @@ export default function Home() {
       }, 2500);
     } catch (err: any) {
       const message =
-        err?.message || (typeof err === "string" ? err : "Échec de l'envoi.");
+        err?.message || (typeof err === "string" ? err : "Échec de l'envoi");
       showToast(
         "error",
         isStorageUnavailableMessage(message)
