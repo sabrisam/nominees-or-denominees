@@ -163,7 +163,7 @@ function NominationCardComponent({
               </motion.button>
             </div>
           )}
-        </div>
+      </BrutalCard>
     </motion.div>
   );
 }
