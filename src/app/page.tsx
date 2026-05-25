@@ -1606,7 +1606,7 @@ export default function Home() {
       void fetchNominations(true);
     } catch (err) {
       const message =
-        err instanceof Error ? err.message : "Modification impossible.";
+        err instanceof Error ? err.message : "Modification impossible";
       showToast("error", message);
     } finally {
       setMutationBusyId(null);
@@ -1649,7 +1649,7 @@ export default function Home() {
       void fetchNominations(true);
     } catch (err) {
       const message =
-        err instanceof Error ? err.message : "Retrait impossible.";
+        err instanceof Error ? err.message : "Retrait impossible";
       showToast("error", message);
     } finally {
       setMutationBusyId(null);
@@ -1685,7 +1685,7 @@ export default function Home() {
 
     try {
       const activeRoomId = roomId ?? (await ensureRoom());
-      if (!activeRoomId) throw new Error("Salon introuvable.");
+      if (!activeRoomId) throw new Error("Salon introuvable");
 
       const thumbnailUpload = await uploadMediaFile(
         supabase,
