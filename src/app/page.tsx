@@ -96,6 +96,8 @@ import {
   Sparkles,
   Trophy,
   UploadCloud,
+  Volume2,
+  VolumeX,
   Zap,
 } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
@@ -722,6 +724,9 @@ export default function Home() {
   const reduceMotion = true; // Optimisé : désactive les animations lourdes et le drag tactiles sur mobile
   const [supabase, setSupabase] =
     useState<ReturnType<typeof getSupabaseBrowserClient>>(null);
+  const [expandedNomination, setExpandedNomination] = useState<Nomination | null>(null);
+  const [initialExpandedTiktoker, setInitialExpandedTiktoker] = useState<string | null>(null);
+  const [isMuted, setIsMuted] = useState(true);
   const [bootingSession, setBootingSession] = useState(true);
   const [participant, setParticipant] = useState<Participant | null>(null);
   const [roomId, setRoomId] = useState<string | null>(null);
@@ -820,6 +825,9 @@ export default function Home() {
 
   const switchTab = useCallback((nextTab: Tab) => {
     haptic(HAPTICS.nav);
+    if (nextTab !== "palmares") {
+      setInitialExpandedTiktoker(null);
+    }
     startTransition(() => {
       setTab((prevTab) => {
         const prevIndex = TAB_ORDER.indexOf(prevTab);
@@ -831,6 +839,12 @@ export default function Home() {
       });
     });
   }, []);
+
+  const handleProfileNavigation = useCallback((tiktokerName: string) => {
+    setExpandedNomination(null);
+    setInitialExpandedTiktoker(tiktokerName);
+    switchTab("palmares");
+  }, [switchTab]);
 
   // supabase client is initialized inside initParticipant
 
@@ -2117,6 +2131,7 @@ export default function Home() {
                 activeMemberCount={activeMemberCount}
                 switchTab={switchTab}
                 setShowSandbox={setShowSandbox}
+                onCardClick={setExpandedNomination}
               />
             )}
 
@@ -2134,6 +2149,7 @@ export default function Home() {
                 handleSectionDrag={handleSectionDrag}
                 reduceMotion={reduceMotion}
                 pageTransition={pageTransition}
+                onCardClick={setExpandedNomination}
               />
             )}
 
@@ -2170,10 +2186,12 @@ export default function Home() {
             {!showSandbox && tab === "palmares" && (
               <PalmaresTab
                 palmaresRows={palmaresRows}
+                allNominations={nominations}
                 switchTab={switchTab}
                 handleSectionDrag={handleSectionDrag}
                 reduceMotion={reduceMotion}
                 pageTransition={pageTransition}
+                initialExpandedTiktoker={initialExpandedTiktoker}
               />
             )}
 
@@ -2232,6 +2250,134 @@ export default function Home() {
           })}
         </div>
       </nav>
+
+      {/* Expanded Nomination Modal Overlay */}
+      <AnimatePresence>
+        {expandedNomination && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            transition={{ duration: 0.2 }}
+            className="fixed inset-0 z-[1000] flex items-center justify-center p-4 bg-black/90 backdrop-blur-md"
+            onClick={() => setExpandedNomination(null)}
+          >
+            <motion.div
+              layoutId={reduceMotion ? undefined : `nomination-card-${expandedNomination.id}`}
+              initial={reduceMotion ? { scale: 0.95, opacity: 0 } : undefined}
+              animate={reduceMotion ? { scale: 1, opacity: 1 } : undefined}
+              exit={reduceMotion ? { scale: 0.95, opacity: 0 } : undefined}
+              transition={{ type: "spring", stiffness: 350, damping: 28 }}
+              className="relative w-full max-w-[28rem] bg-monolith border border-champagne/30 rounded-[12px] shadow-[0_0_50px_rgba(212,175,55,0.15)] overflow-hidden"
+              onClick={(e) => e.stopPropagation()}
+            >
+              {/* Close Button */}
+              <button
+                type="button"
+                onClick={() => setExpandedNomination(null)}
+                className="absolute right-3 top-3 z-50 brutal-icon-button bg-black/60 border border-champagne/40 text-champagneSoft rounded-full p-1.5 flex items-center justify-center hover:bg-black/80"
+                aria-label="Fermer"
+              >
+                <Check className="h-4 w-4 rotate-45" />
+              </button>
+
+              {/* Media frame */}
+              <div className="relative aspect-[9/16] max-h-[58svh] w-full bg-void border-b border-champagne/20">
+                {expandedNomination.media_kind === "video" ? (
+                  <div className="relative w-full h-full">
+                    <video
+                      src={expandedNomination.media_url}
+                      poster={expandedNomination.thumbnail_url ?? undefined}
+                      autoPlay
+                      loop
+                      muted={isMuted}
+                      playsInline
+                      className="w-full h-full object-cover"
+                    />
+                    {/* Mute/Unmute Overlay Control */}
+                    <button
+                      type="button"
+                      onClick={() => setIsMuted(prev => !prev)}
+                      className="absolute bottom-4 right-4 z-40 bg-black/70 border border-champagne/40 text-white rounded-full p-2 flex items-center justify-center hover:bg-black/90 shadow-lg"
+                    >
+                      {isMuted ? (
+                        <VolumeX className="h-4 w-4 text-champagne" />
+                      ) : (
+                        <Volume2 className="h-4 w-4 text-emerald-400 animate-pulse" />
+                      )}
+                    </button>
+                  </div>
+                ) : (
+                  <img
+                    src={expandedNomination.media_url || expandedNomination.thumbnail_url || FALLBACK_IMAGE_URL}
+                    alt=""
+                    className="w-full h-full object-cover"
+                  />
+                )}
+
+                {/* Category Tag */}
+                <span className="absolute left-3 top-3 z-10 inline-flex items-center gap-1 rounded-[8px] border border-champagne/60 bg-black/80 px-2.5 py-1 text-[9px] font-black uppercase tracking-[0.1em] text-champagneSoft backdrop-blur-sm">
+                  {getCategoryMeta(expandedNomination.category_id).label}
+                </span>
+              </div>
+
+              {/* Content Profile Navigation & Stats */}
+              <div className="p-4 space-y-3 bg-monolith">
+                {/* Interactive Profile header */}
+                <div
+                  onClick={() => handleProfileNavigation(expandedNomination.tiktoker_name)}
+                  className="flex items-center gap-3 cursor-pointer group p-2 rounded-[8px] border border-white/5 bg-void hover:border-champagne/40 transition"
+                >
+                  <div className="relative h-9 w-9 overflow-hidden rounded-full border border-champagne/40 bg-zinc-950 shrink-0">
+                    {expandedNomination.thumbnail_url ? (
+                      <img
+                        src={expandedNomination.thumbnail_url}
+                        alt=""
+                        className="h-full w-full object-cover group-hover:scale-105 transition"
+                      />
+                    ) : (
+                      <span className="flex h-full w-full items-center justify-center text-xs font-black text-[#d4af37]">
+                        {expandedNomination.tiktoker_name.slice(0, 2).toUpperCase()}
+                      </span>
+                    )}
+                  </div>
+                  <div className="min-w-0">
+                    <h3 className="text-md font-serif font-black tracking-tight text-white capitalize group-hover:text-champagneSoft transition truncate">
+                      @{expandedNomination.tiktoker_name}
+                    </h3>
+                    <p className="text-[7.5px] font-sans font-black text-zinc-500 uppercase tracking-widest mt-0.5">
+                      VOIR LE PROFIL DANS LE PALMARÈS →
+                    </p>
+                  </div>
+                </div>
+
+                {/* Folder comment description context */}
+                {expandedNomination.comment && (
+                  <div className="rounded-[8px] border border-white/10 bg-void p-3 text-xs font-medium leading-relaxed text-zinc-300">
+                    &ldquo;{expandedNomination.comment}&rdquo;
+                  </div>
+                )}
+
+                {/* Folder Ratings and Overall Stats */}
+                <div className="flex items-center justify-between border-t border-white/5 pt-3 text-[8.5px] font-sans font-black uppercase tracking-wider text-champagne">
+                  <span className="font-serif">
+                    {expandedNomination.ratings.length} NOTES SUR CE SCREEN
+                  </span>
+                  <div className="flex items-center gap-2 font-serif text-zinc-500">
+                    <span className="text-champagneSoft">
+                      {averageImpact(expandedNomination) || "0"} INDICE
+                    </span>
+                    <span>·</span>
+                    <span className="text-white">
+                      {averageRating(expandedNomination.ratings, expandedNomination.category_ids) ? `${averageRating(expandedNomination.ratings, expandedNomination.category_ids).toFixed(1)}★` : "-"}
+                    </span>
+                  </div>
+                </div>
+              </div>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
     </div>
   );
 }
