@@ -524,8 +524,6 @@ const DIRECT_FILTERS: Array<{ id: DirectFilter; label: string }> = [
   { id: "mine", label: "Moi" },
 ];
 
-
-
 function haptic(pattern: number | readonly number[]) {
   if (typeof window !== "undefined") {
     window.dispatchEvent(
@@ -539,8 +537,6 @@ function haptic(pattern: number | readonly number[]) {
     // iOS Safari ignore souvent cette API; les ressorts visuels gardent le retour tactile.
   }
 }
-
-
 
 function makeSessionId() {
   if (typeof crypto !== "undefined" && "randomUUID" in crypto)
@@ -572,8 +568,6 @@ function sanitizeTiktokerName(value: string) {
     .slice(0, 48);
 }
 
-
-
 function statusClass(status: NominationStatus) {
   if (status === "accepted")
     return "border-champagne/60 bg-champagne/15 text-champagneSoft";
@@ -581,8 +575,6 @@ function statusClass(status: NominationStatus) {
     return "border-red-400/30 bg-red-950/40 text-red-100";
   return "border-champagne/50 bg-white/5 text-champagneSoft";
 }
-
-
 
 function countdownToNextCeremony() {
   const now = new Date();
@@ -604,8 +596,6 @@ function isCurrentMonth(dateValue: string) {
     date.getMonth() === now.getMonth()
   );
 }
-
-
 
 function readPendingRatings(): PendingRatingPayload[] {
   if (typeof localStorage === "undefined") return [];
@@ -663,8 +653,6 @@ function addVotedNomination(id: string) {
     }
   } catch {}
 }
-
-
 
 function isLegacyDemoMedia(url: string) {
   return url === LEGACY_FLOWER_VIDEO_URL;
@@ -1100,7 +1088,9 @@ export default function Home() {
         },
         (payload) => {
           if (payload.eventType === "INSERT") {
-            const parsed = parseNomination(payload.new as Record<string, unknown>);
+            const parsed = parseNomination(
+              payload.new as Record<string, unknown>,
+            );
             if (parsed.submitted_by !== participant.id) {
               showToast("info", "Nouveau dossier à juger");
             }
@@ -1109,13 +1099,15 @@ export default function Home() {
               return [parsed, ...prev];
             });
           } else if (payload.eventType === "UPDATE") {
-            const parsed = parseNomination(payload.new as Record<string, unknown>);
+            const parsed = parseNomination(
+              payload.new as Record<string, unknown>,
+            );
             setNominations((prev) =>
               prev.map((n) =>
                 n.id === parsed.id
                   ? { ...n, ...parsed, ratings: n.ratings }
-                  : n
-              )
+                  : n,
+              ),
             );
           } else if (payload.eventType === "DELETE") {
             const deletedId = toText(payload.old?.id);
@@ -1135,7 +1127,10 @@ export default function Home() {
           table: "ratings",
         },
         (payload) => {
-          if (payload.eventType === "INSERT" || payload.eventType === "UPDATE") {
+          if (
+            payload.eventType === "INSERT" ||
+            payload.eventType === "UPDATE"
+          ) {
             const rating = parseRating(payload.new as Record<string, unknown>);
             setNominations((prev) =>
               prev.map((n) => {
@@ -1154,7 +1149,7 @@ export default function Home() {
                   ratings: nextRatings,
                   status: statusFromRatings(nextRatings),
                 };
-              })
+              }),
             );
           } else if (payload.eventType === "DELETE") {
             const deletedId = toText(payload.old?.id);
@@ -1162,7 +1157,7 @@ export default function Home() {
               prev.map((n) => ({
                 ...n,
                 ratings: n.ratings.filter((r) => r.id !== deletedId),
-              }))
+              })),
             );
           }
 
@@ -1333,59 +1328,42 @@ export default function Home() {
   );
 
   const submitRatingSafely = useCallback(
-    async (nomination: Nomination, scores: DimensionScores, review: string) => {
-      if (!participant || !supabase) return false;
+    async (
+      nominationId: string,
+      voterId: string,
+      scores: {
+        rire: number;
+        surprise: number;
+        gene: number;
+        fierte: number;
+        interet: number;
+      },
+      comment: string | null,
+    ) => {
+      if (!supabase) return false;
 
-      const safeScores = cloneScores(scores);
-      const safeReview = review.trim();
-      const averageScore = scoreAverage(safeScores, nomination.category_ids);
-      const impactPoints = scoreTotal(safeScores, nomination.category_ids);
+      try {
+        console.log("[NOD Vote] Envoi unifié de la note vers le RPC");
 
-      const rpcPayload = {
-        target_nomination_id: nomination.id,
-        voter_id: participant.id,
-        rire: safeScores.rire,
-        surprise: safeScores.surprise,
-        gene: safeScores.gene,
-        fierte: safeScores.fierte,
-        interet: safeScores.interet,
-        reaction_comment: safeReview,
-      };
+        // Ajout du cast 'as any' pour bypasser le blocage de type strict généré par Supabase
+        const { error } = await supabase.rpc("submit_nomination_vote", {
+          p_nomination_id: nominationId,
+          p_voter_id: voterId,
+          p_rire: scores.rire,
+          p_surprise: scores.surprise,
+          p_gene: scores.gene,
+          p_fierte: scores.fierte,
+          p_interet: scores.interet,
+          p_reaction_comment: comment,
+        } as any);
 
-      const rpcResult = await supabase.rpc(
-        "submit_nomination_vote",
-        rpcPayload,
-      );
-      if (!rpcResult.error) return true;
-
-      const legacyResult = await supabase.rpc("submit_nomination_vote", {
-        target_nomination_id: nomination.id,
-        voter_id: participant.id,
-        stars: Math.max(0, Math.round(averageScore)),
-        reaction_comment: safeReview,
-      });
-      if (!legacyResult.error) return true;
-
-      const upsertResult = await supabase.from("ratings").upsert(
-        {
-          nomination_id: nomination.id,
-          voter_id: participant.id,
-          rating_stars: Math.max(0, Math.round(averageScore)),
-          rating_score: averageScore,
-          rating_points: impactPoints,
-          rire_score: safeScores.rire,
-          surprise_score: safeScores.surprise,
-          gene_score: safeScores.gene,
-          fierte_score: safeScores.fierte,
-          interet_score: safeScores.interet,
-          comment: safeReview,
-        },
-        { onConflict: "nomination_id,voter_id" },
-      );
-
-      return !upsertResult.error;
+        return !error;
+      } catch (err) {
+        console.error("[NOD Vote Error] Échec de la persistance réseau", err);
+        return false;
+      }
     },
-    [participant, supabase],
+    [supabase],
   );
 
   useEffect(() => {
@@ -1408,8 +1386,9 @@ export default function Home() {
 
         try {
           const ok = await submitRatingSafely(
-            nomination,
-            cloneScores(payload.scores),
+            nomination.id,
+            participant.id,
+            cloneScores(payload.scores) as any,
             payload.comment,
           );
           if (!ok) stillPending.push(payload);
@@ -1471,7 +1450,7 @@ export default function Home() {
     initial: { opacity: 1, x: 0 },
     animate: { opacity: 1, x: 0 },
     exit: { opacity: 1, x: 0 },
-    transition: { duration: 0 }
+    transition: { duration: 0 },
   } as const;
 
   const handleSectionDrag = useCallback(
@@ -1754,8 +1733,11 @@ export default function Home() {
         const { data: tiktoker, error: tiktokerError } = await supabase
           .from("tiktokers")
           .upsert(
-            { username: cleanTiktokerName, avatar_url: thumbnailUpload.publicUrl },
-            { onConflict: "username" }
+            {
+              username: cleanTiktokerName,
+              avatar_url: thumbnailUpload.publicUrl,
+            },
+            { onConflict: "username" },
           )
           .select("id")
           .single();
@@ -1807,7 +1789,9 @@ export default function Home() {
         };
         delete legacyInsert.category_ids;
         delete (legacyInsert as any).tiktoker_id;
-        console.info("[NOD Insert] Retrying without category_ids or tiktoker_id...");
+        console.info(
+          "[NOD Insert] Retrying without category_ids or tiktoker_id...",
+        );
         const legacy = await supabase
           .from("nominations")
           .insert(legacyInsert)
@@ -2100,10 +2084,12 @@ export default function Home() {
         </header>
 
         <div className="tabloid-scroll mx-auto w-full max-w-[30rem] px-2">
-
           <AnimatePresence mode="wait" custom={dir}>
             {showSandbox && (
-              <PreviewCatalog key="sandbox" onClose={() => setShowSandbox(false)} />
+              <PreviewCatalog
+                key="sandbox"
+                onClose={() => setShowSandbox(false)}
+              />
             )}
 
             {!showSandbox && tab === "direct" && (

@@ -1,7 +1,9 @@
+mkdir -p ~/.claude && cat << 'EOF' > ~/.claude/config.json
 {
   "api": {
     "baseUrl": "http://localhost:11434/v1",
     "apiKey": "ollama"
   },
-  "defaultModel": "qwen2.5-coder:1.5b"
+  "defaultModel": "qwen2.5-coder:7b"
 }
+EOF
