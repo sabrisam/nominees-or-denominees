@@ -85,6 +85,7 @@ export function DirectTab({
   activeMemberCount,
   switchTab,
   setShowSandbox,
+  onCardClick,
   loading = false,
   currentLiveEvent = feedItems && feedItems.length > 0 ? feedItems[0] : null,
 }: {
@@ -108,6 +109,7 @@ export function DirectTab({
   activeMemberCount: number;
   switchTab: (t: Tab) => void;
   setShowSandbox: (show: boolean) => void;
+  onCardClick?: (n: Nomination) => void;
   loading?: boolean;
   currentLiveEvent?: any;
 }) {
@@ -315,6 +317,7 @@ export function DirectTab({
                   onEdit={() => startEditNomination(nomination)}
                   onRemove={() => void removeNomination(nomination)}
                   onVote={() => switchTab("vote")}
+                  onCardClick={onCardClick}
                   busy={mutationBusyId === nomination.id}
                 />
               ))}
@@ -365,6 +368,7 @@ export function DirectTab({
                             void removeNomination(item.nomination!)
                           }
                           onVote={() => switchTab("vote")}
+                          onCardClick={onCardClick}
                           busy={mutationBusyId === item.nomination.id}
                         />
                       </motion.div>
@@ -531,6 +535,7 @@ export function DirectTab({
                     onEdit={() => startEditNomination(nomination)}
                     onRemove={() => void removeNomination(nomination)}
                     onVote={() => switchTab("vote")}
+                    onCardClick={onCardClick}
                     busy={mutationBusyId === nomination.id}
                   />
                 </motion.div>
