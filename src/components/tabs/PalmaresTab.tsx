@@ -12,7 +12,7 @@ import {
 } from "lucide-react";
 import { BrutalCard } from "../ui/BrutalCard";
 import { getCategoryMeta } from "@/lib/scoring";
-import type { PalmaresRow, Tab } from "@/types";
+import type { PalmaresRow, Tab, Nomination } from "@/types";
 
 const PalmaresRowItem = React.memo(({
   row,
