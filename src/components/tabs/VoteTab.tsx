@@ -1,3 +1,4 @@
+import React, { useMemo } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { Check, Flame, Sparkles } from "lucide-react";
 import { BrutalCard } from "../ui/BrutalCard";
@@ -18,17 +19,179 @@ const TAP_TRANSITION = {
   mass: 0.42,
 } as const;
 
-/**
- * Critique 5-dimensionnelle (inspirée du protocole Open Design) appliquée à chaque vote :
- *
- * 1. Philosophie   — Cohérence entre l'intention éditoriale et la catégorie soumise.
- * 2. Hiérarchie    — Le pseudo du TikToker et la catégorie dominent la lecture de la carte.
- * 3. Exécution     — Alignement parfait, 0 overflow de pixels, médias chargés.
- * 4. Spécificité   — Aucun placeholder générique ; chaque carte est unique au dossier.
- * 5. Retenue       — Zéro gradient agressif, 1 accent champagne max par carte.
- *
- * Ces règles de qualité sont appliquées visuellement ci-dessous.
- */
+const VoteItemCard = React.memo(({
+  nomination,
+  draftScores,
+  draftReview,
+  onScoreSelect,
+  onScoreChange,
+  onReviewChange,
+  voteBusyId,
+  shakeId,
+  ownsNomination,
+  applyRating,
+  reduceMotion,
+}: {
+  nomination: Nomination;
+  draftScores: DimensionScores;
+  draftReview: string;
+  onScoreSelect: (value: DimensionScores) => void;
+  onScoreChange: (value: DimensionScores) => void;
+  onReviewChange: (val: string) => void;
+  voteBusyId: string | null;
+  shakeId: string | null;
+  ownsNomination: (n: Nomination) => boolean;
+  applyRating: (id: string) => Promise<void>;
+  reduceMotion: boolean;
+}) => {
+  const category = useMemo(() => getCategoryMeta(nomination.category_id), [nomination.category_id]);
+  const categoryLabel = category.label;
+  const Icon = category.icon;
+
+  const currentScore = useMemo(() => {
+    return scoreTotal(draftScores, nomination.category_ids);
+  }, [draftScores, nomination.category_ids]);
+
+  return (
+    <motion.article
+      layout={reduceMotion ? false : "position"}
+      key={nomination.id}
+      initial={{ opacity: 0, y: 12, scale: 0.97 }}
+      animate={
+        shakeId === nomination.id
+          ? {
+              x: [0, -10, 10, -6, 6, 0],
+              scale: [1, 0.99, 1.01, 1],
+              opacity: 1,
+              y: 0,
+            }
+          : { x: 0, scale: 1, opacity: 1, y: 0 }
+      }
+      exit={{ opacity: 0, scale: 0.95, y: -8 }}
+      transition={{
+        duration: reduceMotion ? 0.01 : 0.42,
+        layout: { type: "spring", stiffness: 380, damping: 32 },
+      }}
+      className="brutal-card overflow-hidden"
+    >
+      {/* Media + overlay info */}
+      <div className="relative border-b border-champagne/20 bg-void">
+        <MediaFrame
+          nomination={nomination}
+          height="aspect-[9/16] max-h-[52svh]"
+        />
+
+        {/* Catégorie badge */}
+        <span className="absolute left-2 top-2 -rotate-2 inline-flex items-center gap-1 rounded-[8px] border px-2 py-0.5 text-[8px] font-black uppercase tracking-[0.1em] leading-none border-champagne/60 bg-black/70 text-champagneSoft backdrop-blur-sm font-sans">
+          <Icon className="h-2.5 w-2.5" />
+          {categoryLabel}
+        </span>
+
+        <OwnershipBadge
+          owned={ownsNomination(nomination)}
+          className="absolute right-2 top-2 rotate-2"
+        />
+
+        {/* TikToker name overlay */}
+        <div className="absolute bottom-2 left-2 right-2 rounded-[10px] border border-champagne/30 bg-black/75 p-2 backdrop-blur-md">
+          <p className="tabloid-headline text-[clamp(1.22rem,6.2vw,2rem)] leading-[0.84] text-white font-serif italic normal-case">
+            {nomination.tiktoker_name}
+          </p>
+        </div>
+      </div>
+
+      {/* Interaction zone */}
+      <div className="space-y-1.5 p-2 bg-monolith">
+        {/* Commentaire du dossier */}
+        {nomination.comment && (
+          <p className="rounded-[8px] border border-white/10 bg-void p-2 text-xs font-medium leading-tight text-zinc-300 font-sans">
+            &quot;{nomination.comment}&quot;
+          </p>
+        )}
+
+        {/* Profils rapides */}
+        <ScorePresetRail
+          value={draftScores}
+          compact
+          onSelect={onScoreSelect}
+          label="Profils rapides pour ce vote"
+        />
+
+        {/* Grille de dimensions */}
+        <DimensionScoreGrid
+          value={draftScores}
+          onChange={onScoreChange}
+          compact
+        />
+
+        {/* Réaction textuelle */}
+        <textarea
+          aria-label="Ta réaction sur ce dossier"
+          value={draftReview}
+          onChange={(event) => onReviewChange(event.target.value)}
+          placeholder="Ta réaction sur ce dossier ?"
+          rows={2}
+          maxLength={180}
+          className="brutal-input w-full resize-none p-2 font-sans"
+        />
+
+        {/* Score preview indicator */}
+        <div className="flex items-center justify-between px-0.5">
+          <span className="text-[9px] font-black uppercase tracking-[0.12em] text-zinc-500 font-sans">
+            Indice calculé
+          </span>
+          <span
+            className={`text-[13px] font-serif font-black leading-none ${
+              currentScore >= 80
+                ? "text-champagneSoft"
+                : currentScore >= 60
+                  ? "text-champagne"
+                  : "text-zinc-400"
+            }`}
+          >
+            {currentScore}
+            <span className="text-[9px] text-zinc-500 font-sans">
+              /100
+            </span>
+          </span>
+        </div>
+
+        {/* Bouton de validation */}
+        <motion.button
+          whileTap={TAP_REBOUND}
+          transition={TAP_TRANSITION}
+          onClick={() => void applyRating(nomination.id)}
+          disabled={voteBusyId === nomination.id}
+          className="brutal-action w-full bg-champagne text-black disabled:opacity-50 flex items-center justify-center gap-2 font-sans"
+        >
+          {voteBusyId === nomination.id ? (
+            <>
+              <motion.span
+                animate={{ rotate: 360 }}
+                transition={{
+                  duration: 0.8,
+                  repeat: Infinity,
+                  ease: "linear",
+                }}
+                className="inline-block"
+              >
+                ⏳
+              </motion.span>
+              Enregistrement en cours
+            </>
+          ) : (
+            <>
+              <Flame className="h-3.5 w-3.5" />
+              Enregistrer la note · {currentScore}/100
+            </>
+          )}
+        </motion.button>
+      </div>
+    </motion.article>
+  );
+});
+
+VoteItemCard.displayName = "VoteItemCard";
 
 export function VoteTab({
   pendingForMe,
@@ -90,7 +253,7 @@ export function VoteTab({
 
       {pendingForMe.length === 0 ? (
         <motion.div
-          layout
+          layout={reduceMotion ? false : "position"}
           initial={{ opacity: 0, scale: 0.95 }}
           animate={{ opacity: 1, scale: 1 }}
           exit={{ opacity: 0, scale: 0.95 }}
@@ -130,170 +293,41 @@ export function VoteTab({
             </p>
           </div>
 
-          <AnimatePresence mode="popLayout">
+          <AnimatePresence mode={reduceMotion ? "sync" : "popLayout"}>
             {pendingForMe.map((nomination) => {
-              const category = getCategoryMeta(nomination.category_id);
-              const categoryLabel = category.label;
-              const Icon = category.icon;
-              const draftScores = cloneScores(
-                scoreDraftById[nomination.id] ?? DEFAULT_DIMENSION_SCORES,
-              );
-              const currentScore = scoreTotal(
-                draftScores,
-                nomination.category_ids,
-              );
+              const draftScores = scoreDraftById[nomination.id] ?? DEFAULT_DIMENSION_SCORES;
+              const draftReview = reviewDraftById[nomination.id] ?? "";
 
               return (
-                <motion.article
-                  layout
+                <VoteItemCard
                   key={nomination.id}
-                  initial={{ opacity: 0, y: 12, scale: 0.97 }}
-                  animate={
-                    shakeId === nomination.id
-                      ? {
-                          x: [0, -10, 10, -6, 6, 0],
-                          scale: [1, 0.99, 1.01, 1],
-                          opacity: 1,
-                          y: 0,
-                        }
-                      : { x: 0, scale: 1, opacity: 1, y: 0 }
+                  nomination={nomination}
+                  draftScores={draftScores}
+                  draftReview={draftReview}
+                  onScoreSelect={(value) =>
+                    setScoreDraftById((prev) => ({
+                      ...prev,
+                      [nomination.id]: value,
+                    }))
                   }
-                  exit={{ opacity: 0, scale: 0.95, y: -8 }}
-                  transition={{
-                    duration: 0.42,
-                    layout: { type: "spring", stiffness: 380, damping: 32 },
-                  }}
-                  className="brutal-card overflow-hidden"
-                >
-                  {/* Media + overlay info */}
-                  <div className="relative border-b border-champagne/20 bg-void">
-                    <MediaFrame
-                      nomination={nomination}
-                      height="aspect-[9/16] max-h-[52svh]"
-                    />
-
-                    {/* Catégorie badge */}
-                    <span className="absolute left-2 top-2 -rotate-2 inline-flex items-center gap-1 rounded-[8px] border px-2 py-0.5 text-[8px] font-black uppercase tracking-[0.1em] leading-none border-champagne/60 bg-black/70 text-champagneSoft backdrop-blur-sm font-sans">
-                      <Icon className="h-2.5 w-2.5" />
-                      {categoryLabel}
-                    </span>
-
-                    <OwnershipBadge
-                      owned={ownsNomination(nomination)}
-                      className="absolute right-2 top-2 rotate-2"
-                    />
-
-                    {/* TikToker name overlay */}
-                    <div className="absolute bottom-2 left-2 right-2 rounded-[10px] border border-champagne/30 bg-black/75 p-2 backdrop-blur-md">
-                      <p className="tabloid-headline text-[clamp(1.22rem,6.2vw,2rem)] leading-[0.84] text-white font-serif italic normal-case">
-                        {nomination.tiktoker_name}
-                      </p>
-                    </div>
-                  </div>
-
-                  {/* Interaction zone */}
-                  <div className="space-y-1.5 p-2 bg-monolith">
-                    {/* Commentaire du dossier */}
-                    {nomination.comment && (
-                      <p className="rounded-[8px] border border-white/10 bg-void p-2 text-xs font-medium leading-tight text-zinc-300 font-sans">
-                        &quot;{nomination.comment}&quot;
-                      </p>
-                    )}
-
-                    {/* Profils rapides */}
-                    <ScorePresetRail
-                      value={draftScores}
-                      compact
-                      onSelect={(value) =>
-                        setScoreDraftById((prev) => ({
-                          ...prev,
-                          [nomination.id]: value,
-                        }))
-                      }
-                      label="Profils rapides pour ce vote"
-                    />
-
-                    {/* Grille de dimensions */}
-                    <DimensionScoreGrid
-                      value={draftScores}
-                      onChange={(value) =>
-                        setScoreDraftById((prev) => ({
-                          ...prev,
-                          [nomination.id]: value,
-                        }))
-                      }
-                      compact
-                    />
-
-                    {/* Réaction textuelle */}
-                    <textarea
-                      aria-label="Ta réaction sur ce dossier"
-                      value={reviewDraftById[nomination.id] ?? ""}
-                      onChange={(event) =>
-                        setReviewDraftById((prev) => ({
-                          ...prev,
-                          [nomination.id]: event.target.value,
-                        }))
-                      }
-                      placeholder="Ta réaction sur ce dossier ?"
-                      rows={2}
-                      maxLength={180}
-                      className="brutal-input w-full resize-none p-2 font-sans"
-                    />
-
-                    {/* Score preview indicator */}
-                    <div className="flex items-center justify-between px-0.5">
-                      <span className="text-[9px] font-black uppercase tracking-[0.12em] text-zinc-500 font-sans">
-                        Indice calculé
-                      </span>
-                      <span
-                        className={`text-[13px] font-serif font-black leading-none ${
-                          currentScore >= 80
-                            ? "text-champagneSoft"
-                            : currentScore >= 60
-                              ? "text-champagne"
-                              : "text-zinc-400"
-                        }`}
-                      >
-                        {currentScore}
-                        <span className="text-[9px] text-zinc-500 font-sans">
-                          /100
-                        </span>
-                      </span>
-                    </div>
-
-                    {/* Bouton de validation */}
-                    <motion.button
-                      whileTap={TAP_REBOUND}
-                      transition={TAP_TRANSITION}
-                      onClick={() => void applyRating(nomination.id)}
-                      disabled={voteBusyId === nomination.id}
-                      className="brutal-action w-full bg-champagne text-black disabled:opacity-50 flex items-center justify-center gap-2 font-sans"
-                    >
-                      {voteBusyId === nomination.id ? (
-                        <>
-                          <motion.span
-                            animate={{ rotate: 360 }}
-                            transition={{
-                              duration: 0.8,
-                              repeat: Infinity,
-                              ease: "linear",
-                            }}
-                            className="inline-block"
-                          >
-                            ⏳
-                          </motion.span>
-                          Enregistrement en cours
-                        </>
-                      ) : (
-                        <>
-                          <Flame className="h-3.5 w-3.5" />
-                          Enregistrer la note · {currentScore}/100
-                        </>
-                      )}
-                    </motion.button>
-                  </div>
-                </motion.article>
+                  onScoreChange={(value) =>
+                    setScoreDraftById((prev) => ({
+                      ...prev,
+                      [nomination.id]: value,
+                    }))
+                  }
+                  onReviewChange={(value) =>
+                    setReviewDraftById((prev) => ({
+                      ...prev,
+                      [nomination.id]: value,
+                    }))
+                  }
+                  voteBusyId={voteBusyId}
+                  shakeId={shakeId}
+                  ownsNomination={ownsNomination}
+                  applyRating={applyRating}
+                  reduceMotion={reduceMotion}
+                />
               );
             })}
           </AnimatePresence>
