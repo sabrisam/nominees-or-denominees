@@ -859,7 +859,7 @@ export default function Home() {
         } else {
           const { error } = await client.auth.signInAnonymously();
           if (error) {
-            setBootError(error.message || "Échec authentification anonyme.");
+            setBootError(error.message || "Échec authentification anonyme");
           } else {
             // Wait for next effect run or reload
             window.location.reload();
