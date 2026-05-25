@@ -90,8 +90,8 @@ export function StudioTab({
 
     if (!isAllowedType || file.size > MAX_UPLOAD_BYTES) {
       const message = !isAllowedType
-        ? "Seuls les fichiers image et vidéo sont autorisés."
-        : "Taille maximale atteinte : 25 Mo.";
+        ? "Seuls les fichiers image et vidéo sont autorisés"
+        : "Taille maximale atteinte : 25 Mo";
       window.alert(message);
       await prepareMedia(null);
       return;
@@ -108,7 +108,7 @@ export function StudioTab({
           : "aucune"
       }`;
     console.info("AI PUNCHLINE PROMPT", prompt);
-    window.alert("Prompt IA prêt dans la console du navigateur.");
+    window.alert("Prompt IA prêt dans la console du navigateur");
   };
 
   return (
