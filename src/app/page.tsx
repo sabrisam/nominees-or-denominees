@@ -1052,7 +1052,7 @@ export default function Home() {
           await fetchNominations(false, activeRoomId);
       } catch (err) {
         const message =
-          err instanceof Error ? err.message : "Salon introuvable.";
+          err instanceof Error ? err.message : "Salon introuvable";
         showToast("error", message);
       }
     })();
