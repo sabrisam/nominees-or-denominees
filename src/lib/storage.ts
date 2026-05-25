@@ -1,7 +1,7 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 import type { UploadReference } from "@/types";
 
-export const STORAGE_UNAVAILABLE_NOTICE = "Stockage indisponible : échec du transfert serveur.";
+export const STORAGE_UNAVAILABLE_NOTICE = "Stockage indisponible : échec du transfert serveur";
 
 const SUPABASE_STORAGE_BUCKET = "nod-media";
 
@@ -67,7 +67,7 @@ export function waitForMediaEvent(target: HTMLMediaElement, eventName: string, t
   return new Promise<void>((resolve, reject) => {
     const timer = window.setTimeout(() => {
       cleanup();
-      reject(new Error("Lecture média impossible."));
+      reject(new Error("Lecture média impossible"));
     }, timeoutMs);
 
     const onEvent = () => {
@@ -77,7 +77,7 @@ export function waitForMediaEvent(target: HTMLMediaElement, eventName: string, t
 
     const onError = () => {
       cleanup();
-      reject(new Error("Fichier média illisible."));
+      reject(new Error("Fichier média illisible"));
     };
 
     const cleanup = () => {
@@ -96,7 +96,7 @@ export function canvasToBlob(canvas: HTMLCanvasElement, mimeType: string, qualit
     canvas.toBlob(
       (blob) => {
         if (blob) resolve(blob);
-        else reject(new Error("Aperçu impossible."));
+        else reject(new Error("Aperçu impossible"));
       },
       mimeType,
       quality
@@ -123,7 +123,7 @@ export async function compressImageToWebp(file: File) {
     canvas.width = size.width;
     canvas.height = size.height;
     const context = canvas.getContext("2d", { alpha: false });
-    if (!context) throw new Error("Aperçu impossible sur ce téléphone.");
+    if (!context) throw new Error("Aperçu impossible sur ce téléphone");
 
     context.drawImage(bitmap, 0, 0, size.width, size.height);
     const blob = await canvasToBlob(canvas, "image/webp", 0.84);
@@ -162,7 +162,7 @@ export async function extractVideoThumbnail(file: File) {
     canvas.width = size.width;
     canvas.height = size.height;
     const context = canvas.getContext("2d", { alpha: false });
-    if (!context) throw new Error("Aperçu impossible sur ce téléphone.");
+    if (!context) throw new Error("Aperçu impossible sur ce téléphone");
 
     context.drawImage(video, 0, 0, size.width, size.height);
     const blob = await canvasToBlob(canvas, "image/jpeg", 0.86);
@@ -182,7 +182,7 @@ export async function uploadMediaFile(
   folder: "videos" | "miniatures",
   signal?: AbortSignal
 ): Promise<UploadReference> {
-  if (signal?.aborted) throw new DOMException("Upload annulé.", "AbortError");
+  if (signal?.aborted) throw new DOMException("Upload annulé", "AbortError");
 
   // 1. Diagnostic: verify active session before upload
   const { data: sessionData } = await supabase.auth.getSession();
@@ -190,7 +190,7 @@ export async function uploadMediaFile(
   const token = sessionData?.session?.access_token ?? null;
   
   if (!uid || !token) {
-    const msg = "Upload refusé : aucune session authentifiée active. Active le Sign-In Anonyme sur Supabase.";
+    const msg = "Upload refusé : aucune session authentifiée active. Active le Sign-In Anonyme sur Supabase";
     console.error(`[NOD Upload] ${msg}`);
     throw new Error(msg);
   }
