@@ -55,7 +55,6 @@ export function MediaFrame({
             src={nomination.thumbnail_url}
             alt=""
             fill
-            unoptimized
             sizes="100vw"
             className="object-cover opacity-55"
           />
@@ -149,7 +148,6 @@ export function MediaFrame({
         }
         alt=""
         fill
-        unoptimized
         sizes="100vw"
         onLoadingComplete={() => setResolving(false)}
         onError={() => {
