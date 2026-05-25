@@ -1831,7 +1831,8 @@ export default function Home() {
         ratings: [],
       };
       const initialRatingSaved = await submitRatingSafely(
-        initialNomination,
+        initialNomination.id,
+        participant.id,
         initialScores,
         cleanedComment,
       );
