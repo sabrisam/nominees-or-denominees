@@ -59,6 +59,8 @@ import {
 import { Ticker } from "@/components/ui/Ticker";
 import { BrutalCard } from "@/components/ui/BrutalCard";
 import { CeremonyBulletin } from "@/components/direct/CeremonyBulletin";
+import { DirectTab } from "@/components/tabs/DirectTab";
+import { VoteTab } from "@/components/tabs/VoteTab";
 import dynamic from "next/dynamic";
 
 const StudioTab = dynamic(
