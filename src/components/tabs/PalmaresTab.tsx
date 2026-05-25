@@ -43,11 +43,11 @@ const PalmaresRowItem = React.memo(({
     let count = 0;
     creatorNominations.forEach((n) => {
       n.ratings.forEach((r) => {
-        totals.rire += r.scores?.rire ?? r.rire_score ?? 0;
-        totals.surprise += r.scores?.surprise ?? r.surprise_score ?? 0;
-        totals.gene += r.scores?.gene ?? r.gene_score ?? 0;
-        totals.fierte += r.scores?.fierte ?? r.fierte_score ?? 0;
-        totals.interet += r.scores?.interet ?? r.interet_score ?? 0;
+        totals.rire += r.scores?.rire ?? 0;
+        totals.surprise += r.scores?.surprise ?? 0;
+        totals.gene += r.scores?.gene ?? 0;
+        totals.fierte += r.scores?.fierte ?? 0;
+        totals.interet += r.scores?.interet ?? 0;
         count++;
       });
     });
