@@ -19,7 +19,7 @@ const TAP_TRANSITION = {
   mass: 0.42,
 } as const;
 
-export const NominationCard = React.memo(({
+function NominationCardComponent({
   nomination,
   index = 0,
   owned = false,
@@ -37,7 +37,7 @@ export const NominationCard = React.memo(({
   onVote?: () => void;
   onCardClick?: (n: Nomination) => void;
   busy?: boolean;
-}) => {
+}) {
   const category = getCategoryMeta(nomination.category_id);
   const Icon = category.icon;
   const rating = averageRating(nomination.ratings, nomination.category_ids);
@@ -166,6 +166,7 @@ export const NominationCard = React.memo(({
         </div>
       </BrutalCard>
   );
-});
+}
 
+export const NominationCard = React.memo(NominationCardComponent);
 NominationCard.displayName = "NominationCard";
