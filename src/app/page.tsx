@@ -850,12 +850,12 @@ export default function Home() {
             localStorage.getItem(PSEUDO_KEY) || "",
           );
           const nextPseudo =
-            storedPseudo || `Joueur ${localDeviceId.slice(0, 4).toUpperCase()}`;
+            storedPseudo || `Joueur ${user.id.slice(0, 4).toUpperCase()}`;
 
           if (storedPseudo !== nextPseudo)
             localStorage.setItem(PSEUDO_KEY, nextPseudo);
 
-          setParticipant({ id: localDeviceId, pseudo: nextPseudo });
+          setParticipant({ id: user.id, pseudo: nextPseudo });
         } else {
           const { error } = await client.auth.signInAnonymously();
           if (error) {
