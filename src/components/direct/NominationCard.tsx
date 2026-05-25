@@ -25,6 +25,7 @@ export function NominationCard({
   onEdit,
   onRemove,
   onVote,
+  onCardClick,
   busy = false,
 }: {
   nomination: Nomination;
@@ -33,6 +34,7 @@ export function NominationCard({
   onEdit?: () => void;
   onRemove?: () => void;
   onVote?: () => void;
+  onCardClick?: (n: Nomination) => void;
   busy?: boolean;
 }) {
   const category = getCategoryMeta(nomination.category_id);
@@ -49,7 +51,8 @@ export function NominationCard({
       whileHover={{ scale: 1.012 }}
       whileTap={{ scale: 0.99 }}
       transition={{ type: "spring", stiffness: 400, damping: 25 }}
-      className="w-full"
+      className="w-full cursor-pointer"
+      onClick={() => onCardClick?.(nomination)}
     >
       <BrutalCard
         layout
@@ -98,7 +101,10 @@ export function NominationCard({
               <motion.button
                 whileTap={TAP_REBOUND}
                 transition={TAP_TRANSITION}
-                onClick={onVote}
+                onClick={(e) => {
+                  e.stopPropagation();
+                  onVote();
+                }}
                 className="brutal-action bg-champagne px-2.5 py-1 text-[9px] text-black font-black uppercase tracking-tight shrink-0 self-start font-sans"
                 type="button"
               >
@@ -132,7 +138,10 @@ export function NominationCard({
               <motion.button
                 whileTap={TAP_REBOUND}
                 transition={TAP_TRANSITION}
-                onClick={onEdit}
+                onClick={(e) => {
+                  e.stopPropagation();
+                  onEdit?.();
+                }}
                 className="owner-action bg-white/5 border border-white/10 hover:border-white/20 text-white py-1 font-sans"
                 type="button"
               >
@@ -141,7 +150,10 @@ export function NominationCard({
               <motion.button
                 whileTap={TAP_REBOUND}
                 transition={TAP_TRANSITION}
-                onClick={onRemove}
+                onClick={(e) => {
+                  e.stopPropagation();
+                  onRemove?.();
+                }}
                 disabled={busy}
                 className="owner-action bg-red-950/20 border border-red-500/20 text-red-400 hover:bg-red-950/40 disabled:opacity-50 py-1 font-sans"
                 type="button"
