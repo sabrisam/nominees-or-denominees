@@ -11,7 +11,6 @@ import {
   useTransition,
   type ReactNode,
 } from "react";
-import confetti from "canvas-confetti";
 import { theme } from "@/lib/tokens";
 import {
   getSupabaseBrowserClient,
@@ -60,12 +59,63 @@ import {
 import { Ticker } from "@/components/ui/Ticker";
 import { BrutalCard } from "@/components/ui/BrutalCard";
 import { CeremonyBulletin } from "@/components/direct/CeremonyBulletin";
-import { DirectTab } from "@/components/tabs/DirectTab";
-import { VoteTab } from "@/components/tabs/VoteTab";
-import { StudioTab } from "@/components/tabs/StudioTab";
-import { PalmaresTab } from "@/components/tabs/PalmaresTab";
-import { WinnersTab } from "@/components/tabs/WinnersTab";
-import { PreviewCatalog } from "@/components/tabs/PreviewCatalog";
+import dynamic from "next/dynamic";
+
+const StudioTab = dynamic(
+  () => import("@/components/tabs/StudioTab").then((mod) => mod.StudioTab),
+  {
+    loading: () => (
+      <div className="flex min-h-[40svh] items-center justify-center text-center">
+        <div className="font-serif text-champagne animate-pulse tracking-widest">
+          CHARGEMENT DU STUDIO
+        </div>
+      </div>
+    ),
+    ssr: false,
+  }
+);
+
+const PalmaresTab = dynamic(
+  () => import("@/components/tabs/PalmaresTab").then((mod) => mod.PalmaresTab),
+  {
+    loading: () => (
+      <div className="flex min-h-[40svh] items-center justify-center text-center">
+        <div className="font-serif text-champagne animate-pulse tracking-widest">
+          CHARGEMENT DU PALMARÈS
+        </div>
+      </div>
+    ),
+    ssr: false,
+  }
+);
+
+const WinnersTab = dynamic(
+  () => import("@/components/tabs/WinnersTab").then((mod) => mod.WinnersTab),
+  {
+    loading: () => (
+      <div className="flex min-h-[40svh] items-center justify-center text-center">
+        <div className="font-serif text-champagne animate-pulse tracking-widest">
+          CHARGEMENT DES TROPHÉES
+        </div>
+      </div>
+    ),
+    ssr: false,
+  }
+);
+
+const PreviewCatalog = dynamic(
+  () => import("@/components/tabs/PreviewCatalog").then((mod) => mod.PreviewCatalog),
+  {
+    loading: () => (
+      <div className="rounded-[10px] border border-dashed border-champagne/20 bg-monolith p-6 text-center animate-pulse">
+        <p className="text-[10px] font-black uppercase tracking-widest text-champagne font-sans">
+          Chargement de la Sandbox
+        </p>
+      </div>
+    ),
+    ssr: false,
+  }
+);
 import {
   AnimatePresence,
   motion,
@@ -660,7 +710,8 @@ function isLegacyDemoMedia(url: string) {
   return url === LEGACY_FLOWER_VIDEO_URL;
 }
 
-function studioBurst() {
+async function studioBurst() {
+  const confetti = (await import("canvas-confetti")).default;
   const colors = [
     theme.colors.champagne,
     theme.colors.silver,
@@ -678,7 +729,8 @@ function studioBurst() {
   });
 }
 
-function voteBurst(points: number) {
+async function voteBurst(points: number) {
+  const confetti = (await import("canvas-confetti")).default;
   const elite = points >= 80;
   const colors = elite
     ? [
