@@ -57,7 +57,7 @@ export function useNominations({
         setNominations(filtered);
       } catch (err) {
         if (!silent && showToast) {
-          const message = err instanceof Error ? err.message : "Le direct refuse de répondre.";
+          const message = err instanceof Error ? err.message : "Le direct refuse de répondre";
           showToast("error", message);
         }
       } finally {
