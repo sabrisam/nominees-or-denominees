@@ -52,7 +52,7 @@ export function useNominations({
         const filtered = rows.filter(
           (nomination) =>
             !localExclusions.includes(nomination.id) &&
-            !nomination.ratings.some((r) => r.voter_id === localDeviceId)
+            !nomination.ratings.some((r) => r.voter_id === participantId)
         );
         setNominations(filtered);
       } catch (err) {
@@ -96,6 +96,7 @@ export function useNominations({
 
     return () => {
       window.clearInterval(poll);
+      void channel.unsubscribe();
       void supabase.removeChannel(channel);
     };
   }, [fetchNominations, participantId, roomId, showToast]);
