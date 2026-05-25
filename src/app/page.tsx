@@ -1542,7 +1542,7 @@ export default function Home() {
     } catch (err) {
       clearPreparedMedia();
       const message =
-        err instanceof Error ? err.message : "Média impossible à préparer.";
+        err instanceof Error ? err.message : "Média impossible à préparer";
       showToast("error", message);
     } finally {
       setIsPreparingMedia(false);
