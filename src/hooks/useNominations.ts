@@ -1,5 +1,5 @@
 import { useState, useCallback, useEffect } from "react";
-import { getSupabaseBrowserClient, localDeviceId } from "@/lib/supabase";
+import { getSupabaseBrowserClient } from "@/lib/supabase";
 import { parseNomination } from "@/lib/scoring";
 import type { Nomination, ToastTone } from "@/types";
 
