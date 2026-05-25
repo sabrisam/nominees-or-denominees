@@ -1,3 +1,4 @@
+import React from "react";
 import { motion } from "framer-motion";
 import { BrutalCard } from "../ui/BrutalCard";
 import { MediaFrame } from "./MediaFrame";
@@ -18,7 +19,7 @@ const TAP_TRANSITION = {
   mass: 0.42,
 } as const;
 
-export function NominationCard({
+export const NominationCard = React.memo(({
   nomination,
   index = 0,
   owned = false,
@@ -164,6 +165,7 @@ export function NominationCard({
           )}
         </div>
       </BrutalCard>
-    </motion.div>
   );
-}
+});
+
+NominationCard.displayName = "NominationCard";
