@@ -64,7 +64,7 @@ export function useNominations({
         setSyncing(false);
       }
     },
-    [roomId, showToast]
+    [participantId, roomId, showToast]
   );
 
   useEffect(() => {
