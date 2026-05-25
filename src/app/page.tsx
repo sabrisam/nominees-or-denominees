@@ -1905,7 +1905,8 @@ export default function Home() {
 
     try {
       const remoteSaved = await submitRatingSafely(
-        nomination,
+        nomination.id,
+        participant.id,
         draftScores,
         cleanedReview,
       );
