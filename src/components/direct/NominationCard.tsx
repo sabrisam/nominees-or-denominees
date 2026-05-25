@@ -37,7 +37,7 @@ export const NominationCard = React.memo(({
   onVote?: () => void;
   onCardClick?: (n: Nomination) => void;
   busy?: boolean;
-}) {
+}) => {
   const category = getCategoryMeta(nomination.category_id);
   const Icon = category.icon;
   const rating = averageRating(nomination.ratings, nomination.category_ids);
