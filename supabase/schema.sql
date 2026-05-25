@@ -591,7 +591,7 @@ begin
     category_id = next_category_id,
     tiktoker_name = next_tiktoker_name
   where id = target_nomination_id
-    and submitted_by = editor_id
+    and submitted_by = editor_id::uuid
   returning * into updated_nomination;
 
   if updated_nomination.id is null then
@@ -657,7 +657,7 @@ begin
     category_ids = selected_category_ids,
     tiktoker_name = next_tiktoker_name
   where id = target_nomination_id
-    and submitted_by = editor_id
+    and submitted_by = editor_id::uuid
   returning * into updated_nomination;
 
   if updated_nomination.id is null then
@@ -686,7 +686,7 @@ begin
 
   delete from public.nominations
   where id = target_nomination_id
-    and submitted_by = editor_id
+    and submitted_by = editor_id::uuid
   returning id into deleted_id;
 
   if deleted_id is null then
