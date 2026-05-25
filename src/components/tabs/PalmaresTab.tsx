@@ -20,15 +20,62 @@ const PalmaresRowItem = React.memo(({
   isExpanded,
   onToggle,
   reduceMotion,
+  allNominations,
 }: {
   row: PalmaresRow;
   index: number;
   isExpanded: boolean;
   onToggle: () => void;
   reduceMotion: boolean;
+  allNominations: Nomination[];
 }) => {
   const successRateFormatted = useMemo(() => row.successRate.toFixed(0), [row.successRate]);
   const averageScoreFormatted = useMemo(() => (row.average * 20).toFixed(0), [row.average]);
+
+  const creatorNominations = useMemo(() => {
+    return allNominations.filter(
+      (n) => n.tiktoker_name.toLowerCase() === row.tiktokerName.toLowerCase()
+    );
+  }, [allNominations, row.tiktokerName]);
+
+  const dimensionAverages = useMemo(() => {
+    const totals = { rire: 0, surprise: 0, gene: 0, fierte: 0, interet: 0 };
+    let count = 0;
+    creatorNominations.forEach((n) => {
+      n.ratings.forEach((r) => {
+        totals.rire += r.scores?.rire ?? r.rire_score ?? 0;
+        totals.surprise += r.scores?.surprise ?? r.surprise_score ?? 0;
+        totals.gene += r.scores?.gene ?? r.gene_score ?? 0;
+        totals.fierte += r.scores?.fierte ?? r.fierte_score ?? 0;
+        totals.interet += r.scores?.interet ?? r.interet_score ?? 0;
+        count++;
+      });
+    });
+    return {
+      rire: count > 0 ? totals.rire / count : 0,
+      surprise: count > 0 ? totals.surprise / count : 0,
+      gene: count > 0 ? totals.gene / count : 0,
+      fierte: count > 0 ? totals.fierte / count : 0,
+      interet: count > 0 ? totals.interet / count : 0,
+    };
+  }, [creatorNominations]);
+
+  const historicalRatings = useMemo(() => {
+    const list: Array<{ comment: string; voter: string; stars: number; date: string }> = [];
+    creatorNominations.forEach((n) => {
+      n.ratings.forEach((r) => {
+        if (r.comment?.trim()) {
+          list.push({
+            comment: r.comment,
+            voter: r.voter_id,
+            stars: r.rating_stars,
+            date: r.created_at,
+          });
+        }
+      });
+    });
+    return list;
+  }, [creatorNominations]);
 
   const nominatedCategories = useMemo(() => {
     return Object.entries(row.categoryCounts)
@@ -40,6 +87,7 @@ const PalmaresRowItem = React.memo(({
   return (
     <BrutalCard
       tone="black"
+      id={`palmares-row-${row.tiktokerName.toLowerCase()}`}
       className={`p-4 bg-monolith transition-all duration-300 ${
         isExpanded
           ? "border-[#d4af37]/60 ring-1 ring-[#d4af37]/30 shadow-[0_0_15px_rgba(212,175,55,0.1)]"
@@ -220,6 +268,98 @@ const PalmaresRowItem = React.memo(({
                 </div>
               )}
             </div>
+            {/* Dimensions d'Impact Émotionnel (Aggregated Stats) */}
+            <div className="mt-4 pt-3.5 border-t border-white/5">
+              <h4 className="text-[8px] font-black uppercase tracking-[0.16em] text-[#d4af37]/80 mb-2.5 font-sans">
+                MOYENNES ÉMOTIONNELLES ACCUMULÉES
+              </h4>
+              <div className="grid grid-cols-2 sm:grid-cols-5 gap-2">
+                {[
+                  { key: "rire", label: "Rire", emoji: "😂", val: dimensionAverages.rire, color: "bg-yellow-400" },
+                  { key: "surprise", label: "Surprise", emoji: "🤯", val: dimensionAverages.surprise, color: "bg-sky-400" },
+                  { key: "gene", label: "Gêne", emoji: "🤦", val: dimensionAverages.gene, color: "bg-rose-400" },
+                  { key: "fierte", label: "Fierté", emoji: "✊", val: dimensionAverages.fierte, color: "bg-amber-100" },
+                  { key: "interet", label: "Intérêt", emoji: "🤔", val: dimensionAverages.interet, color: "bg-violet-400" },
+                ].map((dim) => (
+                  <div key={dim.key} className="rounded-[4px] border border-white/5 bg-monolith p-2 text-center">
+                    <span className="text-sm block">{dim.emoji}</span>
+                    <span className="block text-[10px] font-serif font-black text-white mt-1">
+                      {dim.val.toFixed(1)}★
+                    </span>
+                    <span className="block text-[6.5px] font-sans font-black text-zinc-500 uppercase tracking-tight mt-0.5">
+                      {dim.label}
+                    </span>
+                    <div className="stat-bar mt-1.5 w-full bg-void">
+                      <div 
+                        className={`stat-bar-fill ${dim.color}`} 
+                        style={{ width: `${(dim.val / 5) * 100}%` }}
+                      />
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            {/* Screens de la Saison (Folders tagged in) */}
+            <div className="mt-4 pt-3.5 border-t border-white/5">
+              <h4 className="text-[8px] font-black uppercase tracking-[0.16em] text-[#d4af37]/80 mb-2.5 font-sans">
+                DOSSIERS DE LA SAISON ({creatorNominations.length})
+              </h4>
+              {creatorNominations.length === 0 ? (
+                <p className="text-[9px] font-black uppercase tracking-wide text-zinc-600 py-1 font-sans italic">
+                  Aucun dossier enregistré
+                </p>
+              ) : (
+                <div className="space-y-1.5">
+                  {creatorNominations.map((n) => {
+                    const score = n.ratings.length > 0
+                      ? (n.ratings.reduce((acc, curr) => acc + curr.rating_points, 0) / n.ratings.length).toFixed(0)
+                      : "0";
+                    return (
+                      <div key={n.id} className="flex items-center justify-between px-2.5 py-1.5 rounded-[4px] border border-white/5 bg-void">
+                        <div className="min-w-0 pr-2">
+                          <p className="text-[10px] font-sans font-medium text-white truncate">
+                            &ldquo;{n.comment || "Sans contexte"}&rdquo;
+                          </p>
+                          <p className="text-[7.5px] font-sans font-black text-zinc-500 uppercase tracking-widest mt-0.5">
+                            PAR @{n.submitted_by.slice(0, 8).toUpperCase()} · STATUS: {n.status === "pending" ? "À VOTER" : "NOMINÉ"}
+                          </p>
+                        </div>
+                        <span className="gold-pill text-[8.5px] px-2 py-0.5 shrink-0">
+                          {score} PTS
+                        </span>
+                      </div>
+                    );
+                  })}
+                </div>
+              )}
+            </div>
+
+            {/* Historical Ratings comments */}
+            <div className="mt-4 pt-3.5 border-t border-white/5">
+              <h4 className="text-[8px] font-black uppercase tracking-[0.16em] text-[#d4af37]/80 mb-2.5 font-sans">
+                COMMENTAIRES DU CONSEIL
+              </h4>
+              {historicalRatings.length === 0 ? (
+                <p className="text-[9px] font-black uppercase tracking-wide text-zinc-600 py-1 font-sans italic">
+                  Aucune note avec commentaire enregistrée
+                </p>
+              ) : (
+                <div className="space-y-2">
+                  {historicalRatings.map((rating, idx) => (
+                    <div key={idx} className="rounded-[4px] border border-white/5 bg-void p-2">
+                      <p className="text-[10px] font-serif font-medium text-zinc-300 italic leading-tight">
+                        &ldquo;{rating.comment}&rdquo;
+                      </p>
+                      <div className="flex items-center justify-between mt-1 text-[7.5px] font-sans font-black uppercase tracking-wider text-zinc-500">
+                        <span>@{rating.voter.slice(0, 8).toUpperCase()}</span>
+                        <span className="text-[#d4af37]">{rating.stars}★</span>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
           </motion.div>
         )}
       </AnimatePresence>
@@ -231,18 +371,39 @@ PalmaresRowItem.displayName = "PalmaresRowItem";
 
 export function PalmaresTab({
   palmaresRows,
+  allNominations,
   switchTab,
   handleSectionDrag,
   reduceMotion,
   pageTransition,
+  initialExpandedTiktoker,
 }: {
   palmaresRows: PalmaresRow[];
+  allNominations: Nomination[];
   switchTab: (t: Tab) => void;
   handleSectionDrag: (info: any) => void;
   reduceMotion: boolean;
   pageTransition: any;
+  initialExpandedTiktoker?: string | null;
 }) {
   const [expandedIdx, setExpandedIdx] = useState<number | null>(0);
+
+  React.useEffect(() => {
+    if (initialExpandedTiktoker && palmaresRows.length > 0) {
+      const idx = palmaresRows.findIndex(
+        (row) => row.tiktokerName.toLowerCase() === initialExpandedTiktoker.toLowerCase()
+      );
+      if (idx !== -1) {
+        setExpandedIdx(idx);
+        setTimeout(() => {
+          const el = document.getElementById(`palmares-row-${initialExpandedTiktoker.toLowerCase()}`);
+          if (el) {
+            el.scrollIntoView({ behavior: "smooth", block: "center" });
+          }
+        }, 150);
+      }
+    }
+  }, [initialExpandedTiktoker, palmaresRows]);
 
   if (palmaresRows.length === 0) {
     return (
@@ -311,6 +472,7 @@ export function PalmaresTab({
             isExpanded={expandedIdx === index}
             onToggle={() => setExpandedIdx(expandedIdx === index ? null : index)}
             reduceMotion={reduceMotion}
+            allNominations={allNominations}
           />
         ))}
       </div>
