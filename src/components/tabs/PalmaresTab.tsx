@@ -49,7 +49,16 @@ const PalmaresRowItem = React.memo(({
       {/* Row Header - Clickable Trigger */}
       <div
         onClick={onToggle}
-        className="flex items-center justify-between cursor-pointer select-none"
+        onKeyDown={(e) => {
+          if (e.key === "Enter" || e.key === " ") {
+            e.preventDefault();
+            onToggle();
+          }
+        }}
+        tabIndex={0}
+        role="button"
+        aria-expanded={isExpanded}
+        className="flex items-center justify-between cursor-pointer select-none focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-[#d4af37]/60 rounded-[4px]"
       >
         <div className="flex items-center gap-4 min-w-0">
           {/* Rank */}
@@ -64,7 +73,6 @@ const PalmaresRowItem = React.memo(({
                 src={row.avatarUrl}
                 alt=""
                 fill
-                unoptimized
                 sizes="40px"
                 className="object-cover"
               />
