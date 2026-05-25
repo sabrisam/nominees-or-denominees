@@ -1347,14 +1347,14 @@ export default function Home() {
 
         // Ajout du cast 'as any' pour bypasser le blocage de type strict généré par Supabase
         const { error } = await supabase.rpc("submit_nomination_vote", {
-          p_nomination_id: nominationId,
-          p_voter_id: voterId,
-          p_rire: scores.rire,
-          p_surprise: scores.surprise,
-          p_gene: scores.gene,
-          p_fierte: scores.fierte,
-          p_interet: scores.interet,
-          p_reaction_comment: comment,
+          target_nomination_id: nominationId,
+          voter_id: voterId,
+          rire: scores.rire,
+          surprise: scores.surprise,
+          gene: scores.gene,
+          fierte: scores.fierte,
+          interet: scores.interet,
+          reaction_comment: comment,
         } as any);
 
         return !error;
