@@ -402,6 +402,7 @@ export function PalmaresTab({
   reduceMotion,
   pageTransition,
   initialExpandedTiktoker,
+  onNominationClick,
 }: {
   palmaresRows: PalmaresRow[];
   allNominations: Nomination[];
@@ -410,6 +411,7 @@ export function PalmaresTab({
   reduceMotion: boolean;
   pageTransition: any;
   initialExpandedTiktoker?: string | null;
+  onNominationClick?: (nomination: Nomination) => void;
 }) {
   const [expandedIdx, setExpandedIdx] = useState<number | null>(0);
 
@@ -457,7 +459,7 @@ export function PalmaresTab({
           <p className="tabloid-headline text-2xl leading-none text-white font-serif italic font-bold">
             AUCUN PROFIL ÉVALUÉ POUR L{"'"}INSTANT
           </p>
-          <p className="mx-auto mt-2 max-w-[18rem] text-[9px] font-black uppercase tracking-wider text-zinc-500 font-sans">
+          <p className="mx-auto mt-2 max-w-[18rem] text-[9px] font-black uppercase tracking-wider text-zinc-500 font-sans font-bold">
             Le palmarès se mettra à jour après le premier SCREEN noté
           </p>
         </BrutalCard>
@@ -479,7 +481,7 @@ export function PalmaresTab({
         tone="black"
         className="p-4 text-white border-[#d4af37]/20 bg-monolith shadow-brutal"
       >
-        <p className="mb-1 text-[8px] font-black uppercase tracking-[0.2em] text-[#d4af37] font-sans">
+        <p className="mb-1 text-[8px] font-black uppercase tracking-[0.2em] text-[#d4af37] font-sans font-bold">
           Stats central
         </p>
         <h2 className="tabloid-headline text-[clamp(1.75rem,8vw,3rem)] leading-[0.84] font-serif italic normal-case font-black">
@@ -498,6 +500,7 @@ export function PalmaresTab({
             onToggle={() => setExpandedIdx(expandedIdx === index ? null : index)}
             reduceMotion={reduceMotion}
             allNominations={allNominations}
+            onNominationClick={onNominationClick}
           />
         ))}
       </div>
