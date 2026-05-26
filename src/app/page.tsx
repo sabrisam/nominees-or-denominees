@@ -61,6 +61,8 @@ import { BrutalCard } from "@/components/ui/BrutalCard";
 import { CeremonyBulletin } from "@/components/direct/CeremonyBulletin";
 import { DirectTab } from "@/components/tabs/DirectTab";
 import { VoteTab } from "@/components/tabs/VoteTab";
+import { MediaControlOverlay } from "@/components/direct/MediaControlOverlay";
+import { ProfileDetailModal } from "@/components/direct/ProfileDetailModal";
 import dynamic from "next/dynamic";
 
 const StudioTab = dynamic(
