@@ -32,6 +32,7 @@ const VoteItemCard = React.memo(({
   applyRating,
   reduceMotion,
   onCardClick,
+  onProfileClick,
 }: {
   nomination: Nomination;
   draftScores: DimensionScores;
@@ -45,6 +46,7 @@ const VoteItemCard = React.memo(({
   applyRating: (id: string) => Promise<void>;
   reduceMotion: boolean;
   onCardClick?: (n: Nomination) => void;
+  onProfileClick?: (tiktokerName: string) => void;
 }) => {
   const category = useMemo(() => getCategoryMeta(nomination.category_id), [nomination.category_id]);
   const categoryLabel = category.label;
@@ -96,10 +98,19 @@ const VoteItemCard = React.memo(({
         />
 
         {/* TikToker name overlay */}
-        <div className="absolute bottom-2 left-2 right-2 rounded-[10px] border border-champagne/30 bg-black/75 p-2 backdrop-blur-md">
-          <p className="tabloid-headline text-[clamp(1.22rem,6.2vw,2rem)] leading-[0.84] text-white font-serif italic normal-case">
-            {nomination.tiktoker_name}
+        <div 
+          onClick={(e) => {
+            e.stopPropagation();
+            onProfileClick?.(nomination.tiktoker_name);
+          }}
+          className="absolute bottom-2 left-2 right-2 rounded-[10px] border border-champagne/30 bg-black/75 p-2 backdrop-blur-md cursor-pointer hover:border-champagne/60 hover:bg-black/85 transition duration-200 group/profile"
+        >
+          <p className="tabloid-headline text-[clamp(1.22rem,6.2vw,2rem)] leading-[0.84] text-white font-serif italic normal-case group-hover/profile:text-champagneSoft transition">
+            @{nomination.tiktoker_name}
           </p>
+          <span className="text-[7px] font-sans font-black text-zinc-500 uppercase tracking-widest mt-0.5 block group-hover/profile:text-[#d4af37]/80 transition">
+            Voir la fiche profil →
+          </span>
         </div>
       </div>
 
@@ -210,6 +221,7 @@ export function VoteTab({
   reduceMotion,
   pageTransition,
   onCardClick,
+  onProfileClick,
 }: {
   pendingForMe: Nomination[];
   scoreDraftById: Record<string, DimensionScores>;
@@ -230,6 +242,7 @@ export function VoteTab({
   reduceMotion: boolean;
   pageTransition: any;
   onCardClick?: (n: Nomination) => void;
+  onProfileClick?: (tiktokerName: string) => void;
 }) {
   return (
     <motion.section
@@ -333,6 +346,7 @@ export function VoteTab({
                   applyRating={applyRating}
                   reduceMotion={reduceMotion}
                   onCardClick={onCardClick}
+                  onProfileClick={onProfileClick}
                 />
               );
             })}
