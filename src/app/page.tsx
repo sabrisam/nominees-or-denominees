@@ -2140,14 +2140,7 @@ export default function Home() {
 
         <div className="tabloid-scroll mx-auto w-full max-w-[30rem] px-2">
           <AnimatePresence mode="wait" custom={dir}>
-            {showSandbox && (
-              <PreviewCatalog
-                key="sandbox"
-                onClose={() => setShowSandbox(false)}
-              />
-            )}
-
-            {!showSandbox && tab === "direct" && (
+            {tab === "direct" && (
               <DirectTab
                 key="direct"
                 feedItems={feedItems}
@@ -2169,12 +2162,11 @@ export default function Home() {
                 palmaresRows={palmaresRows}
                 activeMemberCount={activeMemberCount}
                 switchTab={switchTab}
-                setShowSandbox={setShowSandbox}
                 onCardClick={setExpandedNomination}
               />
             )}
 
-            {!showSandbox && tab === "vote" && (
+            {tab === "vote" && (
               <VoteTab
                 pendingForMe={pendingForMe}
                 scoreDraftById={scoreDraftById}
@@ -2192,7 +2184,7 @@ export default function Home() {
               />
             )}
 
-            {!showSandbox && tab === "studio" && (
+            {tab === "studio" && (
               <StudioTab
                 editingNomination={editingNomination}
                 fileInputRef={fileInputRef}
@@ -2222,7 +2214,7 @@ export default function Home() {
               />
             )}
 
-            {!showSandbox && tab === "palmares" && (
+            {tab === "palmares" && (
               <PalmaresTab
                 palmaresRows={palmaresRows}
                 allNominations={nominations}
@@ -2234,7 +2226,7 @@ export default function Home() {
               />
             )}
 
-            {!showSandbox && tab === "winners" && (
+            {tab === "winners" && (
               <WinnersTab
                 ultimateWinner={ultimateWinner}
                 paparazziOr={paparazziOr}
