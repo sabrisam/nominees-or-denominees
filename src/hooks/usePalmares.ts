@@ -15,11 +15,11 @@ export function usePalmares(supabaseClientOverride?: any, roomCodeOverride?: str
         return;
       }
 
-      // Query leverages Supabase to fetch all nominations with their nested ratings, grouping them dynamically on the client side for maximum reliability
-      const { data, error } = await activeClient
+      let query = activeClient
         .from("nominations")
         .select(`
           id,
+          room_id,
           status,
           category_ids,
           tiktoker_name,
@@ -36,6 +36,12 @@ export function usePalmares(supabaseClientOverride?: any, roomCodeOverride?: str
             interet_score
           )
         `);
+
+      if (roomCodeOverride) {
+        query = query.eq("room_id", roomCodeOverride);
+      }
+
+      const { data, error } = await query;
 
       if (error) {
         console.error("[NOD usePalmares] error:", error);
