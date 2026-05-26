@@ -2269,7 +2269,7 @@ export default function Home() {
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
             transition={{ duration: 0.2 }}
-            className="fixed inset-0 z-[1000] flex items-center justify-center p-4 bg-black/95 backdrop-blur-md"
+            className="fixed inset-0 z-[1000] flex items-center justify-center p-4 bg-black/35 backdrop-blur-sm"
             onClick={() => setExpandedNomination(null)}
           >
             <motion.div
@@ -2278,21 +2278,29 @@ export default function Home() {
               animate={reduceMotion ? { scale: 1, opacity: 1 } : undefined}
               exit={reduceMotion ? { scale: 0.95, opacity: 0 } : undefined}
               transition={{ type: "spring", stiffness: 350, damping: 28 }}
-              className="relative w-full max-w-[28rem] bg-monolith border border-white/10 rounded-[12px] shadow-2xl overflow-hidden"
+              className={`relative w-full bg-monolith overflow-hidden transition-all shadow-2xl flex flex-col ${
+                expandedNomination.media_kind === "video"
+                  ? "h-full max-h-[100svh] md:h-auto md:max-h-none md:max-w-[28rem] rounded-none md:rounded-[12px] border-none md:border md:border-white/10 justify-center"
+                  : "max-w-[28rem] rounded-[12px] border border-white/10"
+              }`}
               onClick={(e) => e.stopPropagation()}
             >
               {/* Close Button */}
               <button
                 type="button"
                 onClick={() => setExpandedNomination(null)}
-                className="absolute right-3 top-3 z-50 brutal-icon-button bg-black/60 border border-white/20 text-white rounded-full p-1.5 flex items-center justify-center hover:bg-black/80"
+                className="absolute right-3 top-3 z-50 brutal-icon-button bg-black/60 border border-white/20 text-white rounded-full p-1.5 flex items-center justify-center hover:bg-black/80 transition"
                 aria-label="Fermer"
               >
-                <Check className="h-4 w-4 rotate-45" />
+                <X className="h-4 w-4" />
               </button>
 
               {/* Media frame */}
-              <div className="relative aspect-[9/16] max-h-[58svh] w-full bg-zinc-950 border-b border-white/5 flex items-center justify-center overflow-hidden">
+              <div className={`relative bg-zinc-950 flex items-center justify-center overflow-hidden border-b border-white/5 ${
+                expandedNomination.media_kind === "video"
+                  ? "flex-1 md:flex-initial md:aspect-[9/16] md:max-h-[58svh] w-full"
+                  : "aspect-[9/16] max-h-[58svh] w-full"
+              }`}>
                 {expandedNomination.media_kind === "video" ? (
                   <div className="relative w-full h-full flex items-center justify-center bg-zinc-950">
                     <video
@@ -2326,7 +2334,7 @@ export default function Home() {
               </div>
 
               {/* Content Profile Navigation & Stats */}
-              <div className="p-4 space-y-3 bg-monolith">
+              <div className="p-4 space-y-3 bg-monolith shrink-0">
                 {/* Interactive Profile header */}
                 <div
                   onClick={() => handleProfileNavigation(expandedNomination.tiktoker_name)}
@@ -2349,7 +2357,7 @@ export default function Home() {
                     <h3 className="text-md font-serif font-black tracking-tight text-white capitalize group-hover:text-champagneSoft transition truncate">
                       @{expandedNomination.tiktoker_name}
                     </h3>
-                    <p className="text-[7.5px] font-sans font-black text-zinc-500 uppercase tracking-widest mt-0.5">
+                    <p className="text-[7.5px] font-sans font-black text-zinc-500 uppercase tracking-widest mt-0.5 font-bold">
                       VOIR LE PROFIL COMPLET DU CONSEIL →
                     </p>
                   </div>
@@ -2388,6 +2396,10 @@ export default function Home() {
         <ProfileDetailModal
           tiktokerName={activeProfileTiktokerName}
           onClose={() => setActiveProfileTiktokerName(null)}
+          onNominationClick={(nomination) => {
+            setActiveProfileTiktokerName(null);
+            setExpandedNomination(nomination);
+          }}
         />
       )}
     </div>
