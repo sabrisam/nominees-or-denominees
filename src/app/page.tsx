@@ -2243,6 +2243,7 @@ export default function Home() {
                 reduceMotion={reduceMotion}
                 pageTransition={pageTransition}
               />
+            )}
           </AnimatePresence>
           <Footer />
         </div>
