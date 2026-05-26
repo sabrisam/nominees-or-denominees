@@ -1315,10 +1315,13 @@ export default function Home() {
   );
   const paparazziOr = useMemo(() => bestSubmission(nominations), [nominations]);
   const nextPendingForMe = pendingForMe[0];
-  const { palmaresRows, isLoading: isLoadingPalmares } = usePalmares(
+  const { palmaresRows, isLoading: isLoadingPalmares, fetchPalmaresData } = usePalmares(
     supabase,
     roomCode,
   );
+  useEffect(() => {
+    void fetchPalmaresData();
+  }, [nominations, fetchPalmaresData]);
   const categoryRaces = useMemo(
     () => buildCategoryRaces(nominations),
     [nominations],
