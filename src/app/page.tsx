@@ -2188,6 +2188,7 @@ export default function Home() {
                 reduceMotion={reduceMotion}
                 pageTransition={pageTransition}
                 onCardClick={setExpandedNomination}
+                onProfileClick={setActiveProfileTiktokerName}
               />
             )}
 
