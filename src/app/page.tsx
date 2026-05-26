@@ -63,6 +63,7 @@ import { DirectTab } from "@/components/tabs/DirectTab";
 import { VoteTab } from "@/components/tabs/VoteTab";
 import { MediaControlOverlay } from "@/components/direct/MediaControlOverlay";
 import { ProfileDetailModal } from "@/components/direct/ProfileDetailModal";
+import { Footer } from "@/components/layout/Footer";
 import dynamic from "next/dynamic";
 
 const StudioTab = dynamic(
