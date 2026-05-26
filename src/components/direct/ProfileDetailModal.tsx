@@ -405,16 +405,39 @@ export function ProfileDetailModal({ tiktokerName, onClose, onNominationClick }:
                           ? (n.ratings.reduce((acc, curr) => acc + curr.rating_points, 0) / n.ratings.length).toFixed(0)
                           : "0";
                         return (
-                          <div key={n.id} className="flex items-center justify-between px-2.5 py-2 rounded-[4px] border border-white/5 bg-void">
-                            <div className="min-w-0 pr-2">
+                          <div
+                            key={n.id}
+                            onClick={() => onNominationClick?.(n)}
+                            className={`flex items-center gap-3 px-2.5 py-2 rounded-[4px] border border-white/5 bg-void ${
+                              onNominationClick ? "cursor-pointer hover:border-champagne/40 transition-all duration-200" : ""
+                            }`}
+                          >
+                            {/* Visual preview box on the left */}
+                            <div className="relative h-10 w-8 overflow-hidden rounded bg-zinc-950 shrink-0 border border-white/10 flex items-center justify-center">
+                              {n.thumbnail_url || n.media_url ? (
+                                <Image
+                                  src={n.thumbnail_url || n.media_url || ""}
+                                  alt=""
+                                  fill
+                                  sizes="32px"
+                                  className="object-cover"
+                                />
+                              ) : (
+                                <span className="flex h-full w-full items-center justify-center text-[8px] font-black text-champagne font-mono">
+                                  {n.media_kind === "video" ? "VID" : "IMG"}
+                                </span>
+                              )}
+                            </div>
+
+                            <div className="min-w-0 flex-1 pr-2">
                               <p className="text-[10px] font-sans font-medium text-white truncate">
                                 &ldquo;{n.comment || "Sans contexte"}&rdquo;
                               </p>
-                              <p className="text-[7.5px] font-sans font-black text-zinc-500 uppercase tracking-widest mt-0.5">
+                              <p className="text-[7.5px] font-sans font-black text-zinc-500 uppercase tracking-widest mt-0.5 font-bold">
                                 STATUS: {n.status === "pending" ? "À VOTER" : "NOMINÉ"}
                               </p>
                             </div>
-                            <span className="gold-pill text-[8.5px] px-2 py-0.5 shrink-0 bg-champagne/10 border border-champagne/30 text-champagneSoft rounded-[4px]">
+                            <span className="gold-pill text-[8.5px] px-2 py-0.5 shrink-0 bg-champagne/10 border border-[#d4af37]/30 text-champagneSoft rounded-[4px]">
                               {score} PTS
                             </span>
                           </div>
