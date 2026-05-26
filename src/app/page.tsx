@@ -2199,6 +2199,7 @@ export default function Home() {
                 reduceMotion={reduceMotion}
                 pageTransition={pageTransition}
                 initialExpandedTiktoker={initialExpandedTiktoker}
+                onNominationClick={setExpandedNomination}
               />
             )}
 
