@@ -2021,48 +2021,15 @@ export default function Home() {
     }
   };
 
-  if (bootingSession) {
-    return (
-      <div ref={shellRef} className="tabloid-app items-center justify-center">
-        <PaperBackdrop />
-        <div className="flex flex-col items-center gap-2">
-          <BrutalCard
-            tone="yellow"
-            className="flex h-20 w-20 items-center justify-center"
-          >
-            <Loader2 className="h-8 w-8 animate-spin text-black" />
-          </BrutalCard>
-          <p className="text-[10px] font-sans uppercase tracking-[0.15em] text-champagne/40">
-            NOD v4.0
-          </p>
-        </div>
-      </div>
-    );
-  }
-
-  if (!participant) {
+  if (bootError) {
     return (
       <div ref={shellRef} className="tabloid-app items-center justify-center">
         <PaperBackdrop />
         <BrutalCard tone="yellow" className="p-5 text-center">
-          {bootError ? (
-            <>
-              <p className="mb-2 text-xl font-black uppercase leading-none text-red-600">
-                Erreur Fatale
-              </p>
-              <p className="font-mono text-sm">{bootError}</p>
-            </>
-          ) : (
-            <>
-              <Loader2 className="mx-auto mb-3 h-8 w-8 animate-spin text-black" />
-              <p className="text-xl font-black uppercase leading-none">
-                Chargement du jeu...
-              </p>
-              <p className="mt-2 text-[10px] font-sans uppercase tracking-[0.15em] text-champagne/40">
-                NOD v4.0
-              </p>
-            </>
-          )}
+          <p className="mb-2 text-xl font-black uppercase leading-none text-red-600">
+            Erreur Fatale
+          </p>
+          <p className="font-mono text-sm">{bootError}</p>
         </BrutalCard>
       </div>
     );
