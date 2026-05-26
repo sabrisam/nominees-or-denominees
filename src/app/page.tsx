@@ -2297,7 +2297,7 @@ export default function Home() {
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
             transition={{ duration: 0.2 }}
-            className="fixed inset-0 z-[1000] flex items-center justify-center p-4 bg-black/90 backdrop-blur-md"
+            className="fixed inset-0 z-[1000] flex items-center justify-center p-4 bg-black/95 backdrop-blur-md"
             onClick={() => setExpandedNomination(null)}
           >
             <motion.div
@@ -2306,55 +2306,49 @@ export default function Home() {
               animate={reduceMotion ? { scale: 1, opacity: 1 } : undefined}
               exit={reduceMotion ? { scale: 0.95, opacity: 0 } : undefined}
               transition={{ type: "spring", stiffness: 350, damping: 28 }}
-              className="relative w-full max-w-[28rem] bg-monolith border border-champagne/30 rounded-[12px] shadow-[0_0_50px_rgba(212,175,55,0.15)] overflow-hidden"
+              className="relative w-full max-w-[28rem] bg-monolith border border-white/10 rounded-[12px] shadow-2xl overflow-hidden"
               onClick={(e) => e.stopPropagation()}
             >
               {/* Close Button */}
               <button
                 type="button"
                 onClick={() => setExpandedNomination(null)}
-                className="absolute right-3 top-3 z-50 brutal-icon-button bg-black/60 border border-champagne/40 text-champagneSoft rounded-full p-1.5 flex items-center justify-center hover:bg-black/80"
+                className="absolute right-3 top-3 z-50 brutal-icon-button bg-black/60 border border-white/20 text-white rounded-full p-1.5 flex items-center justify-center hover:bg-black/80"
                 aria-label="Fermer"
               >
                 <Check className="h-4 w-4 rotate-45" />
               </button>
 
               {/* Media frame */}
-              <div className="relative aspect-[9/16] max-h-[58svh] w-full bg-void border-b border-champagne/20">
+              <div className="relative aspect-[9/16] max-h-[58svh] w-full bg-zinc-950 border-b border-white/5 flex items-center justify-center overflow-hidden">
                 {expandedNomination.media_kind === "video" ? (
-                  <div className="relative w-full h-full">
+                  <div className="relative w-full h-full flex items-center justify-center bg-zinc-950">
                     <video
+                      ref={videoRef}
                       src={expandedNomination.media_url}
                       poster={expandedNomination.thumbnail_url ?? undefined}
                       autoPlay
                       loop
                       muted={isMuted}
                       playsInline
-                      className="w-full h-full object-cover"
+                      className="w-full h-full object-contain"
                     />
-                    {/* Mute/Unmute Overlay Control */}
-                    <button
-                      type="button"
-                      onClick={() => setIsMuted(prev => !prev)}
-                      className="absolute bottom-4 right-4 z-40 bg-black/70 border border-champagne/40 text-white rounded-full p-2 flex items-center justify-center hover:bg-black/90 shadow-lg"
-                    >
-                      {isMuted ? (
-                        <VolumeX className="h-4 w-4 text-champagne" />
-                      ) : (
-                        <Volume2 className="h-4 w-4 text-emerald-400 animate-pulse" />
-                      )}
-                    </button>
+                    <MediaControlOverlay
+                      videoRef={videoRef}
+                      isMuted={isMuted}
+                      onMuteToggle={() => setIsMuted(prev => !prev)}
+                    />
                   </div>
                 ) : (
                   <img
                     src={expandedNomination.media_url || expandedNomination.thumbnail_url || FALLBACK_IMAGE_URL}
                     alt=""
-                    className="w-full h-full object-cover"
+                    className="w-full h-full object-contain"
                   />
                 )}
 
                 {/* Category Tag */}
-                <span className="absolute left-3 top-3 z-10 inline-flex items-center gap-1 rounded-[8px] border border-champagne/60 bg-black/80 px-2.5 py-1 text-[9px] font-black uppercase tracking-[0.1em] text-champagneSoft backdrop-blur-sm">
+                <span className="absolute left-3 top-3 z-10 inline-flex items-center gap-1 rounded-[8px] border border-white/10 bg-black/80 px-2.5 py-1 text-[9px] font-black uppercase tracking-[0.1em] text-white backdrop-blur-sm">
                   {getCategoryMeta(expandedNomination.category_id).label}
                 </span>
               </div>
@@ -2366,7 +2360,7 @@ export default function Home() {
                   onClick={() => handleProfileNavigation(expandedNomination.tiktoker_name)}
                   className="flex items-center gap-3 cursor-pointer group p-2 rounded-[8px] border border-white/5 bg-void hover:border-champagne/40 transition"
                 >
-                  <div className="relative h-9 w-9 overflow-hidden rounded-full border border-champagne/40 bg-zinc-950 shrink-0">
+                  <div className="relative h-9 w-9 overflow-hidden rounded-full border border-[#d4af37]/40 bg-zinc-950 shrink-0">
                     {expandedNomination.thumbnail_url ? (
                       <img
                         src={expandedNomination.thumbnail_url}
@@ -2384,7 +2378,7 @@ export default function Home() {
                       @{expandedNomination.tiktoker_name}
                     </h3>
                     <p className="text-[7.5px] font-sans font-black text-zinc-500 uppercase tracking-widest mt-0.5">
-                      VOIR LE PROFIL DANS LE PALMARÈS →
+                      VOIR LE PROFIL COMPLET DU CONSEIL →
                     </p>
                   </div>
                 </div>
@@ -2416,6 +2410,16 @@ export default function Home() {
           </motion.div>
         )}
       </AnimatePresence>
+
+      {/* Profile Detail Modal Sheet */}
+      {activeProfileTiktokerName && (
+        <ProfileDetailModal
+          tiktokerName={activeProfileTiktokerName}
+          onClose={() => setActiveProfileTiktokerName(null)}
+        />
+      )}
     </div>
+  );
+}
   );
 }
