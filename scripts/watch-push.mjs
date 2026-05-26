@@ -11,10 +11,38 @@ import { exec } from "child_process";
 import { promisify } from "util";
 import path from "path";
 import { fileURLToPath } from "url";
+import fs from "fs";
 
 const execAsync = promisify(exec);
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const ROOT = path.resolve(__dirname, "..");
+
+function bumpVersion() {
+  const versionFilePath = path.join(ROOT, "VERSION");
+  const tsFilePath = path.join(ROOT, "src", "constants", "version.ts");
+  
+  let versionStr = "1.4.6";
+  if (fs.existsSync(versionFilePath)) {
+    versionStr = fs.readFileSync(versionFilePath, "utf8").trim();
+  }
+  
+  const parts = versionStr.split(".");
+  if (parts.length === 3) {
+    const patch = parseInt(parts[2], 10);
+    if (!isNaN(patch)) {
+      parts[2] = (patch + 1).toString();
+    }
+  } else {
+    parts[0] = "1";
+    parts[1] = "4";
+    parts[2] = "7";
+  }
+  
+  const newVersionStr = parts.join(".");
+  fs.writeFileSync(versionFilePath, newVersionStr, "utf8");
+  fs.writeFileSync(tsFilePath, `export const VERSION = "${newVersionStr}";\n`, "utf8");
+  return newVersionStr;
+}
 
 const GOLD = "\x1b[33m";
 const GREEN = "\x1b[32m";
@@ -30,6 +58,8 @@ const IGNORED = [
   ".env*",
   "*.log",
   "scripts/watch-push.mjs",
+  "VERSION",
+  "src/constants/version.ts",
 ];
 
 let debounceTimer = null;
@@ -56,12 +86,16 @@ async function autoPush(changedFile) {
 
     console.log(`\n${GOLD}⚡ ${timestamp}${RESET} — Changement détecté : ${BOLD}${rel}${RESET}`);
 
-    // Stage tous les fichiers modifiés (sauf .env.local qui est dans .gitignore)
+    // Bump version and generate src/constants/version.ts statically
+    const newVersion = bumpVersion();
+    console.log(`  ${GOLD}✓ SemVer Bumped: ${BOLD}v${newVersion}${RESET}`);
+
+    // Stage all changes including VERSION and version.ts
     await execAsync("git add -A", { cwd: ROOT });
     console.log(`  ${DIM}✓ git add -A${RESET}`);
 
-    // Commit avec message automatique horodaté
-    const commitMsg = `auto: ${rel} @ ${timestamp}`;
+    // Commit with automatic SemVer tag and timestamp
+    const commitMsg = `auto: v${newVersion} - ${rel} @ ${timestamp}`;
     await execAsync(`git commit -m "${commitMsg}"`, { cwd: ROOT });
     console.log(`  ${DIM}✓ commit: "${commitMsg}"${RESET}`);
 
