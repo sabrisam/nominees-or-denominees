@@ -1327,17 +1327,17 @@ export default function Home() {
   );
   const paparazziOr = useMemo(() => bestSubmission(nominations), [nominations]);
   const nextPendingForMe = pendingForMe[0];
-  const {
-// 1. Appel du hook (il gère maintenant la logique JOIN)
-const { profiles, loading, error, refetch } = usePalmares();
+  // 1. Appel du hook (logique JOIN corrigée)
+  const { profiles, loading, error, refetch } = usePalmares();
 
-// 2. Transformation pour garder la compatibilité avec le reste de ton code (page.tsx)
-const palmaresRows = useMemo(() => profiles, [profiles]);
-const isLoadingPalmares = loading;
-const fetchPalmaresData = refetch;
+  // 2. Transformation pour garder la compatibilité avec le reste de page.tsx
+  const palmaresRows = useMemo(() => profiles, [profiles]);
+  const isLoadingPalmares = loading;
+  const fetchPalmaresData = refetch;
 
-// 3. Plus besoin de buildPalmaresRows(nominations) ici, 
-// car usePalmares le fait déjà à la source !
+  useEffect(() => {
+    void fetchPalmaresData();
+  }, [nominations, fetchPalmaresData]);
 
   useEffect(() => {
     void refetch();
