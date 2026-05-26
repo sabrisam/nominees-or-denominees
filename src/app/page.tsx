@@ -885,9 +885,8 @@ export default function Home() {
 
   const handleProfileNavigation = useCallback((tiktokerName: string) => {
     setExpandedNomination(null);
-    setInitialExpandedTiktoker(tiktokerName);
-    switchTab("palmares");
-  }, [switchTab]);
+    setActiveProfileTiktokerName(tiktokerName);
+  }, []);
 
   // supabase client is initialized inside initParticipant
 
