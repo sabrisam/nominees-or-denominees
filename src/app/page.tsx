@@ -78,7 +78,7 @@ const StudioTab = dynamic(
       </div>
     ),
     ssr: false,
-  }
+  },
 );
 
 const PalmaresTab = dynamic(
@@ -92,7 +92,7 @@ const PalmaresTab = dynamic(
       </div>
     ),
     ssr: false,
-  }
+  },
 );
 
 const WinnersTab = dynamic(
@@ -106,7 +106,7 @@ const WinnersTab = dynamic(
       </div>
     ),
     ssr: false,
-  }
+  },
 );
 import {
   AnimatePresence,
@@ -769,8 +769,11 @@ export default function Home() {
   const reduceMotion = true; // Optimisé : désactive les animations lourdes et le drag tactiles sur mobile
   const [supabase, setSupabase] =
     useState<ReturnType<typeof getSupabaseBrowserClient>>(null);
-  const [expandedNomination, setExpandedNomination] = useState<Nomination | null>(null);
-  const [initialExpandedTiktoker, setInitialExpandedTiktoker] = useState<string | null>(null);
+  const [expandedNomination, setExpandedNomination] =
+    useState<Nomination | null>(null);
+  const [initialExpandedTiktoker, setInitialExpandedTiktoker] = useState<
+    string | null
+  >(null);
   const [isMuted, setIsMuted] = useState(true);
   const [bootingSession, setBootingSession] = useState(true);
   const [participant, setParticipant] = useState<Participant | null>(null);
@@ -792,7 +795,9 @@ export default function Home() {
 
   const [showStudioOverlay, setShowStudioOverlay] = useState(false);
   const [preparedFile, setPreparedFile] = useState<File | null>(null);
-  const [activeProfileTiktokerName, setActiveProfileTiktokerName] = useState<string | null>(null);
+  const [activeProfileTiktokerName, setActiveProfileTiktokerName] = useState<
+    string | null
+  >(null);
   const videoRef = useRef<HTMLVideoElement>(null);
   const [thumbnailFile, setThumbnailFile] = useState<File | null>(null);
   const [mediaKind, setMediaKind] = useState<MediaKind | null>(null);
@@ -1709,8 +1714,7 @@ export default function Home() {
       });
       void fetchNominations(true);
     } catch (err) {
-      const message =
-        err instanceof Error ? err.message : "Retrait impossible";
+      const message = err instanceof Error ? err.message : "Retrait impossible";
       showToast("error", message);
     } finally {
       setMutationBusyId(null);
@@ -2272,7 +2276,11 @@ export default function Home() {
             onClick={() => setExpandedNomination(null)}
           >
             <motion.div
-              layoutId={reduceMotion ? undefined : `nomination-card-${expandedNomination.id}`}
+              layoutId={
+                reduceMotion
+                  ? undefined
+                  : `nomination-card-${expandedNomination.id}`
+              }
               initial={reduceMotion ? { scale: 0.95, opacity: 0 } : undefined}
               animate={reduceMotion ? { scale: 1, opacity: 1 } : undefined}
               exit={reduceMotion ? { scale: 0.95, opacity: 0 } : undefined}
@@ -2295,11 +2303,13 @@ export default function Home() {
               </button>
 
               {/* Media frame */}
-              <div className={`relative bg-zinc-950 flex items-center justify-center overflow-hidden border-b border-white/5 ${
-                expandedNomination.media_kind === "video"
-                  ? "flex-1 md:flex-initial md:aspect-[9/16] md:max-h-[58svh] w-full"
-                  : "aspect-[9/16] max-h-[58svh] w-full"
-              }`}>
+              <div
+                className={`relative bg-zinc-950 flex items-center justify-center overflow-hidden border-b border-white/5 ${
+                  expandedNomination.media_kind === "video"
+                    ? "flex-1 md:flex-initial md:aspect-[9/16] md:max-h-[58svh] w-full"
+                    : "aspect-[9/16] max-h-[58svh] w-full"
+                }`}
+              >
                 {expandedNomination.media_kind === "video" ? (
                   <div className="relative w-full h-full flex items-center justify-center bg-zinc-950">
                     <video
@@ -2315,12 +2325,16 @@ export default function Home() {
                     <MediaControlOverlay
                       videoRef={videoRef}
                       isMuted={isMuted}
-                      onMuteToggle={() => setIsMuted(prev => !prev)}
+                      onMuteToggle={() => setIsMuted((prev) => !prev)}
                     />
                   </div>
                 ) : (
                   <img
-                    src={expandedNomination.media_url || expandedNomination.thumbnail_url || FALLBACK_IMAGE_URL}
+                    src={
+                      expandedNomination.media_url ||
+                      expandedNomination.thumbnail_url ||
+                      FALLBACK_IMAGE_URL
+                    }
                     alt=""
                     className="w-full h-full object-contain"
                   />
@@ -2336,7 +2350,9 @@ export default function Home() {
               <div className="p-4 space-y-3 bg-monolith shrink-0">
                 {/* Interactive Profile header */}
                 <div
-                  onClick={() => handleProfileNavigation(expandedNomination.tiktoker_name)}
+                  onClick={() =>
+                    handleProfileNavigation(expandedNomination.tiktoker_name)
+                  }
                   className="flex items-center gap-3 cursor-pointer group p-2 rounded-[8px] border border-white/5 bg-void hover:border-champagne/40 transition"
                 >
                   <div className="relative h-9 w-9 overflow-hidden rounded-full border border-[#d4af37]/40 bg-zinc-950 shrink-0">
@@ -2348,7 +2364,9 @@ export default function Home() {
                       />
                     ) : (
                       <span className="flex h-full w-full items-center justify-center text-xs font-black text-[#d4af37]">
-                        {expandedNomination.tiktoker_name.slice(0, 2).toUpperCase()}
+                        {expandedNomination.tiktoker_name
+                          .slice(0, 2)
+                          .toUpperCase()}
                       </span>
                     )}
                   </div>
@@ -2380,7 +2398,12 @@ export default function Home() {
                     </span>
                     <span>·</span>
                     <span className="text-white">
-                      {averageRating(expandedNomination.ratings, expandedNomination.category_ids) ? `${averageRating(expandedNomination.ratings, expandedNomination.category_ids).toFixed(1)}★` : "-"}
+                      {averageRating(
+                        expandedNomination.ratings,
+                        expandedNomination.category_ids,
+                      )
+                        ? `${averageRating(expandedNomination.ratings, expandedNomination.category_ids).toFixed(1)}★`
+                        : "-"}
                     </span>
                   </div>
                 </div>
