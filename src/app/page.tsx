@@ -1322,7 +1322,7 @@ export default function Home() {
   const nextPendingForMe = pendingForMe[0];
   const { palmaresRows, isLoading: isLoadingPalmares, fetchPalmaresData } = usePalmares(
     supabase,
-    roomCode,
+    roomId || undefined,
   );
   useEffect(() => {
     void fetchPalmaresData();
