@@ -1321,7 +1321,8 @@ export default function Home() {
   );
   const paparazziOr = useMemo(() => bestSubmission(nominations), [nominations]);
   const nextPendingForMe = pendingForMe[0];
-  const { palmaresRows, isLoading: isLoadingPalmares, fetchPalmaresData } = usePalmares(
+// Remplace l'ancien appel par celui-ci :
+const { profiles, loading, error, refetch } = usePalmares();
     supabase,
     roomId || undefined,
   );
