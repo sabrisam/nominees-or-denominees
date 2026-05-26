@@ -2109,7 +2109,7 @@ export default function Home() {
             CÉRÉMONIE DE LA SAISON 1 LE 1ER DU MOIS / DANS{" "}
             {ceremonyCountdown.days}J {ceremonyCountdown.hours}H{" "}
             {ceremonyCountdown.mins}M / TOURNOI DU MOIS /{" "}
-            {monthlyNominations.length} DOSSIERS EN JEU /
+            {monthlyNominations.length} DOSSIERS EN JEU / NOD v{VERSION} /
           </Ticker>
         </header>
 
