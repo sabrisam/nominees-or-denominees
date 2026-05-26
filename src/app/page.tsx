@@ -789,6 +789,8 @@ export default function Home() {
 
   const [showStudioOverlay, setShowStudioOverlay] = useState(false);
   const [preparedFile, setPreparedFile] = useState<File | null>(null);
+  const [activeProfileTiktokerName, setActiveProfileTiktokerName] = useState<string | null>(null);
+  const videoRef = useRef<HTMLVideoElement>(null);
   const [thumbnailFile, setThumbnailFile] = useState<File | null>(null);
   const [mediaKind, setMediaKind] = useState<MediaKind | null>(null);
   const [previewUrl, setPreviewUrlState] = useState<string | null>(null);
