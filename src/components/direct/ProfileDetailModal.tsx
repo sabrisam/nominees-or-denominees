@@ -249,10 +249,12 @@ export function ProfileDetailModal({ tiktokerName, onClose }: ProfileDetailModal
           <div className="p-4 border-b border-white/5 bg-void flex items-center gap-4">
             <div className="relative h-12 w-12 overflow-hidden rounded-full border border-champagne/50 bg-zinc-950 shrink-0 shadow-inner">
               {profile?.avatarUrl ? (
-                <img
+                <Image
                   src={profile.avatarUrl}
                   alt=""
-                  className="h-full w-full object-cover"
+                  fill
+                  sizes="48px"
+                  className="object-cover"
                 />
               ) : (
                 <span className="flex h-full w-full items-center justify-center text-md font-black text-champagne font-mono">
