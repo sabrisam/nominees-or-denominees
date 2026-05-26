@@ -1,3 +1,4 @@
+import Image from "next/image";
 import React, { useState, useEffect, useMemo } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { X, Trophy, TrendingUp, Award, Activity, CheckCircle, Sparkles } from "lucide-react";
