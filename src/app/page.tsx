@@ -104,20 +104,6 @@ const WinnersTab = dynamic(
     ssr: false,
   }
 );
-
-const PreviewCatalog = dynamic(
-  () => import("@/components/tabs/PreviewCatalog").then((mod) => mod.PreviewCatalog),
-  {
-    loading: () => (
-      <div className="rounded-[10px] border border-dashed border-champagne/20 bg-monolith p-6 text-center animate-pulse">
-        <p className="text-[10px] font-black uppercase tracking-widest text-champagne font-sans">
-          Chargement de la Sandbox
-        </p>
-      </div>
-    ),
-    ssr: false,
-  }
-);
 import {
   AnimatePresence,
   motion,
