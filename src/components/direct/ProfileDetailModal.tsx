@@ -10,9 +10,10 @@ import type { Nomination, StarDistribution } from "@/types";
 interface ProfileDetailModalProps {
   tiktokerName: string;
   onClose: () => void;
+  onNominationClick?: (nomination: Nomination) => void;
 }
 
-export function ProfileDetailModal({ tiktokerName, onClose }: ProfileDetailModalProps) {
+export function ProfileDetailModal({ tiktokerName, onClose, onNominationClick }: ProfileDetailModalProps) {
   const [profile, setProfile] = useState<{ id: string; username: string; avatarUrl: string } | null>(null);
   const [nominations, setNominations] = useState<Nomination[]>([]);
   const [isLoading, setIsLoading] = useState(true);
