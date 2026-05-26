@@ -140,6 +140,7 @@ import {
   UploadCloud,
   Volume2,
   VolumeX,
+  X,
   Zap,
 } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
