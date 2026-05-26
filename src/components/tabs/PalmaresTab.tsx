@@ -21,6 +21,7 @@ const PalmaresRowItem = React.memo(({
   onToggle,
   reduceMotion,
   allNominations,
+  onNominationClick,
 }: {
   row: PalmaresRow;
   index: number;
@@ -28,6 +29,7 @@ const PalmaresRowItem = React.memo(({
   onToggle: () => void;
   reduceMotion: boolean;
   allNominations: Nomination[];
+  onNominationClick?: (nomination: Nomination) => void;
 }) => {
   const successRateFormatted = useMemo(() => row.successRate.toFixed(0), [row.successRate]);
   const averageScoreFormatted = useMemo(() => (row.average * 20).toFixed(0), [row.average]);
