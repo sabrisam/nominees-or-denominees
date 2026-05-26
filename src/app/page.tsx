@@ -1328,7 +1328,10 @@ export default function Home() {
   const paparazziOr = useMemo(() => bestSubmission(nominations), [nominations]);
   const nextPendingForMe = pendingForMe[0];
   const { profiles, loading, error, refetch } = usePalmares();
-  const palmaresRows = useMemo(() => buildPalmaresRows(nominations), [nominations]);
+  const palmaresRows = useMemo(
+    () => buildPalmaresRows(nominations),
+    [nominations],
+  );
 
   useEffect(() => {
     void refetch();
