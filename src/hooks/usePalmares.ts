@@ -15,44 +15,58 @@ export function usePalmares(supabaseClientOverride?: any, roomCodeOverride?: str
         return;
       }
 
-      // Query leverages Supabase relational joins to fetch profiles and their linked nominations with ratings
+      // Query leverages Supabase to fetch all nominations with their nested ratings, grouping them dynamically on the client side for maximum reliability
       const { data, error } = await activeClient
-        .from("tiktokers")
+        .from("nominations")
         .select(`
           id,
-          username,
-          avatar_url,
-          nominations (
+          status,
+          category_ids,
+          tiktoker_name,
+          thumbnail_url,
+          media_url,
+          ratings (
             id,
-            status,
-            category_ids,
-            ratings (
-              id,
-              rating_points,
-              rating_score,
-              rire_score,
-              surprise_score,
-              gene_score,
-              fierte_score,
-              interet_score
-            )
+            rating_points,
+            rating_score,
+            rire_score,
+            surprise_score,
+            gene_score,
+            fierte_score,
+            interet_score
           )
         `);
 
       if (error) {
-        // Safe fallback to avoid breaking UI if table or columns do not exist yet
-        if (/relation ".*" does not exist/i.test(error.message)) {
-          console.warn("[NOD usePalmares] tiktokers table not found, fallback to empty leaderboard");
-        } else {
-          console.error("[NOD usePalmares] error:", error);
-        }
+        console.error("[NOD usePalmares] error:", error);
         setPalmaresRows([]);
         return;
       }
 
+      // Group nominations by tiktoker_name (case-insensitive)
+      const groups: Record<string, {
+        tiktokerName: string;
+        avatarUrl: string;
+        nominations: any[];
+      }> = {};
+
+      (data || []).forEach((n: any) => {
+        const nameKey = (n.tiktoker_name || "").trim().toLowerCase();
+        if (!nameKey) return;
+
+        if (!groups[nameKey]) {
+          groups[nameKey] = {
+            tiktokerName: n.tiktoker_name,
+            avatarUrl: n.thumbnail_url || n.media_url || "",
+            nominations: [],
+          };
+        }
+        groups[nameKey].nominations.push(n);
+      });
+
       // Transform fetched data into typed PalmaresRow[] state matrices
-      const rows: PalmaresRow[] = (data || []).map((t: any) => {
-        const linkedNominations = t.nominations || [];
+      const rows: PalmaresRow[] = Object.values(groups).map((group: any) => {
+        const linkedNominations = group.nominations || [];
         const totalDossiers = linkedNominations.length;
         const acceptedDossiers = linkedNominations.filter((n: any) => n.status !== "pending").length;
         const successRate = totalDossiers > 0 ? (acceptedDossiers / totalDossiers) * 100 : 0;
@@ -90,8 +104,8 @@ export function usePalmares(supabaseClientOverride?: any, roomCodeOverride?: str
         const average = votes > 0 ? points / votes / 20 : 0;
 
         return {
-          tiktokerName: t.username,
-          avatarUrl: t.avatar_url || "",
+          tiktokerName: group.tiktokerName,
+          avatarUrl: group.avatarUrl || "",
           points,
           votes,
           average,
@@ -117,7 +131,34 @@ export function usePalmares(supabaseClientOverride?: any, roomCodeOverride?: str
 
   useEffect(() => {
     void fetchPalmaresData();
-  }, [fetchPalmaresData]);
+
+    const activeClient = supabaseClientOverride || supabase;
+    if (!activeClient) return;
+
+    // Realtime channel to listen to nominations and ratings updates and trigger automatic synchronization
+    const channel = activeClient
+      .channel("palmares_realtime_sync")
+      .on(
+        "postgres_changes",
+        { event: "*", schema: "public", table: "nominations" },
+        () => {
+          void fetchPalmaresData();
+        }
+      )
+      .on(
+        "postgres_changes",
+        { event: "*", schema: "public", table: "ratings" },
+        () => {
+          void fetchPalmaresData();
+        }
+      )
+      .subscribe();
+
+    return () => {
+      void channel.unsubscribe();
+      void activeClient.removeChannel(channel);
+    };
+  }, [fetchPalmaresData, supabaseClientOverride]);
 
   return { palmaresRows, isLoading, fetchPalmaresData };
 }
