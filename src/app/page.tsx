@@ -1321,14 +1321,12 @@ export default function Home() {
   );
   const paparazziOr = useMemo(() => bestSubmission(nominations), [nominations]);
   const nextPendingForMe = pendingForMe[0];
-// Remplace l'ancien appel par celui-ci :
-const { profiles, loading, error, refetch } = usePalmares();
-    supabase,
-    roomId || undefined,
-  );
+  const { profiles, loading, error, refetch } = usePalmares();
+
   useEffect(() => {
-    void fetchPalmaresData();
-  }, [nominations, fetchPalmaresData]);
+    void refetch();
+  }, [nominations, refetch]);
+
   const categoryRaces = useMemo(
     () => buildCategoryRaces(nominations),
     [nominations],
@@ -2136,7 +2134,7 @@ const { profiles, loading, error, refetch } = usePalmares();
                 pendingForMe={pendingForMe}
                 allNominations={nominations}
                 ceremonyCountdown={ceremonyCountdown}
-                palmaresRows={palmaresRows}
+                palmaresRows={profiles}
                 activeMemberCount={activeMemberCount}
                 switchTab={switchTab}
                 onCardClick={setExpandedNomination}
@@ -2194,7 +2192,7 @@ const { profiles, loading, error, refetch } = usePalmares();
 
             {tab === "palmares" && (
               <PalmaresTab
-                palmaresRows={palmaresRows}
+                palmaresRows={profiles}
                 allNominations={nominations}
                 switchTab={switchTab}
                 handleSectionDrag={handleSectionDrag}
