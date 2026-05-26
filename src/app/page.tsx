@@ -119,6 +119,7 @@ import {
   buildScoreBoard,
   bestSubmission,
   buildCategoryRaces,
+  buildPalmaresRows,
   buildRankingMemoryGrid,
 } from "@/lib/ranking";
 import {
@@ -1327,6 +1328,7 @@ export default function Home() {
   const paparazziOr = useMemo(() => bestSubmission(nominations), [nominations]);
   const nextPendingForMe = pendingForMe[0];
   const { profiles, loading, error, refetch } = usePalmares();
+  const palmaresRows = useMemo(() => buildPalmaresRows(nominations), [nominations]);
 
   useEffect(() => {
     void refetch();
@@ -2138,7 +2140,7 @@ export default function Home() {
                 pendingForMe={pendingForMe}
                 allNominations={nominations}
                 ceremonyCountdown={ceremonyCountdown}
-                palmaresRows={profiles}
+                palmaresRows={palmaresRows}
                 activeMemberCount={activeMemberCount}
                 switchTab={switchTab}
                 onCardClick={setExpandedNomination}
@@ -2196,7 +2198,7 @@ export default function Home() {
 
             {tab === "palmares" && (
               <PalmaresTab
-                palmaresRows={profiles}
+                palmaresRows={palmaresRows}
                 allNominations={nominations}
                 switchTab={switchTab}
                 handleSectionDrag={handleSectionDrag}
