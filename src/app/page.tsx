@@ -786,7 +786,6 @@ export default function Home() {
   );
 
   const [showStudioOverlay, setShowStudioOverlay] = useState(false);
-  const [showSandbox, setShowSandbox] = useState(false);
   const [preparedFile, setPreparedFile] = useState<File | null>(null);
   const [thumbnailFile, setThumbnailFile] = useState<File | null>(null);
   const [mediaKind, setMediaKind] = useState<MediaKind | null>(null);
